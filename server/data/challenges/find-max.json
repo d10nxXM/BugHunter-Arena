@@ -1,0 +1,31 @@
+{
+  "id": "find-max",
+  "title": "Najveći element liste",
+  "description": "Funkcija find_max vraća najveći broj iz liste. Za praznu listu vraća None.",
+  "language": "python",
+  "function_name": "find_max",
+  "difficulty": "lako",
+  "code": "def find_max(numbers):\n    max_value = 0\n    for number in numbers:\n        if number > max_value:\n            max_value = number\n    return max_value",
+  "bug_lines": [2],
+  "related_lines": [4],
+  "bug_category": "Pogrešna inicijalizacija",
+  "bug_description": "Početna vrijednost max_value = 0 daje pogrešan rezultat kada su svi brojevi negativni (vraća 0, koja nije u listi), a za praznu listu vraća 0 umjesto None.",
+  "reference_solution": "def find_max(numbers):\n    if not numbers:\n        return None\n    max_value = numbers[0]\n    for number in numbers[1:]:\n        if number > max_value:\n            max_value = number\n    return max_value",
+  "tests_json": [
+    { "id": "t1", "args": [[2, 5, 1]], "expected": 5, "visible": true, "failsOnOriginal": false },
+    { "id": "t2", "args": [[7]], "expected": 7, "visible": true, "failsOnOriginal": false },
+    { "id": "t3", "args": [[-8, -3, -10]], "expected": -3, "visible": false, "failsOnOriginal": true },
+    { "id": "t4", "args": [[]], "expected": null, "visible": false, "failsOnOriginal": true }
+  ],
+  "hints_json": [
+    "Da li funkcija radi za svaku listu brojeva, ili samo za uobičajene?",
+    "Šta funkcija vraća ako su svi brojevi u listi negativni?",
+    "Pogledaj početnu vrijednost promjenljive max_value."
+  ],
+  "keywords_json": [
+    ["inicijaliz", "početn", "nul", "max_value = 0"],
+    ["negativ"],
+    ["prvi element", "numbers[0]", "prazn"]
+  ],
+  "fallback_feedback": "Greška je u početnoj vrijednosti max_value = 0. Ako su svi brojevi negativni, nijedan nije veći od 0, pa funkcija vraća 0, koja nije u listi. Maksimum treba početi od prvog elementa, a praznu listu obraditi posebno."
+}
