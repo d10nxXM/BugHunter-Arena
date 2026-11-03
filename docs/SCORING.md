@@ -19,6 +19,7 @@ Score is 0-100. Three components (70 points) are deterministic; the explanation 
 - A fix identical to the original code (ignoring whitespace) scores 0.
 - Fix scoring trusts the browser's results. A test counts as passed when its `passed` is `true` and its `error` is not `"timeout"`; a test with `error: "timeout"` counts as failed. `actual` is not re-checked on the server, and results whose `id` is not a test of the challenge are ignored.
 - Hint penalty: level 1 -5, level 2 -5, level 3 -10. Total by hints used: 0, 5, 10, 20.
+- `hintsUsed` outside 0-3 is a programming error (validation and the DB check prevent it); scoring throws rather than scoring it.
 - Total = sum of components minus hint penalty, clamped to 0-100.
 
 ## Explanation quality (AI rubric)
@@ -72,19 +73,35 @@ This exact case is a required Vitest test.
 
 ## Reference implementation
 
+Abridged. This mirrors `server/src/services/scoringService.js`; `scoreLines`, `scoreEdgeCase` and `scoreFix` are defined there and follow the Components table and Rules above.
+
 ```js
 const HINT_PENALTY = [0, 5, 10, 20]; // total penalty for 0-3 hints used
 
+/** Explanation: round(quality * 3), quality clamped to 0-10, so 0-30. */
+export function scoreExplanation(quality) {
+  if (typeof quality !== 'number' || !Number.isFinite(quality)) return 0;
+  return Math.round(Math.min(10, Math.max(0, quality)) * 3);
+}
+
+/** Total hint penalty (positive number) for 0-3 hints used. Throws RangeError otherwise. */
+export function hintPenalty(hintsUsed) {
+  if (!Number.isInteger(hintsUsed) || hintsUsed < 0 || hintsUsed >= HINT_PENALTY.length) {
+    throw new RangeError('hintsUsed must be an integer 0-3');
+  }
+  return HINT_PENALTY[hintsUsed];
+}
+
 export function calculateScore({ attempt, challenge, explanationQuality, edgeCaseCheck, testResults }) {
   const lines = scoreLines(attempt.selectedLines, challenge.bug_lines, challenge.related_lines); // 0, 20, 40
-  const explanation = Math.round(explanationQuality * 3);                                         // 0-30
-  const edgeCase = scoreEdgeCase(edgeCaseCheck, attempt.edgeCase.expected);                       // 0, 10, 20
-  const fix = scoreFix(testResults, challenge.tests_json, attempt.fixedCode, challenge.code);     // 0, 5, 10
-  const hintPenalty = HINT_PENALTY[attempt.hintsUsed];
-  const total = Math.min(100, Math.max(0, lines + explanation + edgeCase + fix - hintPenalty));
+  const explanation = scoreExplanation(explanationQuality);                                    // 0-30
+  const edgeCase = scoreEdgeCase(edgeCaseCheck, attempt.edgeCase?.expected);                  // 0, 10, 20
+  const fix = scoreFix(testResults, challenge.tests_json, attempt.fixedCode, challenge.code); // 0, 5, 10
+  const penalty = hintPenalty(attempt.hintsUsed);
+  const total = Math.min(100, Math.max(0, lines + explanation + edgeCase + fix - penalty));
   return {
     total,
-    breakdown: { lineIdentification: lines, explanation, edgeCase, fix, hintPenalty: -hintPenalty },
+    breakdown: { lineIdentification: lines, explanation, edgeCase, fix, hintPenalty: -penalty },
   };
 }
 ```

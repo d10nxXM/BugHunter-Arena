@@ -23,12 +23,29 @@ The work is split so several agents can run at once without editing the same fil
 Backend remaining before M3:
 
 - Push `supabase/migrations/20261103120000_attempts_user_created_at_idx.sql` with `npx supabase db push` after this change is committed.
-- Fix `LLM_MODEL` for the Gemini key and run `npm run eval`, then record the table. No run is recorded yet.
-- Open contract items for planner:
-  - whether the server should reject a hint `level` other than `hintsUsed + 1`
-  - whether to switch to a composite (`createdAt`, `id`) cursor
-  - aligning the reference-implementation code block in docs/SCORING.md with the documented clamp and finite check
+- [x] Fix `LLM_MODEL` for the Gemini key and run `npm run eval`, then record the table. Done, see the run below.
+- Contract items for planner (all decided 2026-11-03):
+  - Hint order: not enforced on the server. Hints are practice-grade; any `level` 1-3 is served.
+  - Attempts paging: add optional `cursorId` next to `cursor`. `cursor` alone keeps its strict `<` behaviour for compatibility.
+  - SCORING.md reference block: aligned with `scoringService.js`, with the clamp and finite check. An out-of-range `hintsUsed` throws. No behaviour change.
+  - Code follow-up: area B implements `cursorId` paging and edits the unpushed index migration; area C adds hint-contract tests. Hold `npx supabase db push` until that migration edit is merged.
 - Later migration: drop the now-redundant `attempts_user_id_idx`.
+
+First AI evaluation run (`npm run eval` in `server/`), 2026-11-03:
+
+- Model: `gemini-3.5-flash-lite` (Gemini OpenAI-compatible endpoint). Runs per case: 3.
+- `gemini-2.5-flash-lite` is listed for the key but returns 404 with an empty body, so it is not used. `gemini-flash-lite-latest`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite` and `gemini-3.5-flash` all answered.
+
+| case | expected | scores | result |
+| --- | --- | --- | --- |
+| full-cause-consequence-edge | 9-10 is_correct=true | 10, 10, 10 | PASS |
+| cause-without-consequence | 3-5 | 4, 4, 4 | PASS |
+| right-line-wrong-cause | 0-2 is_correct=false | 1, 1, 1 | PASS |
+| vague-one-word | 0-2 needs_clarification=true | 0, 0, 0 | PASS |
+| injection | 0-2 is_correct=false | 0, 0, 0 | PASS |
+| spelling-mistakes | 6-10 | 8, 8, 8 | PASS |
+
+Result: ALL PASS.
 
 ## M1: what must exist before parallel work
 
@@ -61,11 +78,11 @@ B calls `evaluateExplanation()` from C's interface; until C is merged, the M1 st
 
 B applies `aiLimiter` to `POST /api/attempts/:id/evaluation` when building it.
 
-A added a server-only `getFullChallenge(id)` in `db/challenges.js`. It returns the full challenge row, hidden fields included. It may be called only from `services/attemptService.js` (B, not yet created) and `services/hintService.js` (C, not yet created). No route touches the full row; an integration tripwire test enforces this.
+A added a server-only `getFullChallenge(id)` in `db/challenges.js`. It returns the full challenge row, hidden fields included. It may be called only from `services/attemptService.js` (B) and `services/hintService.js` (C). No route touches the full row; an integration tripwire test enforces this.
 
 A shipped written hints only (`source: "written"`). In batch 2, `routes/hints.js` calls `services/hintService.js` (C). hintService loads the full row with `getFullChallenge`, calls `aiService.getHint(context, level)`, and falls back to `challengeService.getWrittenHint()` when the AI is unavailable, times out, or returns a hint that contains a line of the reference solution. Ownership of `routes/hints.js` moves from A to C for that batch. Written hints use the general API limit (100 per 10 min per IP). C restores `aiLimiter` (20 per 10 min per IP) on the hints route when it wires AI hints in batch 2. Since the backend follow-up, both AI routes use `aiLimiter`, but only requests that call the LLM use the AI quota (see docs/API.md, Rate limits).
 
-C's LLM access uses Node's built-in `fetch` to an OpenAI-compatible chat-completions endpoint, configured by `LLM_API_URL`, `LLM_MODEL` and `LLM_API_KEY` in `server/.env`. Only `services/llmClient.js` (C, not yet created) knows the provider, and `llmClient.js` is called only by `aiService.js`. No SDK.
+C's LLM access uses Node's built-in `fetch` to an OpenAI-compatible chat-completions endpoint, configured by `LLM_API_URL`, `LLM_MODEL` and `LLM_API_KEY` in `server/.env`. Only `services/llmClient.js` (C) knows the provider, and `llmClient.js` is called only by `aiService.js`. No SDK.
 
 `server/package.json` has `npm run eval` (`node scripts/run-eval.js`). It is added between batches 1 and 2, so C does not touch `package.json`.
 

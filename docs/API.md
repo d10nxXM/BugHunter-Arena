@@ -15,7 +15,7 @@ Grading happens in two calls: `POST /api/attempts` locks the answer and only the
 | POST | `/api/attempts` | Submit answer; returns attempt id, all tests, reference solution | Must |
 | POST | `/api/attempts/:id/evaluation` | Test results in; score and feedback out | Must |
 | GET | `/api/progress?userId=` | Dashboard statistics | Should |
-| GET | `/api/attempts?userId=&challengeId=&limit=&cursor=` | Attempt history | Could |
+| GET | `/api/attempts?userId=&challengeId=&limit=&cursor=&cursorId=` | Attempt history | Could |
 | POST | `/api/users` | Create a user with a display name | Could |
 
 ## GET /api/health
@@ -78,7 +78,7 @@ Response:
 
 `level` must be an integer 1-3. Any other value, including `"1"` or `1.5`, returns `400 VALIDATION_ERROR`. An unknown challenge returns `404 NOT_FOUND`.
 
-The server does not enforce hint order. For now the client enforces it by asking for one more than the hints already used. Open contract item: whether the server should reject any `level` other than `hintsUsed + 1`.
+The server does not enforce hint order or count. Any `level` 1-3 is served, and each response holds one level. The client asks for one more than the hints already used and reports `hintsUsed` in `POST /api/attempts`. That count is not checked against the hints served (see Trust model). Practice use only.
 
 `currentAnswer` is optional. If present it must be an object. `selectedLines` is an optional array of at most 10 positive integers. `explanation` is an optional string of at most 1000 characters, with no minimum. Unknown keys are dropped. Anything else returns `400 VALIDATION_ERROR` before any AI call.
 
@@ -213,14 +213,14 @@ Definitions are in `docs/DATA_MODEL.md` under derived data.
 
 `userId` is required and must be a UUID; otherwise `400 VALIDATION_ERROR`. An unknown user, or one with no attempts, gets `200` with zeros and empty lists: `{ "totalScore": 0, "solved": 0, "attempted": 0, "averageDurationSec": 0, "perChallenge": [], "weakCategories": [] }`. Progress is computed from the user's newest 1000 attempts.
 
-## GET /api/attempts?userId=&challengeId=&limit=&cursor=
+## GET /api/attempts?userId=&challengeId=&limit=&cursor=&cursorId=
 
 - `userId` is required and must be a UUID.
 - `challengeId` is optional (`[a-z0-9-]{1,64}`) and restricts the list to one challenge.
 - `limit` is optional: an integer 1-100, default 50.
-- `cursor` is optional: the `createdAt` of the last item of the previous page (ISO 8601 with offset, URL-encoded). Only attempts created strictly before it are returned.
+- `cursor` and `cursorId` are optional: the `createdAt` (ISO 8601 with offset, URL-encoded, sent back exactly as received) and the `id` of the last item of the previous page. With both, only attempts ordered after that item are returned (`createdAt` earlier, or equal `createdAt` and smaller `id`), so no attempt is skipped or repeated. `cursor` alone returns attempts created strictly before it (kept for compatibility; may skip attempts that share a `createdAt`). `cursorId` without `cursor` returns `400 VALIDATION_ERROR`.
 
-Known limitation: the cursor compares `createdAt` only, so an attempt with exactly the same `createdAt` as the cursor is skipped. This needs two attempts by one user in the same microsecond and is accepted for the MVP.
+Known limitation (`cursor` only): an attempt with exactly the same `createdAt` as the cursor is skipped. This needs two attempts by one user in the same microsecond. Send `cursorId` with `cursor` to avoid it.
 
 Invalid values return `400 VALIDATION_ERROR`.
 
@@ -254,7 +254,7 @@ There is no authentication in the MVP. User ids and attempt ids are random UUIDs
 - read that user's progress (`GET /api/progress`) and attempt history (`GET /api/attempts`);
 - submit attempts under that user id.
 
-Anyone who knows a submitted attempt id can evaluate it. Test results, durations and hint counts come from the browser. The platform is for practice use only; nothing here is exam-grade.
+Anyone who knows a submitted attempt id can evaluate it. Test results, durations and hint counts come from the browser. Hint order is not enforced on the server either. The platform is for practice use only; nothing here is exam-grade.
 
 ## Rate limits
 
@@ -292,7 +292,7 @@ An unavailable AI service is not an error: the evaluation returns `200` with `fe
 
 | HTTP | Code | When |
 | --- | --- | --- |
-| 400 | VALIDATION_ERROR | Invalid, empty or too long input; challenge id not matching `[a-z0-9-]{1,64}`; hint `level` not an integer 1-3; malformed JSON body (also an unsupported charset or encoding); attempt id or `userId` not a UUID; `limit` or `cursor` invalid on `GET /api/attempts` |
+| 400 | VALIDATION_ERROR | Invalid, empty or too long input; challenge id not matching `[a-z0-9-]{1,64}`; hint `level` not an integer 1-3; malformed JSON body (also an unsupported charset or encoding); attempt id or `userId` not a UUID; `limit`, `cursor` or `cursorId` invalid, or `cursorId` without `cursor`, on `GET /api/attempts` |
 | 404 | NOT_FOUND | Challenge, attempt or user does not exist (user: `POST /api/attempts` with an unknown `userId`); unknown route (no router handles the path) |
 | 409 | ALREADY_EVALUATED | Attempt already evaluated |
 | 413 | PAYLOAD_TOO_LARGE | Body over 50 KB |

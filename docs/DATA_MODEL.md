@@ -60,7 +60,7 @@ create table attempts (
 create index attempts_user_id_idx on attempts (user_id);
 create index attempts_challenge_id_idx on attempts (challenge_id);
 -- 20261103120000_attempts_user_created_at_idx.sql
-create index attempts_user_id_created_at_idx on attempts (user_id, created_at desc);
+create index attempts_user_id_created_at_idx on attempts (user_id, created_at desc, id desc);
 
 alter table users enable row level security;
 alter table challenges enable row level security;
@@ -73,7 +73,7 @@ Migrations:
 | File | Change |
 | --- | --- |
 | `20261103002608_init_schema.sql` | Initial schema |
-| `20261103120000_attempts_user_created_at_idx.sql` | Index `attempts_user_id_created_at_idx` on `attempts (user_id, created_at desc)` for history and progress reads |
+| `20261103120000_attempts_user_created_at_idx.sql` | Index `attempts_user_id_created_at_idx` on `attempts (user_id, created_at desc, id desc)` for history (keyset order) and progress reads |
 
 ## Attempt columns
 
