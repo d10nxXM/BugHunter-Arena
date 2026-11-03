@@ -1,0 +1,18 @@
+{
+  "find-max": {
+    "evaluation": {
+      "is_correct": true,
+      "explanation_quality": 8,
+      "detected_misconception": "Pretpostavka da lista uvijek sadrži bar jedan pozitivan broj.",
+      "needs_clarification": false,
+      "hint": null,
+      "feedback": "Tačno si prepoznao da početna vrijednost 0 pravi problem kada su svi brojevi negativni. Dobro je što si objasnio da funkcija tada vraća 0, koja nije u listi. Za punu ocjenu nedostaje ponašanje za praznu listu.",
+      "practice_tip": "Kada tražiš najveći ili najmanji element, kreni od prvog elementa liste, a ne od proizvoljne konstante."
+    },
+    "hints": [
+      "Da li funkcija radi za svaku listu brojeva, ili samo za uobičajene?",
+      "Šta funkcija vraća ako su svi brojevi u listi negativni?",
+      "Pogledaj početnu vrijednost promjenljive max_value."
+    ]
+  }
+}
