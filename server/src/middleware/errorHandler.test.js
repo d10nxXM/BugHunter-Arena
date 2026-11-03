@@ -70,6 +70,30 @@ describe('errorHandler', () => {
     expect(res.text).not.toContain('hunter2');
   });
 
+  it('renders an AppError 501 NOT_IMPLEMENTED with its code and message', async () => {
+    const err = new AppError(
+      501,
+      'NOT_IMPLEMENTED',
+      'Ova funkcija još nije dostupna.',
+    );
+    const res = await request(appThrowing(err)).get('/boom');
+    expect(res.status).toBe(501);
+    expect(res.body).toEqual({
+      error: {
+        code: 'NOT_IMPLEMENTED',
+        message: 'Ova funkcija još nije dostupna.',
+      },
+    });
+  });
+
+  it('still hides other 5xx AppErrors behind INTERNAL_ERROR', async () => {
+    const err = new AppError(503, 'UNAVAILABLE', 'internal detail xyz');
+    const res = await request(appThrowing(err)).get('/boom');
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.text).not.toContain('xyz');
+  });
+
   it('uses the same fixed message for different unknown errors', async () => {
     const a = await request(appThrowing(new Error('first'))).get('/boom');
     const b = await request(appThrowing(new TypeError('second'))).get('/boom');
