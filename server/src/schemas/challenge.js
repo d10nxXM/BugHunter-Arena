@@ -75,6 +75,10 @@ const TestsSchema = z.array(ChallengeTestSchema).superRefine((tests, ctx) => {
   }
 });
 
+// Same cap as `feedback` in EvaluationResultSchema (schemas/aiOutput.js), so
+// the keyword fallback built from this text always passes it.
+export const FALLBACK_FEEDBACK_MAX = 2000;
+
 export const ChallengeFileSchema = z.strictObject({
   id: ChallengeIdSchema,
   title: text,
@@ -91,5 +95,5 @@ export const ChallengeFileSchema = z.strictObject({
   tests_json: TestsSchema,
   hints_json: z.array(text).length(3),
   keywords_json: z.array(z.array(text).min(1)).length(3),
-  fallback_feedback: text,
+  fallback_feedback: text.max(FALLBACK_FEEDBACK_MAX),
 });

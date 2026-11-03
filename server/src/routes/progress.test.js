@@ -58,10 +58,11 @@ describe('GET /api/progress', () => {
     });
   });
 
-  it('returns zeros for a user without attempts', async () => {
+  it('returns 200 with zeros for an unknown user', async () => {
     const res = await request(app).get(
       '/api/progress?userId=22222222-2222-4222-8222-222222222222',
     );
+    expect(res.status).toBe(200);
     expect(res.body).toEqual({
       totalScore: 0,
       solved: 0,
@@ -70,6 +71,15 @@ describe('GET /api/progress', () => {
       perChallenge: [],
       weakCategories: [],
     });
+  });
+
+  it('reads at most 1000 attempts of the user', async () => {
+    const before = fake.calls.limits.length;
+    const res = await request(app).get(`/api/progress?userId=${U}`);
+    expect(res.status).toBe(200);
+    expect(fake.calls.limits.slice(before)).toEqual([
+      { table: 'attempts', limit: 1000 },
+    ]);
   });
 
   it('400 without or with an invalid userId', async () => {

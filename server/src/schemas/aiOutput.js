@@ -41,3 +41,20 @@ export const DemoEntrySchema = z.object({
 
 /** data/demo-responses.json: recorded answers keyed by challenge id. */
 export const DemoResponsesSchema = z.record(z.string(), DemoEntrySchema);
+
+/**
+ * What evaluateExplanation returns from any source (ai, fallback or demo),
+ * checked by attemptService before scoring; anything else becomes the keyword
+ * fallback. Limits match EvaluationOutputSchema; feedback allows the longer
+ * written fallback_feedback of a challenge.
+ */
+export const EvaluationResultSchema = z.object({
+  source: z.enum(['ai', 'fallback', 'demo']),
+  is_correct: z.boolean(),
+  explanation_quality: z.number().finite().min(0).max(10),
+  detected_misconception: z.string().max(300).nullable(),
+  needs_clarification: z.boolean(),
+  hint: z.string().max(300).nullable(),
+  feedback: z.string().min(1).max(2000),
+  practice_tip: z.string().max(400).nullable(),
+});

@@ -421,7 +421,7 @@ describe('leak: public responses, all challenges', () => {
   });
 });
 
-describe('parity: fallback stub shape (ai and demo N/A until worker C)', () => {
+describe('parity: fallback shape with the AI not configured (ai and demo parity: test/crossarea.test.js)', () => {
   it('returns the 8 documented fields with a valid quality', async () => {
     const out = await evaluateExplanation({
       challenge: rows[0],

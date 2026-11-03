@@ -45,7 +45,7 @@ describe('POST /api/challenges/:id/hints', () => {
     expect(Object.keys(res.body).sort()).toEqual(['hint', 'level', 'source']);
   });
 
-  it('accepts and ignores currentAnswer', async () => {
+  it('accepts currentAnswer without echoing it (AI not configured: written hint)', async () => {
     const res = await post({
       level: 1,
       currentAnswer: { selectedLines: [2], explanation: 'ignored text' },
@@ -171,8 +171,6 @@ describe('POST /api/challenges/:id/hints', () => {
       level: 1,
       currentAnswer: { explanation: 'SECRET-STUDENT-TEXT' },
     });
-    expect(JSON.stringify(spy.mock.calls)).not.toContain(
-      'SECRET-STUDENT-TEXT',
-    );
+    expect(JSON.stringify(spy.mock.calls)).not.toContain('SECRET-STUDENT-TEXT');
   });
 });

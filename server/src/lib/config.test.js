@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseConfig, config } from './config.js';
+import { parseConfig, config, missingLlmVariables } from './config.js';
 
 const base = {
   SUPABASE_URL: 'https://abc.supabase.co',
@@ -273,5 +273,47 @@ describe('config (built from process.env under vitest)', () => {
       aiTimeoutMs: 15000,
       logLevel: 'silent',
     });
+  });
+});
+
+describe('missingLlmVariables', () => {
+  const full = {
+    LLM_API_KEY: 'sk-secret-value',
+    LLM_API_URL: 'https://llm.example.test/v1',
+    LLM_MODEL: 'model-x',
+  };
+
+  it('[] when no LLM variable is set', () => {
+    expect(missingLlmVariables(parseConfig(base))).toEqual([]);
+  });
+
+  it('[] when the AI is available or in demo mode', () => {
+    expect(missingLlmVariables(parseConfig({ ...base, ...full }))).toEqual([]);
+    expect(
+      missingLlmVariables(
+        parseConfig({ ...base, LLM_API_KEY: 'k', DEMO_MODE: 'true' }),
+      ),
+    ).toEqual([]);
+  });
+
+  it('names the missing variables when only some are set, never values', () => {
+    const onlyKey = missingLlmVariables(
+      parseConfig({ ...base, LLM_API_KEY: full.LLM_API_KEY }),
+    );
+    expect(onlyKey).toEqual(['LLM_API_URL', 'LLM_MODEL']);
+    expect(JSON.stringify(onlyKey)).not.toContain(full.LLM_API_KEY);
+
+    expect(
+      missingLlmVariables(parseConfig({ ...base, ...full, LLM_MODEL: '' })),
+    ).toEqual(['LLM_MODEL']);
+    expect(
+      missingLlmVariables(
+        parseConfig({ ...base, LLM_API_URL: full.LLM_API_URL }),
+      ),
+    ).toEqual(['LLM_API_KEY', 'LLM_MODEL']);
+  });
+
+  it('[] for a missing config', () => {
+    expect(missingLlmVariables(undefined)).toEqual([]);
   });
 });

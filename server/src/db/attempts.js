@@ -5,9 +5,9 @@ export const FK_VIOLATION = '23503';
 
 // Explicit column lists. The student's text (explanation, fixed_code) is
 // selected only where the evaluation needs it.
-const EVALUATION_COLUMNS =
+export const EVALUATION_COLUMNS =
   'id, challenge_id, user_id, selected_lines, explanation, edge_case, fixed_code, hints_used, status';
-const SUMMARY_COLUMNS =
+export const SUMMARY_COLUMNS =
   'id, challenge_id, status, score, score_breakdown, feedback_source, hints_used, duration, created_at';
 
 /**
@@ -53,13 +53,28 @@ export async function completeEvaluation(id, fields) {
   return data !== null;
 }
 
-/** Attempt summaries of one user, newest first; optionally one challenge. */
-export async function listAttemptSummaries(userId, challengeId) {
+/**
+ * Attempt summaries of one user, newest first (created_at desc, then id
+ * desc); optionally one challenge. `before` (an ISO timestamp) keeps only
+ * attempts created strictly earlier, for keyset pages. At most `limit` rows,
+ * always applied. Uses attempts_user_id_created_at_idx.
+ *
+ * The cursor is `created_at` only, with a strict `<`: a row whose created_at
+ * equals the cursor is skipped on the next page (two attempts in the same
+ * microsecond). Accepted for the MVP; the later fix is a composite
+ * (created_at, id) cursor.
+ */
+export async function listAttemptSummaries(
+  userId,
+  { challengeId, before, limit = 1000 } = {},
+) {
   let query = db.from('attempts').select(SUMMARY_COLUMNS).eq('user_id', userId);
   if (challengeId) query = query.eq('challenge_id', challengeId);
-  const { data, error } = await query.order('created_at', {
-    ascending: false,
-  });
+  if (before) query = query.lt('created_at', before);
+  const { data, error } = await query
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
+    .limit(limit);
   if (error) throw new Error('listAttemptSummaries failed', { cause: error });
   return data ?? [];
 }

@@ -1,4 +1,3 @@
-import { z } from 'zod';
 import { AppError } from '../lib/AppError.js';
 import { config } from '../lib/config.js';
 import { logger } from '../lib/logger.js';
@@ -14,6 +13,8 @@ import {
 import { userExists } from '../db/users.js';
 import { calculateScore, countPassedTests } from './scoringService.js';
 import { evaluateExplanation } from './evaluationService.js';
+import { evaluateWithKeywords } from './fallbackService.js';
+import { EvaluationResultSchema } from '../schemas/aiOutput.js';
 
 // Never log: explanation, edgeCase and fixedCode are student text.
 
@@ -21,63 +22,15 @@ const SOLVED_MIN_SCORE = 70;
 const MAX_INT4 = 2147483647;
 // Margin on top of AI_TIMEOUT_MS for the outer guard around the evaluation.
 const AI_GUARD_MARGIN_MS = 1000;
-const QUALITY_BY_GROUPS = [0, 3, 7, 10];
-const GENERIC_FALLBACK_FEEDBACK =
-  'Procjena bez AI-ja: objašnjenje je ocijenjeno prema ključnim pojmovima.';
+// GET /api/progress reads at most this many attempts of one user.
+const PROGRESS_MAX_ROWS = 1000;
 
 const NOT_FOUND_CHALLENGE = 'Izazov ne postoji.';
 const NOT_FOUND_USER = 'Korisnik ne postoji.';
 
-const AiResultSchema = z.object({
-  source: z.enum(['ai', 'fallback', 'demo']),
-  is_correct: z.boolean(),
-  explanation_quality: z.number().finite().min(0).max(10),
-  detected_misconception: z.string().max(500).nullable(),
-  needs_clarification: z.boolean(),
-  hint: z.string().max(500).nullable(),
-  feedback: z.string().min(1).max(2000),
-  practice_tip: z.string().max(500).nullable(),
-});
-
-/**
- * Minimal non-AI evaluation (docs/SCORING.md "Fallback without the AI"), used
- * only when evaluateExplanation throws, hangs or returns garbage.
- */
-export function localFallbackEvaluation(challenge, explanation) {
-  const text = typeof explanation === 'string' ? explanation.toLowerCase() : '';
-  const groups = Array.isArray(challenge?.keywords_json)
-    ? challenge.keywords_json
-    : [];
-  const matched = groups.filter(
-    (group) =>
-      Array.isArray(group) &&
-      group.some(
-        (stem) =>
-          typeof stem === 'string' &&
-          stem.trim() !== '' &&
-          text.includes(stem.toLowerCase()),
-      ),
-  ).length;
-  const quality = QUALITY_BY_GROUPS[Math.min(matched, 3)];
-  const stored = challenge?.fallback_feedback;
-  return {
-    source: 'fallback',
-    is_correct: quality >= 7,
-    explanation_quality: quality,
-    detected_misconception: null,
-    needs_clarification: false,
-    hint: null,
-    feedback:
-      typeof stored === 'string' && stored.trim() !== ''
-        ? stored
-        : GENERIC_FALLBACK_FEEDBACK,
-    practice_tip: null,
-  };
-}
-
 /**
  * Runs evaluateExplanation under a timeout. Any throw, rejection, hang or
- * invalid result becomes the local fallback. Never rejects.
+ * invalid result becomes the keyword fallback (fallbackService). Never rejects.
  */
 export async function evaluateWithFallback(
   context,
@@ -86,34 +39,40 @@ export async function evaluateWithFallback(
     evaluate = evaluateExplanation,
   } = {},
 ) {
+  const TIMED_OUT = Symbol('timeout');
   let timer;
-  const guard = new Promise((_, reject) => {
-    timer = setTimeout(
-      () => reject(new Error('evaluation timed out')),
-      timeoutMs,
-    );
+  const guard = new Promise((resolve) => {
+    timer = setTimeout(() => resolve(TIMED_OUT), timeoutMs);
     timer.unref?.();
   });
+  // Log fields: a fixed kind (timeout, invalid_result, evaluate_threw) and,
+  // for invalid_result, the issue paths only. Never values or student text.
+  let failure;
   try {
     const raw = await Promise.race([
       Promise.resolve().then(() => evaluate(context)),
       guard,
     ]);
-    const parsed = AiResultSchema.safeParse(raw);
-    if (!parsed.success) throw new Error('invalid evaluation result');
-    return parsed.data;
-  } catch (err) {
-    logger.warn(
-      { route: 'evaluation', attemptId: context.attemptId, reason: err?.name },
-      'evaluation failed, using fallback',
-    );
-    return localFallbackEvaluation(
-      context.challenge,
-      context.answer?.explanation,
-    );
+    if (raw === TIMED_OUT) {
+      failure = { reason: 'timeout' };
+    } else {
+      const parsed = EvaluationResultSchema.safeParse(raw);
+      if (parsed.success) return parsed.data;
+      failure = {
+        reason: 'invalid_result',
+        paths: parsed.error.issues.map((issue) => issue.path.join('.')),
+      };
+    }
+  } catch {
+    failure = { reason: 'evaluate_threw' };
   } finally {
     clearTimeout(timer);
   }
+  logger.warn(
+    { route: 'evaluation', attemptId: context?.attemptId, ...failure },
+    'evaluation failed, using fallback',
+  );
+  return { source: 'fallback', ...evaluateWithKeywords(context) };
 }
 
 /**
@@ -162,11 +121,15 @@ export async function createAttempt(input) {
   };
 }
 
-/** POST /api/attempts/:id/evaluation. */
+/**
+ * POST /api/attempts/:id/evaluation. `onAiCall` is passed down to the
+ * evaluation chain (called right before an LLM call); the other options go
+ * to evaluateWithFallback.
+ */
 export async function evaluateAttempt(
   attemptId,
   { testResults, edgeCaseCheck },
-  options,
+  { onAiCall, ...guardOptions } = {},
 ) {
   const row = await getAttemptForEvaluation(attemptId);
   if (!row) throw new AppError(404, 'NOT_FOUND', 'Pokušaj ne postoji.');
@@ -202,8 +165,9 @@ export async function evaluateAttempt(
         fixedCode: attempt.fixedCode,
       },
       testSummary: { testsPassed, testsTotal },
+      onAiCall,
     },
-    options,
+    guardOptions,
   );
 
   const { total, breakdown } = calculateScore({
@@ -304,15 +268,25 @@ export function computeProgress(rows, categories) {
 /** GET /api/progress. */
 export async function getProgress(userId) {
   const [rows, categories] = await Promise.all([
-    listAttemptSummaries(userId),
+    listAttemptSummaries(userId, { limit: PROGRESS_MAX_ROWS }),
     getChallengeCategories(),
   ]);
   return computeProgress(rows, categories);
 }
 
-/** GET /api/attempts. Summaries only: no answer text, no hidden data. */
-export async function listAttempts(userId, challengeId) {
-  const rows = await listAttemptSummaries(userId, challengeId);
+/**
+ * GET /api/attempts. Summaries only: no answer text, no hidden data. Newest
+ * first; `cursor` is the createdAt of the last item of the previous page.
+ */
+export async function listAttempts(
+  userId,
+  { challengeId, limit, cursor } = {},
+) {
+  const rows = await listAttemptSummaries(userId, {
+    challengeId,
+    limit,
+    before: cursor,
+  });
   return rows.map((row) => ({
     id: row.id,
     challengeId: row.challenge_id,

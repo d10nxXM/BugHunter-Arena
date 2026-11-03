@@ -49,10 +49,16 @@ export const AttemptIdParamsSchema = z.object({ id: IdSchema });
 /** GET /api/progress?userId= */
 export const ProgressQuerySchema = z.object({ userId: IdSchema });
 
-/** GET /api/attempts?userId=&challengeId= */
+/**
+ * GET /api/attempts?userId=&challengeId=&limit=&cursor=
+ * `cursor` is the createdAt of the last item of the previous page (ISO 8601
+ * with Z or an offset); the next page holds attempts created strictly before.
+ */
 export const AttemptListQuerySchema = z.object({
   userId: IdSchema,
   challengeId: ChallengeIdSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  cursor: z.iso.datetime({ offset: true }).optional(),
 });
 
 /** POST /api/users. */

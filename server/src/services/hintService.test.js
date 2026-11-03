@@ -88,7 +88,7 @@ describe('hintService.getHint', () => {
     expect(result).toEqual({
       level: 2,
       hint: row.hints_json[1],
-      source: 'ai',
+      source: 'demo',
     });
     expect(mocks.aiGetHint).not.toHaveBeenCalled();
     expect(mocks.getFullChallenge).not.toHaveBeenCalled();
@@ -99,5 +99,65 @@ describe('hintService.getHint', () => {
     mocks.config.aiStatus = 'demo';
     const result = await getHint('other', 1);
     expect(result.source).toBe('written');
+  });
+
+  describe('onAiCall', () => {
+    it('is called once, right before the AI hint', async () => {
+      mocks.aiGetHint.mockResolvedValue('AI hint.');
+      const onAiCall = vi.fn();
+      await getHint('find-max', 1, undefined, { onAiCall });
+      expect(onAiCall).toHaveBeenCalledTimes(1);
+      expect(onAiCall.mock.invocationCallOrder[0]).toBeLessThan(
+        mocks.aiGetHint.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('is still called when the AI hint rejects', async () => {
+      mocks.aiGetHint.mockRejectedValue(new Error('timeout'));
+      const onAiCall = vi.fn();
+      const result = await getHint('find-max', 1, undefined, { onAiCall });
+      expect(result.source).toBe('written');
+      expect(onAiCall).toHaveBeenCalledTimes(1);
+      expect(onAiCall.mock.invocationCallOrder[0]).toBeLessThan(
+        mocks.aiGetHint.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('is not called in demo mode', async () => {
+      mocks.config.demoMode = true;
+      mocks.config.aiStatus = 'demo';
+      const onAiCall = vi.fn();
+      await getHint('find-max', 1, undefined, { onAiCall });
+      await getHint('other', 1, undefined, { onAiCall });
+      expect(onAiCall).not.toHaveBeenCalled();
+    });
+
+    it('is not called when the AI is unavailable', async () => {
+      mocks.config.aiStatus = 'unavailable';
+      const onAiCall = vi.fn();
+      await getHint('find-max', 1, undefined, { onAiCall });
+      expect(onAiCall).not.toHaveBeenCalled();
+    });
+
+    it('is not called when loading the challenge rejects', async () => {
+      mocks.getFullChallenge.mockRejectedValue(new Error('db'));
+      const onAiCall = vi.fn();
+      await getHint('find-max', 1, undefined, { onAiCall });
+      expect(onAiCall).not.toHaveBeenCalled();
+    });
+
+    it('is not called for an unknown challenge (null row)', async () => {
+      mocks.getFullChallenge.mockResolvedValue(null);
+      const onAiCall = vi.fn();
+      await getHint('find-max', 1, undefined, { onAiCall });
+      expect(onAiCall).not.toHaveBeenCalled();
+    });
+
+    it('is optional', async () => {
+      mocks.aiGetHint.mockResolvedValue('AI hint.');
+      await expect(getHint('find-max', 1)).resolves.toMatchObject({
+        source: 'ai',
+      });
+    });
   });
 });

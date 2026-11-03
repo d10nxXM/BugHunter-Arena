@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeAll } from 'vitest';
 import request from 'supertest';
 import { createFakeSupabase } from '../../test/fakeSupabase.js';
 import { loadFindMaxRow } from '../../test/fixtures.js';
@@ -20,6 +20,7 @@ const fake = createFakeSupabase({
 state.db = fake.db;
 
 const { app } = await import('../app.js');
+const { config } = await import('../lib/config.js');
 
 const attemptBody = (overrides = {}) => ({
   challengeId: 'find-max',
@@ -312,16 +313,28 @@ describe('POST /api/attempts/:id/evaluation', () => {
     expect(many.status).toBe(400);
   });
 
-  it('applies the AI rate limit (429 after 20 requests)', async () => {
-    let last;
-    for (let i = 0; i < 21; i += 1) {
-      last = await request(app)
-        .post('/api/attempts/33333333-3333-4333-8333-333333333333/evaluation')
-        .send(evalBody());
-      if (last.status === 429) break;
+  it('validation runs before aiLimiter: 25 bad bodies in AI mode are all 400, never 429', async () => {
+    const saved = { ...config };
+    Object.assign(config, {
+      aiStatus: 'available',
+      demoMode: false,
+      llmApiKey: 'k',
+      llmApiUrl: 'https://llm.example.test/v1',
+      llmModel: 'm',
+    });
+    try {
+      for (let i = 0; i < 25; i += 1) {
+        const res = await request(app)
+          .post('/api/attempts/33333333-3333-4333-8333-333333333333/evaluation')
+          .send({ testResults: [] });
+        expect(res.status).toBe(400);
+        expect(res.body.error.code).toBe('VALIDATION_ERROR');
+        // Rejected before aiLimiter ran: only the general policy is sent.
+        expect(res.headers['ratelimit-policy']).not.toMatch(/q=20\b/);
+      }
+    } finally {
+      Object.assign(config, saved);
     }
-    expect(last.status).toBe(429);
-    expect(last.body.error.code).toBe('RATE_LIMITED');
   });
 });
 
@@ -332,6 +345,9 @@ describe('GET /api/attempts', () => {
   });
 
   it('lists summaries of one user without student text or hidden data', async () => {
+    // Own data: does not depend on the POST tests running first.
+    const created = await create(attemptBody({ userId: USER_ID }));
+    expect(created.status).toBe(201);
     const res = await request(app).get(
       `/api/attempts?userId=${USER_ID}&challengeId=find-max`,
     );
@@ -371,5 +387,59 @@ describe('GET /api/attempts', () => {
       `/api/attempts?userId=${USER_ID}&challengeId=other`,
     );
     expect(res.body).toEqual([]);
+  });
+
+  describe('pagination (limit, cursor)', () => {
+    const PAGED_USER = '44444444-4444-4444-8444-444444444444';
+    const at = (i) => new Date(Date.UTC(2026, 0, 1) + i * 60000).toISOString();
+    const seeded = Array.from({ length: 55 }, (_, i) => ({
+      id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+      user_id: PAGED_USER,
+      challenge_id: 'find-max',
+      status: 'submitted',
+      hints_used: 0,
+      created_at: at(i),
+    }));
+    const list = (query = '') =>
+      request(app).get(`/api/attempts?userId=${PAGED_USER}${query}`);
+
+    beforeAll(() => {
+      fake.tables.attempts.push(...seeded);
+    });
+
+    it('limit=1 gives the newest attempt only', async () => {
+      const res = await list('&limit=1');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(1);
+      expect(res.body[0].id).toBe(seeded[54].id);
+      expect(res.body[0].createdAt).toBe(at(54));
+    });
+
+    it('cursor = the last createdAt gives the next page', async () => {
+      const first = await list('&limit=1');
+      const cursor = encodeURIComponent(first.body.at(-1).createdAt);
+      const next = await list(`&limit=1&cursor=${cursor}`);
+      expect(next.status).toBe(200);
+      expect(next.body).toHaveLength(1);
+      expect(next.body[0].id).toBe(seeded[53].id);
+    });
+
+    it('defaults to 50 items, newest first', async () => {
+      const res = await list();
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveLength(50);
+      expect(res.body[0].id).toBe(seeded[54].id);
+      expect(res.body[49].id).toBe(seeded[5].id);
+    });
+
+    it.each([
+      ['limit=0', '&limit=0'],
+      ['limit=101', '&limit=101'],
+      ['a bad cursor', '&cursor=yesterday'],
+    ])('400 for %s', async (_name, query) => {
+      const res = await list(query);
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
   });
 });

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import request from 'supertest';
 import { readFileSync } from 'node:fs';
-import { z } from 'zod';
 import { createFakeSupabase } from './fakeSupabase.js';
 import { collectKeys, expectNoLeak, loadFindMaxRow } from './fixtures.js';
 
@@ -15,6 +14,7 @@ const { config } = await import('../src/lib/config.js');
 const { aiLimiter, apiLimiter } =
   await import('../src/middleware/rateLimit.js');
 const { calculateScore } = await import('../src/services/scoringService.js');
+const { EvaluationResultSchema } = await import('../src/schemas/aiOutput.js');
 
 const row = loadFindMaxRow();
 const original = { ...config };
@@ -31,18 +31,6 @@ const FEEDBACK_FIELDS = [
   'needs_clarification',
   'practice_tip',
 ];
-
-// Copy of AiResultSchema in src/services/attemptService.js (not exported).
-const BAiResultSchema = z.object({
-  source: z.enum(['ai', 'fallback', 'demo']),
-  is_correct: z.boolean(),
-  explanation_quality: z.number().finite().min(0).max(10),
-  detected_misconception: z.string().max(500).nullable(),
-  needs_clarification: z.boolean(),
-  hint: z.string().max(500).nullable(),
-  feedback: z.string().min(1).max(2000),
-  practice_tip: z.string().max(500).nullable(),
-});
 
 const aiEval = {
   is_correct: true,
@@ -88,7 +76,7 @@ beforeEach(() => {
   }).db;
   fetchMock = vi.fn();
   vi.stubGlobal('fetch', fetchMock);
-  for (const key of ['::ffff:127.0.0.1', '127.0.0.1', '::1']) {
+  for (const key of ['::ffff:127.0.0.1', '127.0.0.1', '::/56']) {
     aiLimiter.resetKey(key);
     apiLimiter.resetKey(key);
   }
@@ -200,7 +188,7 @@ describe('full flow without the LLM (hard rule 6)', () => {
   });
 });
 
-describe('cross-area: C evaluateExplanation result vs B AiResultSchema', () => {
+describe('cross-area: C evaluateExplanation result vs B EvaluationResultSchema', () => {
   it('a valid AI result passes end to end as feedbackSource "ai" (not silently replaced)', async () => {
     setMode('ai');
     fetchMock.mockResolvedValue(llmReply(JSON.stringify(aiEval)));
@@ -256,12 +244,14 @@ describe('cross-area: C evaluateExplanation result vs B AiResultSchema', () => {
     const parsed = DemoResponsesSchema.parse(demoFile);
     for (const [id, entry] of Object.entries(parsed)) {
       expect(
-        BAiResultSchema.safeParse({ source: 'demo', ...entry.evaluation })
-          .success,
+        EvaluationResultSchema.safeParse({
+          source: 'demo',
+          ...entry.evaluation,
+        }).success,
         `demo entry ${id}`,
       ).toBe(true);
       expect(
-        BAiResultSchema.safeParse({
+        EvaluationResultSchema.safeParse({
           source: 'demo',
           ...demoFile[id].evaluation,
         }).success,
@@ -305,7 +295,7 @@ describe('parity: ai, fallback, demo through POST /evaluation', () => {
       expect(res.body.feedbackSource).toBe(source);
       expect(Object.keys(res.body.feedback).sort()).toEqual(FEEDBACK_FIELDS);
       expect(
-        BAiResultSchema.safeParse({
+        EvaluationResultSchema.safeParse({
           source: res.body.feedbackSource,
           ...res.body.feedback,
         }).success,
@@ -359,7 +349,9 @@ describe('leak: hints in AI, demo and written modes', () => {
           'source',
         ]);
         expect(res.body.level).toBe(level);
-        expect(res.body.source).toBe(mode === 'none' ? 'written' : 'ai');
+        expect(res.body.source).toBe(
+          { none: 'written', demo: 'demo', ai: 'ai' }[mode],
+        );
         // the hint text itself is legitimately returned, so hints_json is excluded
         expectNoLeak(expect, res, { ...row, hints_json: [] });
         expect(collectKeys(res.body).has('bug_description')).toBe(false);

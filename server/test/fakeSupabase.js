@@ -6,8 +6,16 @@
  * field, it can only be because its own mapping let it through.
  *
  * Supported chain:
- *   from(t).select(cols).eq(col, v).order(col, opts).limit(n)
+ *   from(t).select(cols).eq(col, v).lt(col, v).order(col, opts).limit(n)
  *     .maybeSingle() | .single() | await (list)
+ *     (.eq is an equality filter recorded in calls.filters; .lt keeps rows
+ *     with row[col] < v and is recorded apart, in calls.ranges, so
+ *     calls.filters stays equality-only; .limit is recorded in calls.limits)
+ *   .lt compares like PostgREST on a timestamptz column: when both sides
+ *     parse as ISO 8601 dates they are compared as instants (Date.parse), so
+ *     '+00:00', '+02:00' and 'Z' offsets mean the same moment. Precision is
+ *     milliseconds (Postgres keeps microseconds). Anything else falls back to
+ *     a string compare.
  *   from(t).upsert(rows, opts) | await
  *   from(t).insert(row).select(cols).single() | await
  *   from(t).update(patch).eq(col, v)...select(cols).maybeSingle() | await
@@ -18,6 +26,18 @@
  * `calls` records everything the code under test asked for.
  */
 import { randomUUID } from 'node:crypto';
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}(T|\s|$)/;
+
+/** a < b, as instants when both are ISO dates, else as strings. */
+export function lessThan(a, b) {
+  if (typeof a === 'string' && typeof b === 'string') {
+    const ta = ISO_DATE.test(a) ? Date.parse(a) : NaN;
+    const tb = ISO_DATE.test(b) ? Date.parse(b) : NaN;
+    if (!Number.isNaN(ta) && !Number.isNaN(tb)) return ta < tb;
+  }
+  return a < b;
+}
 
 const DEFAULTS = {
   attempts: { status: 'submitted', hints_used: 0 },
@@ -34,17 +54,26 @@ export function createFakeSupabase({
     from: [],
     selects: [],
     filters: [],
+    ranges: [],
     orders: [],
+    limits: [],
     upserts: [],
     inserts: [],
     updates: [],
   };
 
   function builder(table) {
-    const state = { op: 'select', filters: [], orders: [], payload: null };
+    const state = {
+      op: 'select',
+      filters: [],
+      ranges: [],
+      orders: [],
+      payload: null,
+    };
 
     const matches = (row) =>
-      state.filters.every(([column, value]) => row[column] === value);
+      state.filters.every(([column, value]) => row[column] === value) &&
+      state.ranges.every(([column, value]) => lessThan(row[column], value));
 
     function finish(single) {
       if (state.op === 'upsert') {
@@ -100,6 +129,11 @@ export function createFakeSupabase({
         state.filters.push([column, value]);
         return chain;
       },
+      lt(column, value) {
+        calls.ranges.push({ table, column, op: 'lt', value });
+        state.ranges.push([column, value]);
+        return chain;
+      },
       order(column, options = {}) {
         const ascending = options.ascending !== false;
         calls.orders.push({ table, column, ascending });
@@ -107,6 +141,7 @@ export function createFakeSupabase({
         return chain;
       },
       limit(n) {
+        calls.limits.push({ table, limit: n });
         state.limit = n;
         return chain;
       },

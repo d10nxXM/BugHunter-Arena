@@ -284,6 +284,46 @@ describe('AttemptListQuerySchema', () => {
       ok(AttemptListQuerySchema, { userId: UUID, challengeId: 'Bad Id' }),
     ).toBe(false);
   });
+
+  it('limit defaults to 50 and coerces query strings', () => {
+    expect(AttemptListQuerySchema.parse({ userId: UUID }).limit).toBe(50);
+    expect(
+      AttemptListQuerySchema.parse({ userId: UUID, limit: '100' }).limit,
+    ).toBe(100);
+    expect(
+      AttemptListQuerySchema.parse({ userId: UUID, limit: '1' }).limit,
+    ).toBe(1);
+  });
+
+  it.each([0, 101, '0', '101', '1.5', '', 'abc', '-1'])(
+    'rejects limit %j',
+    (limit) => {
+      expect(ok(AttemptListQuerySchema, { userId: UUID, limit })).toBe(false);
+    },
+  );
+
+  it.each([
+    '2026-11-03T12:00:00Z',
+    '2026-11-03T12:00:00.123Z',
+    '2026-11-03T12:00:00+00:00',
+    '2026-11-03T12:00:00.123456+00:00',
+  ])('accepts cursor %s', (cursor) => {
+    const parsed = AttemptListQuerySchema.parse({ userId: UUID, cursor });
+    expect(parsed.cursor).toBe(cursor);
+  });
+
+  it('cursor is optional', () => {
+    expect(
+      AttemptListQuerySchema.parse({ userId: UUID }).cursor,
+    ).toBeUndefined();
+  });
+
+  it.each(['yesterday', '2026-11-03', '', '2026-11-03T12:00:00'])(
+    'rejects cursor %j',
+    (cursor) => {
+      expect(ok(AttemptListQuerySchema, { userId: UUID, cursor })).toBe(false);
+    },
+  );
 });
 
 describe('CreateUserSchema', () => {

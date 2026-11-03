@@ -6,7 +6,10 @@ import {
   VisibleTestSchema,
   ChallengeIdParamsSchema,
   ChallengeFileSchema,
+  FALLBACK_FEEDBACK_MAX,
 } from './challenge.js';
+import { EvaluationResultSchema } from './aiOutput.js';
+import { evaluateWithKeywords } from '../services/fallbackService.js';
 import { HealthSchema } from './health.js';
 import {
   API_DETAIL_EXAMPLE,
@@ -161,6 +164,28 @@ describe('ChallengeFileSchema', () => {
 
   it('accepts the real find-max.json', () => {
     expect(() => ChallengeFileSchema.parse(file())).not.toThrow();
+  });
+
+  it('fallback_feedback: up to 2000 chars, longer is rejected', () => {
+    expect(FALLBACK_FEEDBACK_MAX).toBe(2000);
+    expect(file().fallback_feedback.length).toBeLessThanOrEqual(2000);
+    const at = { ...file(), fallback_feedback: 'x'.repeat(2000) };
+    expect(ChallengeFileSchema.safeParse(at).success).toBe(true);
+    const over = { ...file(), fallback_feedback: 'x'.repeat(2001) };
+    const result = ChallengeFileSchema.safeParse(over);
+    expect(result.success).toBe(false);
+    expect(result.error.issues.map((i) => i.path.join('.'))).toEqual([
+      'fallback_feedback',
+    ]);
+  });
+
+  it('a fallback built from the longest allowed text passes EvaluationResultSchema', () => {
+    const challenge = { ...file(), fallback_feedback: 'x'.repeat(2000) };
+    const out = {
+      source: 'fallback',
+      ...evaluateWithKeywords({ challenge, answer: { explanation: '' } }),
+    };
+    expect(EvaluationResultSchema.safeParse(out).success).toBe(true);
   });
 
   it('rejects a missing required field', () => {

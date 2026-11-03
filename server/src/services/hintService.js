@@ -10,12 +10,22 @@ import { getDemoEntry } from './evaluationService.js';
  * any AI failure) the written hint. Demo mode returns the recorded hint.
  * Throws only what getWrittenHint throws (404 NOT_FOUND, db errors).
  *
- * @returns {Promise<{ level: number, hint: string, source: 'ai' | 'written' }>}
+ * `onAiCall` is invoked right before the LLM is called (and only then), so the
+ * route's aiLimiter keeps the slot; a later fallback to the written hint still
+ * counts as an AI call.
+ *
+ * @param {{ onAiCall?: () => void }} [options]
+ * @returns {Promise<{ level: number, hint: string, source: 'ai' | 'written' | 'demo' }>}
  */
-export async function getHint(challengeId, level, currentAnswer) {
+export async function getHint(
+  challengeId,
+  level,
+  currentAnswer,
+  { onAiCall } = {},
+) {
   if (config.demoMode) {
     const hint = getDemoEntry(challengeId)?.hints[level - 1];
-    if (hint) return { level, hint, source: 'ai' };
+    if (hint) return { level, hint, source: 'demo' };
     logger.warn(
       { challengeId, level },
       'no demo hint recorded, using written hint',
@@ -33,6 +43,7 @@ export async function getHint(challengeId, level, currentAnswer) {
     }
     if (challenge) {
       try {
+        onAiCall?.();
         const hint = await aiService.getHint(
           { challenge, currentAnswer },
           level,

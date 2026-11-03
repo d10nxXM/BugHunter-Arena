@@ -11,20 +11,36 @@ You own the AI mentor: worker C in `docs/PLAN.md`. You run inside your backend-l
 - `server/src/services/aiService.js` - `evaluateAnswer(context)`, `getHint(context, level)`
 - `server/src/services/evaluationService.js` - `evaluateExplanation(context)`: demo, then AI, then fallback (see the `error-handling` skill)
 - `server/src/services/fallbackService.js` - keyword-group scoring from `docs/SCORING.md`
+- `server/src/services/hintService.js` - `getHint(challengeId, level, currentAnswer, { onAiCall })`: demo, then AI, then written hint
+- `server/src/schemas/aiOutput.js` - Zod schemas for LLM output, demo entries and the evaluation result
+- `server/src/routes/hints.js` - `POST /api/challenges/:id/hints` (owned by C from batch 2)
 - `server/src/prompts/evaluation.md`, `server/src/prompts/hint.md`
 - `server/data/demo-responses.json`
 - `server/eval/explanations.json`, `server/scripts/run-eval.js`
 
-Don't edit routes, `app.js`, scoring or the database layer. If you need something from them, say so in your summary.
+Don't edit routes other than `routes/hints.js`, `app.js`, scoring or the database layer. If you need something from them, say so in your summary.
 
 ## Interface others rely on
 
 ```js
 // evaluationService.js
-export async function evaluateExplanation({ attemptId, challenge, answer, testSummary }) -> {
+export async function evaluateExplanation({ attemptId, challenge, answer, testSummary, onAiCall }) -> {
   source: 'ai' | 'fallback' | 'demo',
   is_correct, explanation_quality, detected_misconception, needs_clarification, hint, feedback, practice_tip
 }
+// attemptId: logs only. challenge: full row. answer: { selectedLines, explanation, edgeCase, fixedCode }.
+// testSummary: { testsPassed, testsTotal }. onAiCall: called once, right before the LLM is called.
+
+// hintService.js
+export async function getHint(challengeId, level, currentAnswer, { onAiCall } = {})
+  -> { level, hint, source: 'ai' | 'written' | 'demo' }
+
+// aiService.js (called only by evaluationService and hintService)
+evaluateAnswer({ challenge, answer, testSummary })
+// reads challenge.description, bug_category, code, bug_description; answer.explanation; testSummary counts
+getHint({ challenge, currentAnswer }, level)
+// reads challenge.description, bug_category, code, hints_json[level - 1]; currentAnswer.explanation;
+// reference_solution only to reject a leaking hint, never sent
 ```
 
 All three sources return every field. That is checked by the parity test in `ai-regression-testing`.
@@ -49,12 +65,13 @@ Hint prompt (`prompts/hint.md`): level 1 points at the kind of input, level 2 na
 | --- | --- | --- |
 | Temperature | 0-0.2 | 0.3 |
 | Max output tokens | ~400 | ~80 |
-| Timeout | `AI_TIMEOUT_MS` (15 s) | 8 s |
-| Retry | Once, only on invalid JSON | None, written hint instead |
+| Timeout | `AI_TIMEOUT_MS` (15 s) | 8 s, or `AI_TIMEOUT_MS` if lower |
+| Retry | Once, on invalid JSON or schema-invalid output, only if at least 1 s of the budget is left | None, written hint instead |
 
 - Validate output with Zod; clamp `explanation_quality` to 0-10.
 - Escape `<` and `>` in student text before wrapping it in `<student_answer>`.
-- Reject a hint that contains a line from `reference_solution`; use the written hint.
+- Reject a hint, and use the written hint instead, when it contains a backtick, or when, after trimming, collapsing whitespace and lowercasing, it contains a line of `reference_solution`. Solution lines are ignored if they are shorter than 3 characters, contain only brackets and punctuation (`()[]{}:,;`), or also appear in the original `code`.
+- Demo mode: hints return `source: "demo"`, evaluations `source: "demo"`. A missing demo entry falls back to the written hint or the keyword fallback.
 - `LLM_API_KEY` empty or `DEMO_MODE=true`: never call the provider.
 - The provider is swappable: only `llmClient.js` knows its SDK.
 

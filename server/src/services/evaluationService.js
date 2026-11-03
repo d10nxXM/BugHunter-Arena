@@ -72,6 +72,8 @@ export function getDemoEntry(challengeId) {
  * @param {object} context.challenge Full challenge row, snake_case as stored.
  * @param {object} context.answer `{ selectedLines, explanation, edgeCase, fixedCode }`.
  * @param {object} [context.testSummary] `{ testsPassed, testsTotal }`.
+ * @param {() => void} [context.onAiCall] Called right before the LLM call (and
+ *   only then), so aiLimiter keeps the slot. Never passed to aiService.
  * @returns {Promise<{
  *   source: 'ai' | 'fallback' | 'demo',
  *   is_correct: boolean,
@@ -95,6 +97,7 @@ export async function evaluateExplanation(context = {}) {
     );
   } else if (config.aiStatus === 'available') {
     try {
+      context.onAiCall?.();
       const feedback = await aiService.evaluateAnswer({
         challenge,
         answer: context.answer,

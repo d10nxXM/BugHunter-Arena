@@ -185,3 +185,52 @@ describe('parity: ai, fallback and demo return every field', () => {
     check(await evaluateExplanation(context()), 'demo');
   });
 });
+
+describe('onAiCall', () => {
+  const withHook = (onAiCall) => ({ ...context(), onAiCall });
+
+  it('is called once, right before evaluateAnswer, when the AI is available', async () => {
+    mocks.evaluateAnswer.mockResolvedValue(aiFeedback);
+    const onAiCall = vi.fn();
+    const result = await evaluateExplanation(withHook(onAiCall));
+    expect(result.source).toBe('ai');
+    expect(onAiCall).toHaveBeenCalledTimes(1);
+    expect(onAiCall.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.evaluateAnswer.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('is still called when evaluateAnswer rejects', async () => {
+    mocks.evaluateAnswer.mockRejectedValue(new Error('down'));
+    const onAiCall = vi.fn();
+    const result = await evaluateExplanation(withHook(onAiCall));
+    expect(result.source).toBe('fallback');
+    expect(onAiCall).toHaveBeenCalledTimes(1);
+    expect(onAiCall.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.evaluateAnswer.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('is never passed to the AI service', async () => {
+    mocks.evaluateAnswer.mockResolvedValue(aiFeedback);
+    await evaluateExplanation(withHook(vi.fn()));
+    expect(mocks.evaluateAnswer.mock.calls[0][0]).not.toHaveProperty(
+      'onAiCall',
+    );
+  });
+
+  it('is not called in demo mode', async () => {
+    mocks.config.demoMode = true;
+    mocks.config.aiStatus = 'demo';
+    const onAiCall = vi.fn();
+    await evaluateExplanation(withHook(onAiCall));
+    expect(onAiCall).not.toHaveBeenCalled();
+  });
+
+  it('is not called when the AI is unavailable', async () => {
+    mocks.config.aiStatus = 'unavailable';
+    const onAiCall = vi.fn();
+    await evaluateExplanation(withHook(onAiCall));
+    expect(onAiCall).not.toHaveBeenCalled();
+  });
+});

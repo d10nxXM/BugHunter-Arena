@@ -18,14 +18,17 @@ The work is split so several agents can run at once without editing the same fil
 | Backend batch 1 (A) | Merged | Challenges and written hints |
 | Backend batch 2 (B and C) | Merged | B first, then C. B: attempts, evaluation, scoring, progress, users. C: AI mentor, AI hints, demo mode, eval set. No migration |
 | M2 backend | Complete | `npm test` in `server/` passes on `main` after batch 2 |
+| Backend follow-up | Done | AI quota counts LLM-calling requests only, demo hint source, validation before aiLimiter, attempts index and pagination, cleanup |
 
 Backend remaining before M3:
 
-- Contract changes for `docs/API.md`, `docs/DATA_MODEL.md` and `docs/SCORING.md` need planner approval. The disagreements found after batch 2 are listed in the batch 2 review.
-- Decide whether written hints count toward `aiLimiter`. The code applies it to every hint request; `docs/API.md` says written hints use only the general limit.
-- Add an index on `attempts (user_id, created_at)` and decide whether the history and progress reads need a limit. Both need a migration, pushed after merge.
-- Remove stale comments and test titles that still describe the batch 1 stubs: `server/src/middleware/rateLimit.js` (`aiLimiter` note), `server/src/routes/hints.test.js` ("accepts and ignores currentAnswer"), `server/test/integration.test.js` (parity title), and `server/src/middleware/notImplemented.js`, which no route uses.
-- Run `npm run eval` against the real provider and record the table. No run is recorded in the repo yet.
+- Push `supabase/migrations/20261103120000_attempts_user_created_at_idx.sql` with `npx supabase db push` after this change is committed.
+- Fix `LLM_MODEL` for the Gemini key and run `npm run eval`, then record the table. No run is recorded yet.
+- Open contract items for planner:
+  - whether the server should reject a hint `level` other than `hintsUsed + 1`
+  - whether to switch to a composite (`createdAt`, `id`) cursor
+  - aligning the reference-implementation code block in docs/SCORING.md with the documented clamp and finite check
+- Later migration: drop the now-redundant `attempts_user_id_idx`.
 
 ## M1: what must exist before parallel work
 
@@ -34,7 +37,7 @@ Server foundation (first Claude Code task):
 - Supabase client, seed script, `GET /api/health`, `GET /api/challenges`, `GET /api/challenges/:id`
 
 Shell completion (so M2 workers never edit shared files):
-- `server/src/app.js` registers every router: challenges, hints, attempts, progress, users. Routers not built yet return `501 NOT_IMPLEMENTED`.
+- `server/src/app.js` registers every router: challenges, hints, attempts, progress, users. Routers not built yet returned `501 NOT_IMPLEMENTED` until built in M2.
 - `server/src/services/evaluationService.js` stub exporting `evaluateExplanation()` that returns the fallback shape.
 - `client/src/App.jsx` with all routes and placeholder pages: ChallengeList, ChallengePage, ResultView, Dashboard.
 - `client/src/api/client.js` and `client/src/api/mocks/` matching every example in `docs/API.md`.
@@ -60,7 +63,7 @@ B applies `aiLimiter` to `POST /api/attempts/:id/evaluation` when building it.
 
 A added a server-only `getFullChallenge(id)` in `db/challenges.js`. It returns the full challenge row, hidden fields included. It may be called only from `services/attemptService.js` (B, not yet created) and `services/hintService.js` (C, not yet created). No route touches the full row; an integration tripwire test enforces this.
 
-A shipped written hints only (`source: "written"`). In batch 2, `routes/hints.js` calls `services/hintService.js` (C). hintService loads the full row with `getFullChallenge`, calls `aiService.getHint(context, level)`, and falls back to `challengeService.getWrittenHint()` when the AI is unavailable, times out, or returns a hint that contains a line of the reference solution. Ownership of `routes/hints.js` moves from A to C for that batch. Written hints use the general API limit (100 per 10 min per IP). C restores `aiLimiter` (20 per 10 min per IP) on the hints route when it wires AI hints in batch 2.
+A shipped written hints only (`source: "written"`). In batch 2, `routes/hints.js` calls `services/hintService.js` (C). hintService loads the full row with `getFullChallenge`, calls `aiService.getHint(context, level)`, and falls back to `challengeService.getWrittenHint()` when the AI is unavailable, times out, or returns a hint that contains a line of the reference solution. Ownership of `routes/hints.js` moves from A to C for that batch. Written hints use the general API limit (100 per 10 min per IP). C restores `aiLimiter` (20 per 10 min per IP) on the hints route when it wires AI hints in batch 2. Since the backend follow-up, both AI routes use `aiLimiter`, but only requests that call the LLM use the AI quota (see docs/API.md, Rate limits).
 
 C's LLM access uses Node's built-in `fetch` to an OpenAI-compatible chat-completions endpoint, configured by `LLM_API_URL`, `LLM_MODEL` and `LLM_API_KEY` in `server/.env`. Only `services/llmClient.js` (C, not yet created) knows the provider, and `llmClient.js` is called only by `aiService.js`. No SDK.
 

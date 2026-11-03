@@ -13,11 +13,11 @@ Score is 0-100. Three components (70 points) are deterministic; the explanation 
 
 ## Rules
 
-- An edge case **exposes the bug** when the original code and the reference solution return different values for that input (`originalOutput !== referenceOutput`, compared as JSON). If the original raises and the reference does not, it also exposes the bug.
+- An edge case **exposes the bug** when the original code and the reference solution return different values for that input (`originalOutput !== referenceOutput`, compared as JSON), or when the original raised. `edgeCaseCheck.error` is the only signal that something raised: a non-empty string means the original code raised, and the edge case then exposes the bug whatever the two outputs are. The reference solution is trusted not to raise, so the request has no separate error field for it.
 - The expected result is **correct** when it equals `referenceOutput` as JSON.
 - Results compare as JSON values: `None` is `null`; numbers by value (`1 == 1.0`); booleans equal only booleans (`true != 1`); strings by value; lists element by element in order; objects by the same keys in any order. NaN, Infinity, sets and other non-JSON values never match.
 - A fix identical to the original code (ignoring whitespace) scores 0.
-- A test with `error: "timeout"` counts as failed.
+- Fix scoring trusts the browser's results. A test counts as passed when its `passed` is `true` and its `error` is not `"timeout"`; a test with `error: "timeout"` counts as failed. `actual` is not re-checked on the server, and results whose `id` is not a test of the challenge are ignored.
 - Hint penalty: level 1 -5, level 2 -5, level 3 -10. Total by hints used: 0, 5, 10, 20.
 - Total = sum of components minus hint penalty, clamped to 0-100.
 
@@ -30,9 +30,11 @@ Score is 0-100. Three components (70 points) are deterministic; the explanation 
 | 6-8 | Right cause and consequence |
 | 9-10 | Right cause, consequence and edge case, clearly stated |
 
+The AI's `explanation_quality` must be a finite number. The AI output schema rounds it to an integer and clamps it to 0-10 (for example 14.4 becomes 10 and -2 becomes 0). A missing or non-numeric quality makes the output schema-invalid, which is handled like invalid JSON (see "Fallback without the AI"). Scoring clamps the quality to 0-10 again, and a value that is not a finite number scores 0 explanation points.
+
 ## Fallback without the AI
 
-Used when the AI times out (15 s), returns invalid JSON twice, is unavailable, or for any error. Each challenge has three keyword groups (cause, condition, fix). A group matches if the lowercased explanation contains any of its stems. Stems are lowercased too, and blank stems are ignored.
+Used when the AI is not configured, times out (`AI_TIMEOUT_MS`, 15 s), returns a provider error, fails in any other way, or returns unusable output twice. Unusable means not valid JSON, or valid JSON that fails the output schema. The evaluation retries once on either kind, in any combination. Both tries share one 15 s budget, and the retry is skipped (fallback right away) when less than 1 s of the budget is left. Timeouts and provider errors are not retried. The server also wraps the whole evaluation in an outer guard of `AI_TIMEOUT_MS` + 1 s. If the guard fires, or the result does not match the evaluation result schema, the keyword fallback below is used. Each challenge has three keyword groups (cause, condition, fix). A group matches if the lowercased explanation contains any of its stems. Stems are lowercased too, and blank stems are ignored.
 
 | Groups matched | Quality |
 | --- | --- |

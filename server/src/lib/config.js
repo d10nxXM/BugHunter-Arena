@@ -89,6 +89,22 @@ export function parseConfig(env) {
   };
 }
 
+/**
+ * Names of the LLM variables still missing when the AI is partly configured:
+ * aiStatus is 'unavailable' but at least one of LLM_API_KEY, LLM_API_URL,
+ * LLM_MODEL is set. Otherwise []. Pure; returns names only, never values.
+ */
+export function missingLlmVariables(cfg) {
+  if (cfg?.aiStatus !== 'unavailable') return [];
+  const vars = [
+    ['LLM_API_KEY', cfg.llmApiKey],
+    ['LLM_API_URL', cfg.llmApiUrl],
+    ['LLM_MODEL', cfg.llmModel],
+  ];
+  const missing = vars.filter(([, value]) => !value).map(([name]) => name);
+  return missing.length === vars.length ? [] : missing;
+}
+
 // Tests get fixed values from vitest.config.js and must never read server/.env.
 if (process.env.NODE_ENV !== 'test') {
   loadEnv({

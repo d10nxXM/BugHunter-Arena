@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import * as hintService from '../services/hintService.js';
 import { validate } from '../middleware/validate.js';
-import { aiLimiter } from '../middleware/rateLimit.js';
+import { aiCallRecorder, aiLimiter } from '../middleware/rateLimit.js';
 import { ChallengeIdParamsSchema } from '../schemas/challenge.js';
 
 // Mounted in app.js at /api/challenges/:id/hints. mergeParams exposes the
@@ -24,12 +24,14 @@ const HintRequestSchema = z.object({
 const HintResponseSchema = z.strictObject({
   level: z.int().min(1).max(3),
   hint: z.string().min(1),
-  source: z.enum(['written', 'ai']),
+  source: z.enum(['written', 'ai', 'demo']),
 });
 
 // POST /api/challenges/:id/hints
-// aiLimiter shares one counter with the evaluation route (20 per 10 min). It
-// runs after validation, so malformed requests do not use up AI calls.
+// aiLimiter shares one counter with the evaluation route (20 LLM calls per
+// 10 min). It runs after validation. Only a request on which hintService
+// actually calls the LLM keeps its slot (aiCallRecorder); written and demo
+// hints, 400 and 404 are given back.
 router.post(
   '/',
   validate(ChallengeIdParamsSchema, 'params'),
@@ -40,6 +42,7 @@ router.post(
       req.valid.params.id,
       req.valid.body.level,
       req.valid.body.currentAnswer,
+      { onAiCall: aiCallRecorder(res) },
     );
     res.json(HintResponseSchema.parse(hint));
   },

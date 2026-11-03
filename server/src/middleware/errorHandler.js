@@ -26,9 +26,7 @@ export function notFound(req, res, next) {
 export function errorHandler(err, req, res, next) {
   if (res.headersSent) return next(err);
 
-  // 501 is the one 5xx an AppError may render as-is: it is raised on purpose
-  // by route shells (see notImplemented.js) with a fixed, safe message.
-  if (err instanceof AppError && (err.status < 500 || err.status === 501)) {
+  if (err instanceof AppError && err.status < 500) {
     return send(res, err.status, err.code, err.message);
   }
 

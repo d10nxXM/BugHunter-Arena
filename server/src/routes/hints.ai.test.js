@@ -92,6 +92,7 @@ describe('POST /api/challenges/:id/hints with the AI', () => {
       const res = await post({ level: 1 });
       expect(res.status).toBe(200);
       expect(res.body.hint).toBe(row.hints_json[0]);
+      expect(res.body.source).toBe('demo');
       expect(state.complete).not.toHaveBeenCalled();
     } finally {
       config.demoMode = false;

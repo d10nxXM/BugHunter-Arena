@@ -4,7 +4,7 @@ Three tables in Supabase (PostgreSQL): `challenges`, `attempts`, and the optiona
 
 Challenge JSON files in `server/data/challenges/` are the source of truth. `server/scripts/seed.js` (`npm run seed` in `server/`) checks every file against `ChallengeFileSchema` and checks that the file name matches the id, then upserts all of them into `challenges` in one call. If any file is invalid, nothing is written. The seed does not run the extra checks of `validate-challenges` (see Validation rules).
 
-The schema is applied through migrations in `supabase/migrations/`, pushed with `npx supabase db push --remote` after the PR is merged to `main`. The SQL below is the first migration; later changes are new migration files, and this document is updated in the same PR.
+The schema is applied through migrations in `supabase/migrations/`, pushed with `npx supabase db push` after the PR is merged to `main`. The SQL below is the schema after all migrations (see the Migrations table); later changes are new migration files, and this document is updated in the same PR.
 
 ## SQL schema
 
@@ -59,12 +59,30 @@ create table attempts (
 
 create index attempts_user_id_idx on attempts (user_id);
 create index attempts_challenge_id_idx on attempts (challenge_id);
+-- 20261103120000_attempts_user_created_at_idx.sql
+create index attempts_user_id_created_at_idx on attempts (user_id, created_at desc);
 
 alter table users enable row level security;
 alter table challenges enable row level security;
 alter table attempts enable row level security;
 -- No policies: only the server's service key reads and writes these tables.
 ```
+
+Migrations:
+
+| File | Change |
+| --- | --- |
+| `20261103002608_init_schema.sql` | Initial schema |
+| `20261103120000_attempts_user_created_at_idx.sql` | Index `attempts_user_id_created_at_idx` on `attempts (user_id, created_at desc)` for history and progress reads |
+
+## Attempt columns
+
+- `duration`: seconds from opening the challenge to submitting. It is the request's `durationSec`, rounded to an integer and capped at 2147483647.
+- `test_results`: the `testResults` array of the evaluation request as validated. Up to 100 items `{ id, passed, actual?, error? }`, with unknown keys dropped.
+- `score_breakdown`: `{ lineIdentification, explanation, edgeCase, fix, hintPenalty }`. `hintPenalty` is 0 or negative (`docs/SCORING.md`).
+- `ai_feedback`: the seven feedback fields `{ is_correct, explanation_quality, detected_misconception, needs_clarification, hint, feedback, practice_tip }`. The source is stored separately in `feedback_source` (`ai`, `fallback` or `demo`).
+- `test_results`, `score`, `score_breakdown`, `ai_feedback` and `feedback_source` are `null` while `status` is `submitted`. They are all set in one conditional update that also sets `status = 'evaluated'`, and only if the attempt is still `submitted`.
+- `feedback_rating` is not written by any endpoint yet (FR-22).
 
 ## Challenge JSON format
 
@@ -106,6 +124,7 @@ Files:
 Fields (schema):
 - `id`: 1-64 characters, lowercase letters, digits and hyphens only (`^[a-z0-9-]{1,64}$`).
 - `title`, `description`, `function_name`, `code`, `bug_category`, `bug_description`, `reference_solution`, `fallback_feedback`: non-empty strings.
+- `fallback_feedback`: at most 2000 characters.
 - `language`: `python` or `javascript`. `difficulty`: `lako`, `srednje` or `teško`.
 - `bug_lines`: at least one entry. `related_lines`: required but may be empty. Both hold positive integers.
 - `tests_json`: each test is `{ id, args, expected, visible, failsOnOriginal? }`. `id` is a non-empty string, `args` is an array of JSON values, `expected` is any JSON value, `visible` is a boolean, and `failsOnOriginal` is an optional boolean in the schema. At least 2 visible tests and at least 1 hidden test. Test ids are unique within the challenge.
@@ -129,7 +148,13 @@ See `server/data/challenges/find-max.json` for a complete example.
 
 ## Derived data for the dashboard
 
-- **Solved challenge**: best attempt has a score of at least 70.
-- **Total score**: sum of the best score per challenge, so retries do not inflate it.
-- **Average time**: mean `duration` over solved challenges.
-- **Weak categories**: categories where the student most often missed the bug line or scored under 70; top three are shown.
+Computed by `computeProgress` in `server/src/services/attemptService.js` from the user's newest 1000 attempts, read newest first.
+
+- **Best attempt** of a challenge: the evaluated attempt with the highest score. On a tie the newest wins. Submitted attempts that are not evaluated are never the best attempt.
+- **Attempted**: the number of distinct challenges with at least one attempt, evaluated or not.
+- **Per challenge**: one entry per attempted challenge, sorted by challenge id. `bestScore` is the best attempt's score, or 0 if the challenge has no evaluated attempt. `attempts` counts all attempts, evaluated or not.
+- **Solved challenge**: its best attempt has a score of at least 70.
+- **Total score**: the sum of `bestScore` over attempted challenges, so retries do not inflate it.
+- **averageDurationSec**: the mean `duration` of the best attempt of each solved challenge, rounded to whole seconds. A missing duration counts as 0. It is 0 if no challenge is solved.
+- **Weak categories**: each evaluated attempt whose challenge has a known category is a miss for that category when `score_breakdown.lineIdentification < 40` or its score is under 70. A selection of related lines only scores 20, so it counts as a miss. Categories are sorted by misses, most first, with ties in alphabetical order. The top 3 are returned as `{ category, misses }`. Categories with no misses are not listed.
+- A user with no attempts gets zeros and empty lists.

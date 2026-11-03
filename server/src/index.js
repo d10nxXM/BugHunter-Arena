@@ -1,5 +1,5 @@
 import { app } from './app.js';
-import { config } from './lib/config.js';
+import { config, missingLlmVariables } from './lib/config.js';
 import { logger } from './lib/logger.js';
 
 app.listen(config.port, (error) => {
@@ -9,4 +9,11 @@ app.listen(config.port, (error) => {
     return;
   }
   logger.info({ port: config.port, ai: config.aiStatus }, 'API listening');
+  const missing = missingLlmVariables(config);
+  if (missing.length > 0) {
+    logger.warn(
+      { missing },
+      'AI partly configured and unavailable; set the missing variables',
+    );
+  }
 });
