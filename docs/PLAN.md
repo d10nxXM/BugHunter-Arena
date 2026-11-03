@@ -30,11 +30,15 @@ Shell completion (so M2 workers never edit shared files):
 
 | Worker | Agent | Owns | Must not touch |
 | --- | --- | --- | --- |
-| A Challenges and hints | backend-dev | `routes/challenges.js`, `routes/hints.js`, `db/challenges.js`, `scripts/seed.js`, `scripts/validate-challenges.js`, `data/challenges/` | `app.js`, attempts, AI services |
-| B Attempts and scoring | backend-dev + tdd-guide | `routes/attempts.js`, `routes/progress.js`, `db/attempts.js`, `services/scoringService.js`, `services/attemptService.js`, `schemas/attempt.js` | `app.js`, AI services, `docs/SCORING.md` |
-| C AI mentor | ai-integration | `services/llmClient.js`, `aiService.js`, `evaluationService.js`, `fallbackService.js`, `prompts/`, `data/demo-responses.json`, `eval/` | Routes, scoring, db |
+| A Challenges and hints | backend-dev | `routes/challenges.js`, `routes/hints.js` (batch 1 only; moves to C in batch 2), `db/challenges.js`, `services/challengeService.js`, `scripts/seed.js`, `scripts/validate-challenges.js`, `data/challenges/` | `app.js`, attempts, AI services |
+| B Attempts and scoring | backend-dev + tdd-guide | `routes/attempts.js`, `routes/progress.js`, `db/attempts.js`, `services/scoringService.js`, `services/attemptService.js`, `schemas/attempt.js` | `app.js`, AI services, `docs/SCORING.md`, `db/challenges.js` (calls `getFullChallenge` only) |
+| C AI mentor | ai-integration | `services/llmClient.js`, `aiService.js`, `evaluationService.js`, `fallbackService.js`, `prompts/`, `data/demo-responses.json`, `eval/`, `routes/hints.js` (batch 2, from A) | Routes except `routes/hints.js` in batch 2, scoring, db |
 
 B calls `evaluateExplanation()` from C's interface; until C is merged, the M1 stub returns the fallback shape.
+
+A added a server-only `getFullChallenge(id)` in `db/challenges.js`. It returns the full challenge row, hidden fields included. B calls it from the attempts service (`services/attemptService.js`) only. No public route may use it.
+
+A shipped written hints only (`source: "written"`). In batch 2, C wires `routes/hints.js` to `aiService.getHint()`; the written hint stays the fallback. Ownership of `routes/hints.js` moves from A to C for that batch.
 
 ### Frontend
 
