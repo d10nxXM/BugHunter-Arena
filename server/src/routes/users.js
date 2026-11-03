@@ -1,10 +1,15 @@
 import { Router } from 'express';
-import { notImplemented } from '../middleware/notImplemented.js';
+import { validate } from '../middleware/validate.js';
+import { CreateUserSchema } from '../schemas/attempt.js';
+import { createUser } from '../db/users.js';
 
-// Mounted in app.js at /api/users. No M2 owner in docs/PLAN.md yet.
+// Mounted in app.js at /api/users.
 const router = Router();
 
 // POST /api/users
-router.post('/', notImplemented);
+router.post('/', validate(CreateUserSchema), async (req, res) => {
+  const user = await createUser(req.valid.body.displayName);
+  res.status(201).json(user);
+});
 
 export default router;
