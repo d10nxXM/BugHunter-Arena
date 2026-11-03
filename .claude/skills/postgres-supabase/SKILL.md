@@ -87,8 +87,11 @@ Add an index when a query filters or sorts on a column, not speculatively. Check
 
 ## Migrations
 
-- Keep SQL migrations in `server/db/migrations/NNN_description.sql`, applied in order (Supabase CLI or the SQL editor).
-- Never edit an applied migration; add a new one.
+- Migrations live in `supabase/migrations/` at the repo root.
+- Create one with `npx supabase migration new <description>`; it gets a timestamped filename.
+- Apply with `npx supabase db push --remote` (after a one-time `npx supabase login` and `npx supabase link --project-ref <ref>`). It applies only migrations not yet recorded in the database. Push after the migration's PR is merged to `main`, never from an unmerged branch.
+- Never change the schema in the dashboard's SQL editor or table editor. That creates drift the migrations don't know about. Every change is a migration file, reviewed in a PR.
+- Never edit a migration that has been applied; add a new one.
 - Adding a `not null` column to a table with rows needs a default or a backfill step.
 
 ## Seed

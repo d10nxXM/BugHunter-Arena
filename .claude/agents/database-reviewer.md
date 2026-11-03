@@ -31,7 +31,7 @@ You review the database layer of BugHunter Arena: Supabase (PostgreSQL), accesse
 
 ## Migrations
 
-- One migration per change, in order, never edited after it has been applied.
+- Migrations are in `supabase/migrations/`, one per change, never edited after they have been applied. Schema changes made in the dashboard instead of a migration are HIGH.
 - Adding a `not null` column to a table with data needs a default or a backfill.
 - Seed script (`scripts/seed.js`) upserts by `id`, so it is safe to run twice.
 

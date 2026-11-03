@@ -4,6 +4,8 @@ Three tables in Supabase (PostgreSQL): `challenges`, `attempts`, and the optiona
 
 Challenge JSON files in `server/data/challenges/` are the source of truth; `server/scripts/seed.js` upserts them into `challenges`.
 
+The schema is applied through migrations in `supabase/migrations/`, pushed with `npx supabase db push --remote` after the PR is merged to `main`. The SQL below is the first migration; later changes are new migration files, and this document is updated in the same PR.
+
 ## SQL schema
 
 ```sql
