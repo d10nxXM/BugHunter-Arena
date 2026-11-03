@@ -60,6 +60,10 @@ Delegate to these in `.claude/agents/`. Reviewers report, they don't edit.
 | Run a backend batch as a tree (plan, parallel areas, merge) | `backend-orchestrator`, started with `claude --agent backend-orchestrator` |
 | One backend area: build, review, test in its own worktree | `backend-lead` (started by the orchestrator) |
 | Backend tests, coverage, contract and integration runs | `backend-tester` |
+| AI hints, evaluation, prompts, fallback, demo responses | `ai-integration` |
+| Pyodide worker, test results, code editor | `test-runner` |
+
+Parallel work follows `docs/PLAN.md`: each worker edits only the files it owns.
 
 ## Skills
 
