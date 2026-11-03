@@ -3,7 +3,14 @@ import globals from 'globals';
 import prettier from 'eslint-config-prettier';
 
 export default [
+  { ignores: ['coverage/'] },
   js.configs.recommended,
-  { languageOptions: { globals: globals.node, ecmaVersion: 'latest', sourceType: 'module' } },
+  {
+    languageOptions: {
+      globals: globals.node,
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+    },
+  },
   prettier,
 ];

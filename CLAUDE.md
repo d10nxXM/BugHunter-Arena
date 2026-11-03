@@ -57,6 +57,9 @@ Delegate to these in `.claude/agents/`. Reviewers report, they don't edit.
 | Build, dev server, lint or install fails | `build-error-resolver` |
 | User flow changed, before a release or demo | `e2e-runner` |
 | Code changed something the docs describe | `docs-sync` |
+| Run a backend batch as a tree (plan, parallel areas, merge) | `backend-orchestrator`, started with `claude --agent backend-orchestrator` |
+| One backend area: build, review, test in its own worktree | `backend-lead` (started by the orchestrator) |
+| Backend tests, coverage, contract and integration runs | `backend-tester` |
 
 ## Skills
 
