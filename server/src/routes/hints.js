@@ -7,7 +7,9 @@ import { ChallengeIdParamsSchema } from '../schemas/challenge.js';
 
 // Mounted in app.js at /api/challenges/:id/hints. mergeParams exposes the
 // challenge id as req.params.id. The level is range checked (1-3) but not
-// tied to the number of hints already used.
+// tied to the number of hints already used. This is decided behaviour: hint
+// order and count are deliberately not enforced on the server (practice use
+// only), and each response holds exactly one level. See docs/API.md.
 const router = Router({ mergeParams: true });
 
 // The student's work in progress; shaped and capped because the AI may read it.
