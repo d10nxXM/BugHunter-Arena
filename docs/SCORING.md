@@ -15,7 +15,7 @@ Score is 0-100. Three components (70 points) are deterministic; the explanation 
 
 - An edge case **exposes the bug** when the original code and the reference solution return different values for that input (`originalOutput !== referenceOutput`, compared as JSON). If the original raises and the reference does not, it also exposes the bug.
 - The expected result is **correct** when it equals `referenceOutput` as JSON.
-- Results compare as JSON values: Python `None` is `null`; lists compare element by element.
+- Results compare as JSON values: `None` is `null`; numbers by value (`1 == 1.0`); booleans equal only booleans (`true != 1`); strings by value; lists element by element in order; objects by the same keys in any order. NaN, Infinity, sets and other non-JSON values never match.
 - A fix identical to the original code (ignoring whitespace) scores 0.
 - A test with `error: "timeout"` counts as failed.
 - Hint penalty: level 1 -5, level 2 -5, level 3 -10. Total by hints used: 0, 5, 10, 20.
@@ -32,7 +32,7 @@ Score is 0-100. Three components (70 points) are deterministic; the explanation 
 
 ## Fallback without the AI
 
-Used when the AI times out (15 s), returns invalid JSON twice, is unavailable, or for any error. Each challenge has three keyword groups (cause, condition, fix). A group matches if the lowercased explanation contains any of its stems.
+Used when the AI times out (15 s), returns invalid JSON twice, is unavailable, or for any error. Each challenge has three keyword groups (cause, condition, fix). A group matches if the lowercased explanation contains any of its stems. Stems are lowercased too, and blank stems are ignored.
 
 | Groups matched | Quality |
 | --- | --- |
@@ -41,7 +41,19 @@ Used when the AI times out (15 s), returns invalid JSON twice, is unavailable, o
 | 1 | 3 |
 | 0 | 0 |
 
-The result is marked `feedbackSource: "fallback"` and the feedback text is the challenge's `fallback_feedback`.
+The result is marked `feedbackSource: "fallback"` (`evaluateExplanation()` returns `source: "fallback"`). The `feedback` object has these values:
+
+| Field | Value |
+| --- | --- |
+| is_correct | `true` when `explanation_quality >= 7`, else `false` |
+| explanation_quality | From the table above: 0, 3, 7 or 10 |
+| detected_misconception | `null` |
+| needs_clarification | `false` |
+| hint | `null` |
+| feedback | The challenge's `fallback_feedback`; if it is missing or blank, the generic text `Procjena bez AI-ja: objašnjenje je ocijenjeno prema ključnim pojmovima.` |
+| practice_tip | `null` |
+
+Known weakness: two matched groups without the cause group (for example condition and fix) still give quality 7 and `is_correct: true`.
 
 ## Worked example (find_max)
 

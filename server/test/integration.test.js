@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createFakeSupabase } from './fakeSupabase.js';
 import { CHALLENGES_DIR, expectNoLeak } from './fixtures.js';
@@ -148,23 +148,151 @@ describe('leak: public responses, all challenges', () => {
     }
   });
 
-  it('getFullChallenge has no caller outside its definition and tests', () => {
-    const srcDir = fileURLToPath(new URL('../src', import.meta.url));
-    const hits = [];
+  // User decision (see docs/PLAN.md): only attemptService.js and
+  // hintService.js may reference getFullChallenge, besides its definition in
+  // db/challenges.js. hintService may use it so AI hints can check against
+  // hidden data; routes call only services, never the full row. These files
+  // may not exist yet; that is fine.
+  const GET_FULL_CHALLENGE_ALLOWED = [
+    'src/db/challenges.js',
+    'src/services/attemptService.js',
+    'src/services/hintService.js',
+  ];
+
+  // Text tripwires, not a sandbox: they read files as plain text and match
+  // patterns, so they catch honest mistakes, not deliberate obfuscation.
+  //
+  // Scan scope: .js/.mjs/.cjs files under server/ plus server/package.json.
+  // Skipped (by path relative to server/): node_modules/, coverage/ and this
+  // guard file. Other `test` directories are scanned.
+  const serverDir = fileURLToPath(new URL('..', import.meta.url));
+  const toPosix = (p) => p.replaceAll(String.fromCharCode(92), '/');
+  const SKIP_PREFIXES = ['node_modules/', 'coverage/'];
+  const GUARD_FILE = 'test/integration.test.js';
+  const SOURCE_EXT = /\.(js|mjs|cjs)$/;
+  const isTestPath = (rel) => /\.test\.[^/]+$/.test(rel) || /^test\//.test(rel);
+
+  // Returns { files, hits, scanned }. `files` are all scanned files as
+  // { rel, src, isTest }; `scanned` is their relative paths. `hits` are the
+  // relative paths of files accepted by `select` whose text satisfies
+  // `predicate`.
+  const scanServer = (predicate, select = () => true, root = serverDir) => {
+    const files = [];
     const walk = (dir) => {
       for (const name of readdirSync(dir)) {
         const p = join(dir, name);
-        if (statSync(p).isDirectory()) walk(p);
-        else if (p.endsWith('.js') && !p.endsWith('.test.js')) {
-          if (readFileSync(p, 'utf8').includes('getFullChallenge'))
-            hits.push(
-              p.replaceAll(String.fromCharCode(92), '/').split('/src/')[1],
-            );
+        const rel = toPosix(relative(root, p));
+        if (statSync(p).isDirectory()) {
+          if (!SKIP_PREFIXES.includes(`${rel}/`)) walk(p);
+        } else if (
+          (SOURCE_EXT.test(name) || rel === 'package.json') &&
+          rel !== GUARD_FILE
+        ) {
+          files.push({
+            rel,
+            src: readFileSync(p, 'utf8'),
+            isTest: isTestPath(rel),
+          });
         }
       }
     };
-    walk(srcDir);
-    expect(hits).toEqual(['db/challenges.js']);
+    walk(root);
+    const hits = files
+      .filter((f) => select(f) && predicate(f.src))
+      .map((f) => f.rel);
+    return { files, hits, scanned: files.map((f) => f.rel) };
+  };
+
+  const isNonTestSourceOrPackage = (f) => f.rel === 'package.json' || !f.isTest;
+  const isPackageOrTest = (f) => f.rel === 'package.json' || f.isTest;
+
+  const expectScanCovered = (scanned) => {
+    expect(scanned).toContain('src/app.js');
+    expect(scanned).toContain('scripts/validate-challenges.js');
+    expect(scanned).toContain('package.json');
+  };
+
+  it('no route file references getFullChallenge', () => {
+    const { hits, scanned } = scanServer(
+      (src) => src.includes('getFullChallenge'),
+      (f) => !f.isTest && f.rel.startsWith('src/routes/'),
+    );
+    expectScanCovered(scanned);
+    expect(
+      hits,
+      `routes must not touch the full challenge row, found getFullChallenge in: ${hits}`,
+    ).toEqual([]);
+  });
+
+  it('getFullChallenge is referenced only by its definition and the allow-listed services', () => {
+    const { hits, scanned } = scanServer(
+      (src) => src.includes('getFullChallenge'),
+      isNonTestSourceOrPackage,
+    );
+    expectScanCovered(scanned);
+    const offenders = hits.filter(
+      (h) => !GET_FULL_CHALLENGE_ALLOWED.includes(h),
+    );
+    expect(
+      offenders,
+      `forbidden getFullChallenge use in: ${offenders}`,
+    ).toEqual([]);
+    expect(hits).toContain('src/db/challenges.js');
+  });
+
+  // Safety guard: the author tool tools/check-challenge.py never runs from
+  // the server. Rule (a): non-test source and package.json must not contain
+  // child_process (also matches node:child_process) or check-challenge.
+  // Rule (b): package.json and all test files must not contain
+  // check-challenge, nor a python word together with a spawn API. Test files
+  // may spawn Node itself.
+  const mentionsTool = (src) => src.includes('check-challenge');
+  const usesChildProcess = (src) => src.includes('child_process');
+  const PYTHON_WORD = /\b(python3?|pythonw|py)\b/i;
+  const SPAWN_API =
+    /child_process|\b(execa|cross-spawn|shelljs|zx)\b|\b(spawn|spawnSync|execSync|execFile|fork)\s*\(/;
+  const spawnsPython = (src) => PYTHON_WORD.test(src) && SPAWN_API.test(src);
+  const ruleA = (src) => usesChildProcess(src) || mentionsTool(src);
+  const ruleB = (src) => mentionsTool(src) || spawnsPython(src);
+
+  it('rule (a): non-test source and package.json have no child_process or check-challenge', () => {
+    const { hits, scanned } = scanServer(ruleA, isNonTestSourceOrPackage);
+    expectScanCovered(scanned);
+    expect(
+      hits,
+      `child_process or check-challenge in non-test file: ${hits}`,
+    ).toEqual([]);
+  });
+
+  it('rule (b): package.json and test files have no check-challenge or python spawn', () => {
+    const { hits, scanned } = scanServer(ruleB, isPackageOrTest);
+    expectScanCovered(scanned);
+    expect(
+      hits,
+      `check-challenge or python spawn in package.json/test file: ${hits}`,
+    ).toEqual([]);
+  });
+
+  it('matchers: flag python spawns and tool references, allow Node spawns', () => {
+    const pkg = '"x": "python ../tools/check-challenge.py"';
+    expect(ruleB(pkg)).toBe(true);
+    expect(ruleA(pkg)).toBe(true);
+    expect(ruleB("spawnSync('python3', ['a.py'])")).toBe(true);
+    expect(ruleB("import { exec } from 'zx'; // python")).toBe(true);
+    expect(ruleB('spawnSync(process.execPath, [script])')).toBe(false);
+    expect(ruleB("const c = { language: 'python' }; /x/.exec(s)")).toBe(false);
+    expect(ruleB("execSync('python x.py')")).toBe(true);
+    expect(ruleB("require('child_process'); // python")).toBe(true);
+    expect(ruleA("import cp from 'node:child_process'")).toBe(true);
+  });
+
+  it('scanner: scans top-level test/, skips node_modules and the guard, classes nested test/ as source', () => {
+    const { scanned } = scanServer(() => false);
+    expect(scanned).toContain('test/fixtures.js');
+    expect(scanned.some((p) => p.startsWith('node_modules/'))).toBe(false);
+    expect(scanned).not.toContain(GUARD_FILE);
+    expect(isTestPath('test/fixtures.js')).toBe(true);
+    expect(isTestPath('src/x/test/helper.js')).toBe(false);
   });
 });
 

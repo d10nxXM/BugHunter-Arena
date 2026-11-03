@@ -7,6 +7,8 @@ const base = {
   ALLOWED_ORIGIN: 'http://localhost:5173',
   PORT: '4000',
   LLM_API_KEY: '',
+  LLM_API_URL: '',
+  LLM_MODEL: '',
   DEMO_MODE: 'false',
   LOG_LEVEL: 'warn',
   AI_TIMEOUT_MS: '9000',
@@ -52,6 +54,70 @@ describe('parseConfig', () => {
     expect(result.llmApiKey).toBe('');
     expect(result.logLevel).toBe('info');
     expect(result.allowedOrigin).toBe('http://localhost:5173');
+    expect(result.llmApiUrl).toBe('');
+    expect(result.llmModel).toBe('');
+  });
+
+  describe('LLM_API_URL and LLM_MODEL', () => {
+    it('default to empty strings when unset or empty', () => {
+      const result = parseConfig(base);
+      expect(result.llmApiUrl).toBe('');
+      expect(result.llmModel).toBe('');
+    });
+
+    it('maps a valid https URL and a model id', () => {
+      const result = parseConfig({
+        ...base,
+        LLM_API_URL: 'https://api.example.com/v1/chat/completions',
+        LLM_MODEL: 'model-x',
+      });
+      expect(result.llmApiUrl).toBe(
+        'https://api.example.com/v1/chat/completions',
+      );
+      expect(result.llmModel).toBe('model-x');
+    });
+
+    it('allows http for localhost', () => {
+      expect(
+        parseConfig({
+          ...base,
+          LLM_API_URL: 'http://localhost:11434/v1/chat/completions',
+        }).llmApiUrl,
+      ).toBe('http://localhost:11434/v1/chat/completions');
+    });
+
+    it.each([
+      'not-a-url',
+      'http://api.example.com/v1/chat/completions',
+      'http://localhost.evil.com/v1',
+      'ftp://api.example.com/v1',
+      'javascript:alert(1)',
+      'https://user:pw@api.example.com/v1',
+      'http://user@localhost:11434/v1',
+    ])('rejects LLM_API_URL "%s" naming the variable only', (url) => {
+      const message = messageOf({ ...base, LLM_API_URL: url });
+      expect(message).toMatch(/LLM_API_URL/);
+      expect(message).not.toContain(url);
+    });
+
+    it('never echoes URL credentials in the error message', () => {
+      const message = messageOf({
+        ...base,
+        LLM_API_URL: 'https://user:sk-url-secret@api.example.com/v1',
+      });
+      expect(message).toMatch(/LLM_API_URL/);
+      expect(message).not.toContain('sk-url-secret');
+      expect(message).not.toContain('user');
+    });
+
+    it('stores an accepted URL in normalized form', () => {
+      expect(
+        parseConfig({
+          ...base,
+          LLM_API_URL: '  HTTPS://API.Example.COM/v1/chat/completions  ',
+        }).llmApiUrl,
+      ).toBe('https://api.example.com/v1/chat/completions');
+    });
   });
 
   describe('aiStatus', () => {
@@ -67,10 +133,45 @@ describe('parseConfig', () => {
       expect(parseConfig(env).aiStatus).toBe('unavailable');
     });
 
-    it('is "available" when a key is set', () => {
-      expect(parseConfig({ ...base, LLM_API_KEY: 'sk-test' }).aiStatus).toBe(
-        'available',
-      );
+    const fullLlm = {
+      LLM_API_KEY: 'sk-test',
+      LLM_API_URL: 'https://api.example.com/v1/chat/completions',
+      LLM_MODEL: 'model-x',
+    };
+
+    it('is "available" when key, URL and model are all set', () => {
+      expect(parseConfig({ ...base, ...fullLlm }).aiStatus).toBe('available');
+    });
+
+    it.each(['LLM_API_KEY', 'LLM_API_URL', 'LLM_MODEL'])(
+      'is "unavailable" when %s is empty',
+      (name) => {
+        expect(parseConfig({ ...base, ...fullLlm, [name]: '' }).aiStatus).toBe(
+          'unavailable',
+        );
+      },
+    );
+
+    it.each(['LLM_API_KEY', 'LLM_API_URL', 'LLM_MODEL'])(
+      'is "unavailable" when %s is missing',
+      (name) => {
+        const env = { ...base, ...fullLlm };
+        delete env[name];
+        expect(parseConfig(env).aiStatus).toBe('unavailable');
+      },
+    );
+
+    it('is "demo" when DEMO_MODE is true with full LLM config', () => {
+      expect(
+        parseConfig({ ...base, ...fullLlm, DEMO_MODE: 'true' }).aiStatus,
+      ).toBe('demo');
+    });
+
+    it('never exposes the key outside llmApiKey', () => {
+      const result = parseConfig({ ...base, ...fullLlm });
+      const { llmApiKey, ...rest } = result;
+      expect(llmApiKey).toBe('sk-test');
+      expect(JSON.stringify(rest)).not.toContain('sk-test');
     });
 
     it('is "demo" when DEMO_MODE is true, even with a key', () => {
@@ -165,6 +266,8 @@ describe('config (built from process.env under vitest)', () => {
       allowedOrigin: 'http://localhost:5173',
       port: 3000,
       llmApiKey: '',
+      llmApiUrl: '',
+      llmModel: '',
       demoMode: false,
       aiStatus: 'unavailable',
       aiTimeoutMs: 15000,

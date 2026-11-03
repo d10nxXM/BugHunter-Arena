@@ -24,7 +24,7 @@ An additive change (new optional field) is safe. Renaming or removing a field, c
 
 - Paths: plural nouns, kebab-case ids: `/api/challenges/find-max`, `/api/attempts/:id/evaluation`.
 - JSON fields: camelCase in the API (`selectedLines`), snake_case in the database (`selected_lines`). Map at the boundary in `server/src/db/` or a serializer, never leak database rows directly.
-- Status codes: `200` read/OK, `201` created, `400` validation, `404` not found, `409` state conflict, `413` too large, `429` rate limited, `500` unexpected.
+- Status codes: `200` read/OK, `201` created, `400` validation, `404` not found, `409` state conflict, `413` too large, `429` rate limited, `501` NOT_IMPLEMENTED (endpoint registered but not built yet), `500` unexpected.
 - Errors: always `{ "error": { "code": "UPPER_SNAKE", "message": "Montenegrin, safe to show" } }`.
 - Nullable fields are explicit `null`, never missing.
 - Enums are lowercase strings and listed in the doc (`feedbackSource: "ai" | "fallback" | "demo"`).

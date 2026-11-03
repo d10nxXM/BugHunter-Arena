@@ -79,7 +79,7 @@ Priority: **Must** = the core flow does not work without it; **Should** = MVP go
 | NFR-04 | Reliability | Full flow without manual intervention | 3 consecutive runs clean |
 | NFR-05 | Security | User code never runs on the server | Web Worker only, 3 s timeout |
 | NFR-06 | Security | API and database keys only on the server | None in client code or repo |
-| NFR-07 | Security | Request size and AI call limits | 50 KB per request; 20 AI calls per user per 10 min |
+| NFR-07 | Security | Request size and AI call limits | 50 KB per request; 100 API requests and 20 AI calls per IP per 10 min |
 | NFR-08 | Integrity | Solution, bug lines and hidden tests not in the browser before submit | Verified in DevTools |
 | NFR-09 | Usability | New user finishes a first challenge without instructions | Test user, < 10 min |
 | NFR-10 | Usability | Montenegrin UI, plain error messages | All messages translated |
@@ -89,27 +89,31 @@ Priority: **Must** = the core flow does not work without it; **Should** = MVP go
 
 ## Bug categories
 
-| Category | Typical example |
-| --- | --- |
-| Wrong initialization | Maximum starts at 0 instead of the first element |
-| Boundary condition | `<` instead of `<=` at the edge of a range |
-| Off-by-one | Loop stops one step early |
-| Wrong operator | `//` instead of `/` |
-| Condition order | General condition checked before the specific one |
-| Mutating a collection while iterating | Removing from the list the loop walks over |
-| Default function behavior | JavaScript `sort()` compares numbers as text |
+The Montenegrin names are the exact `bug_category` values used in challenge files and API responses. Names marked Proposed have no challenge yet and need the user's confirmation before a challenge uses them.
+
+| Category | Status | Typical example |
+| --- | --- | --- |
+| Pogrešna inicijalizacija | Official (in `find-max.json`) | Maximum starts at 0 instead of the first element |
+| Granični uslov | Proposed, to confirm | `<` instead of `<=` at the edge of a range |
+| Greška za jedan | Proposed, to confirm | Loop stops one step early (off-by-one) |
+| Pogrešan operator | Proposed, to confirm | `//` instead of `/` |
+| Redoslijed uslova | Proposed, to confirm | General condition checked before the specific one |
+| Izmjena kolekcije tokom iteracije | Proposed, to confirm | Removing from the list the loop walks over |
+| Podrazumijevano ponašanje funkcije | Proposed, to confirm | JavaScript `sort()` compares numbers as text |
 
 ## Challenge set
 
 | # | Challenge | Language | Category | Difficulty | Priority |
 | --- | --- | --- | --- | --- | --- |
-| 1 | find_max - largest element (demo) | Python | Wrong initialization | lako | Must |
-| 2 | remove_negatives | Python | Mutating a collection while iterating | srednje | Must |
-| 3 | binary_search | Python | Off-by-one in the loop condition | teško | Must |
-| 4 | count_in_range | Python | Boundary condition | lako | Should |
-| 5 | average | Python | Wrong operator | lako | Should |
-| 6 | fizzbuzz | Python | Condition order | lako | Should |
-| 7 | topThree | JavaScript | Default function behavior | srednje | Could |
+| 1 | find_max - largest element (demo) | Python | Pogrešna inicijalizacija | lako | Must |
+| 2 | remove_negatives | Python | Izmjena kolekcije tokom iteracije | srednje | Must |
+| 3 | binary_search | Python | Greška za jedan (uslov petlje) | teško | Must |
+| 4 | count_in_range | Python | Granični uslov | lako | Should |
+| 5 | average | Python | Pogrešan operator | lako | Should |
+| 6 | fizzbuzz | Python | Redoslijed uslova | lako | Should |
+| 7 | topThree | JavaScript | Podrazumijevano ponašanje funkcije | srednje | Could |
+
+Category names other than `Pogrešna inicijalizacija` are proposed; see Bug categories.
 
 How the bug shows in the three Must challenges:
 

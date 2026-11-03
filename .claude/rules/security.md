@@ -12,6 +12,8 @@ These apply to every change in the repo.
 
 - User code is never executed by Node, never passed to `eval`, `Function`, `child_process` or `vm` on the server.
 - It runs only in `client/src/workers/testRunner.worker.js`, terminated after 3 s.
+- `tools/check-challenge.py` is an author tool. It runs trusted challenge code (not user code) with the author's local Python, outside the server. Nothing in `server/` may import or run it; a text tripwire test in `server/test/integration.test.js` enforces this. `server/scripts/validate-challenges.js` runs no code.
+- Non-test server code must not use `child_process`.
 
 ## Integrity of grading
 

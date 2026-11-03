@@ -55,7 +55,7 @@ Feature: hints adapted by the AI (FR-11).
 1. `docs/API.md` - confirm `POST /api/challenges/:id/hints` request/response; add `source: "ai" | "written"`. Agent: planner -> docs-sync. Verify: frontend-dev and backend-dev agree.
 2. `server/src/prompts/hint.md` - prompt with level rules and the no-solution rule. Agent: backend-dev.
 3. `server/src/services/aiService.js` - `getHint(context, level)` with 8 s timeout, no retry, falls back to `hints_json[level - 1]`. Verify: unit test with the LLM mocked to time out returns the written hint.
-4. `server/src/routes/hints.js` - Zod schema, rejects `level` that is not `hintsUsed + 1`. Verify: integration test for 200 and 400.
+4. `server/src/routes/hints.js` - Zod schema, accepts an integer `level` 1-3 (400 otherwise). The server does not enforce order; the client sends `hintsUsed + 1` (open contract item in `docs/API.md`). Verify: integration test for 200 and 400.
 5. `client/src/components/HintPanel.jsx` - shows level, penalty and source. Agent: frontend-dev. Verify: React Testing Library test.
 
 Risks: the AI leaks the fix in a hint -> output check rejects hints that contain code from `reference_solution`, falls back to the written hint.

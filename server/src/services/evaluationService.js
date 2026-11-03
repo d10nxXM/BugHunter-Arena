@@ -68,7 +68,7 @@ export async function evaluateExplanation(context = {}) {
 
   return {
     source: 'fallback',
-    // Not defined by the docs for the fallback: true from 2 groups (quality 7).
+    // docs/SCORING.md "Fallback without the AI": is_correct = quality >= 7.
     is_correct: quality >= 7,
     explanation_quality: quality,
     detected_misconception: null,

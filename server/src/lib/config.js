@@ -12,12 +12,31 @@ const LOG_LEVELS = [
   'silent',
 ];
 
+/**
+ * LLM_API_URL must be https. Plain http is accepted only for localhost
+ * (a local OpenAI-compatible server during development). Credentials in the
+ * URL (user or password) are rejected, because the URL may end up in logs.
+ */
+function isAllowedLlmUrl(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  if (url.username !== '' || url.password !== '') return false;
+  if (url.protocol === 'https:') return true;
+  return url.protocol === 'http:' && url.hostname === 'localhost';
+}
+
 const EnvSchema = z.object({
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_KEY: z.string().min(1),
   ALLOWED_ORIGIN: z.url().default('http://localhost:5173'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   LLM_API_KEY: z.string().default(''),
+  LLM_API_URL: z.string().refine(isAllowedLlmUrl).default(''),
+  LLM_MODEL: z.string().default(''),
   AI_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
   DEMO_MODE: z.enum(['true', 'false']).default('false'),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
@@ -51,7 +70,8 @@ export function parseConfig(env) {
   const demoMode = e.DEMO_MODE === 'true';
   let aiStatus = 'available';
   if (demoMode) aiStatus = 'demo';
-  else if (e.LLM_API_KEY === '') aiStatus = 'unavailable';
+  else if (e.LLM_API_KEY === '' || e.LLM_API_URL === '' || e.LLM_MODEL === '')
+    aiStatus = 'unavailable';
 
   return {
     supabaseUrl: e.SUPABASE_URL,
@@ -59,6 +79,9 @@ export function parseConfig(env) {
     allowedOrigin: e.ALLOWED_ORIGIN,
     port: e.PORT,
     llmApiKey: e.LLM_API_KEY,
+    // Normalized form: trims spaces, lowercases scheme and host.
+    llmApiUrl: e.LLM_API_URL === '' ? '' : new URL(e.LLM_API_URL).href,
+    llmModel: e.LLM_MODEL,
     aiTimeoutMs: e.AI_TIMEOUT_MS,
     demoMode,
     aiStatus,

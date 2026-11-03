@@ -8,13 +8,6 @@ vi.mock('../db/client.js', () => ({
   db: { from: (...args) => state.db.from(...args) },
 }));
 
-// The real aiLimiter (20 per 10 min) is covered in hints.rateLimit.test.js;
-// here it is a passthrough so the many requests below do not hit it.
-vi.mock('../middleware/rateLimit.js', async (importOriginal) => ({
-  ...(await importOriginal()),
-  aiLimiter: (_req, _res, next) => next(),
-}));
-
 const { app } = await import('../app.js');
 const { logger } = await import('../lib/logger.js');
 

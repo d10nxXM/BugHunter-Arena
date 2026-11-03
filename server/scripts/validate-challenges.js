@@ -6,12 +6,13 @@
 // SAFETY: this script never runs Python or any challenge code (no process
 // spawning, no dynamic evaluation). It only reads JSON and checks its shape.
 //
-// KNOWN GAP: `failsOnOriginal` (whether a test fails on the buggy `code` and
-// passes on `reference_solution`) can only be computed by executing the
-// challenge code. It is NOT computed here. We only check that the boolean is
-// present on every test and that the flags are plausible (at least one hidden
-// test fails on the original; the visible tests do not all fail). Verifying
-// the flags needs a separate, sandboxed (browser/Pyodide) step.
+// `failsOnOriginal` (whether a test fails on the buggy `code` and passes on
+// `reference_solution`) is computed and written into the challenge file by the
+// author-side behavior check in tools/ at the repo root, which challenge
+// authors run with their local Python. That tool is not part of the server.
+// This script checks structure only: that the boolean is present on every
+// test and that the flags are plausible (at least one hidden test fails on the
+// original; the visible tests do not all fail).
 import { readdir, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,9 +22,19 @@ const DEFAULT_DIR = fileURLToPath(
   new URL('../data/challenges', import.meta.url),
 );
 
+/**
+ * Number of lines in `code`; a trailing newline is not counted as a line
+ * (\n or \r\n).
+ */
+export function countCodeLines(code) {
+  const lines = code.split(/\r?\n/);
+  if (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
+  return lines.length;
+}
+
 function checkSemantics(data) {
   const problems = [];
-  const lineCount = data.code.split('\n').length;
+  const lineCount = countCodeLines(data.code);
 
   for (const field of ['bug_lines', 'related_lines']) {
     const bad = data[field].filter((n) => n > lineCount);

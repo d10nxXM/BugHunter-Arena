@@ -2,7 +2,6 @@ import { Router } from 'express';
 import { z } from 'zod';
 import * as challengeService from '../services/challengeService.js';
 import { validate } from '../middleware/validate.js';
-import { aiLimiter } from '../middleware/rateLimit.js';
 import { ChallengeIdParamsSchema } from '../schemas/challenge.js';
 
 // Mounted in app.js at /api/challenges/:id/hints. mergeParams exposes the
@@ -23,9 +22,11 @@ const HintResponseSchema = z.strictObject({
 });
 
 // POST /api/challenges/:id/hints
+// Written hints make no LLM call, so only the general apiLimiter (mounted on
+// /api in app.js) applies. When worker C wires AI hints in batch 2, add
+// aiLimiter back to this route.
 router.post(
   '/',
-  aiLimiter,
   validate(ChallengeIdParamsSchema, 'params'),
   validate(HintRequestSchema, 'body'),
   async (req, res) => {

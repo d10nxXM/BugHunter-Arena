@@ -9,6 +9,8 @@
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "seed": "node scripts/seed.js",
+    "validate:challenges": "node scripts/validate-challenges.js",
+    "eval": "node scripts/run-eval.js",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

@@ -113,6 +113,37 @@ describe('validateChallengeDir', () => {
     expect(problems.join('\n')).toMatch(/bug_lines/);
   });
 
+  it.each([
+    ['\\n', '\n'],
+    ['\\r\\n', '\r\n'],
+  ])('ignores a trailing %s when counting lines', async (_label, eol) => {
+    const file = loadFindMaxFile();
+    const lines = file.code.split('\n');
+    file.code = lines.join(eol) + eol;
+    file.bug_lines = [lines.length];
+    write('find-max.json', file);
+    expect((await validateChallengeDir(dir)).problems).toEqual([]);
+
+    file.bug_lines = [lines.length + 1];
+    write('find-max.json', file);
+    const { problems } = await validateChallengeDir(dir);
+    expect(problems.join('\n')).toMatch(
+      new RegExp(
+        `bug_lines ${lines.length + 1} outside the code \\(${lines.length} lines\\)`,
+      ),
+    );
+  });
+
+  it('ignores a trailing newline for related_lines too', async () => {
+    const file = loadFindMaxFile();
+    const count = file.code.split('\n').length;
+    file.code += '\n';
+    file.related_lines = [count + 1];
+    write('find-max.json', file);
+    const { problems } = await validateChallengeDir(dir);
+    expect(problems.join('\n')).toMatch(/related_lines/);
+  });
+
   it('ignores non-json files', async () => {
     write('notes.txt', 'hello');
     write('find-max.json', loadFindMaxFile());

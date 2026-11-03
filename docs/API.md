@@ -73,10 +73,16 @@ Request:
 Response:
 
 ```json
-{ "level": 1, "hint": "Da li funkcija radi za svaku listu brojeva, ili samo za uobičajene?", "source": "ai" }
+{ "level": 1, "hint": "Da li funkcija radi za svaku listu brojeva, ili samo za uobičajene?", "source": "written" }
 ```
 
-`source` is `ai` or `written`. `level` must be one more than the hints already used.
+`level` must be an integer 1-3. Any other value, including `"1"` or `1.5`, returns `400 VALIDATION_ERROR`. An unknown challenge returns `404 NOT_FOUND`.
+
+The server does not enforce hint order. For now the client enforces it by asking for one more than the hints already used. Open contract item: whether the server should reject any `level` other than `hintsUsed + 1`.
+
+`currentAnswer` is optional. It is accepted and currently ignored. It is reserved for AI hints that adapt to the student's answer.
+
+`source` is `written` today: the hint is `hints_json[level - 1]` from the challenge. `ai` is a documented future value, used once AI hints are wired in batch 2. The written hint remains the fallback when the AI is unavailable or fails. Written hints currently use only the general API rate limit (see Rate limits).
 
 ## POST /api/attempts
 
@@ -151,7 +157,17 @@ Response `200 OK`:
 }
 ```
 
-`feedbackSource` is `ai`, `fallback` or `demo`. With `fallback`, `feedback` has the same fields, `detected_misconception` is `null`, and the text comes from the challenge.
+`feedbackSource` is `ai`, `fallback` or `demo`. With `fallback`, `feedback` has the same fields, with these values (rules in `docs/SCORING.md`, "Fallback without the AI"):
+
+- `is_correct`: `true` when `explanation_quality >= 7`, else `false`
+- `explanation_quality`: from the keyword groups (0, 3, 7 or 10)
+- `detected_misconception`: `null`
+- `needs_clarification`: `false`
+- `hint`: `null`
+- `feedback`: the challenge's `fallback_feedback`, or, if it is missing or blank, the generic text `Procjena bez AI-ja: objašnjenje je ocijenjeno prema ključnim pojmovima.`
+- `practice_tip`: `null`
+
+Known weakness: two matched keyword groups without the cause group still give quality 7 and `is_correct: true`.
 
 ## GET /api/progress?userId=
 
@@ -162,7 +178,7 @@ Response `200 OK`:
   "attempted": 4,
   "averageDurationSec": 212,
   "perChallenge": [{ "challengeId": "find-max", "bestScore": 89, "attempts": 2 }],
-  "weakCategories": [{ "category": "Off-by-one", "misses": 2 }]
+  "weakCategories": [{ "category": "Pogrešna inicijalizacija", "misses": 2 }]
 }
 ```
 
@@ -172,6 +188,19 @@ Definitions are in `docs/DATA_MODEL.md` under derived data.
 
 Request `{ "displayName": "dion" }` (2-32 chars). Response `201` `{ "id": "uuid", "displayName": "dion" }`.
 
+## Rate limits
+
+Limits are per IP address, since there is no login. Over a limit the server returns `429 RATE_LIMITED`. Responses carry the standard `RateLimit` and `RateLimit-Policy` headers.
+
+| Limit | Applies to | Per IP |
+| --- | --- | --- |
+| General | Every request under `/api` | 100 requests per 10 min |
+| AI | `POST /api/attempts/:id/evaluation` (planned: worker B adds `aiLimiter` when building the route); `POST /api/challenges/:id/hints` once AI hints are wired in batch 2 | 20 requests per 10 min, one counter shared by these routes, counted on top of the general limit |
+
+Written hints currently use only the general limit.
+
+`trust proxy` is off. Behind a reverse proxy every client shares the proxy's IP, so configure it before deploying behind one.
+
 ## Errors
 
 Shape: `{ "error": { "code": "VALIDATION_ERROR", "message": "Objašnjenje mora imati najmanje 20 karaktera." } }`.
@@ -180,9 +209,10 @@ An unavailable AI service is not an error: the evaluation returns `200` with `fe
 
 | HTTP | Code | When |
 | --- | --- | --- |
-| 400 | VALIDATION_ERROR | Invalid, empty or too long input; wrong hint level |
-| 404 | NOT_FOUND | Challenge or attempt does not exist |
+| 400 | VALIDATION_ERROR | Invalid, empty or too long input; challenge id not matching `[a-z0-9-]{1,64}`; hint `level` not an integer 1-3; malformed JSON body (also an unsupported charset or encoding) |
+| 404 | NOT_FOUND | Challenge or attempt does not exist; unknown route (no router handles the path) |
 | 409 | ALREADY_EVALUATED | Attempt already evaluated |
 | 413 | PAYLOAD_TOO_LARGE | Body over 50 KB |
-| 429 | RATE_LIMITED | Too many requests |
-| 500 | INTERNAL_ERROR | Unexpected server error |
+| 429 | RATE_LIMITED | Too many requests from this IP (see Rate limits) |
+| 500 | INTERNAL_ERROR | Unexpected server error. The message is always the same fixed text, with no details |
+| 501 | NOT_IMPLEMENTED | Endpoint is registered but not built yet |

@@ -39,7 +39,8 @@ Follow the `useTestRunner` pattern in the `react-patterns` skill and the Pyodide
 - The page side times each run at 3 s. On timeout it terminates the worker, reports `timedOut: true`, and starts a fresh worker.
 - Inside the worker, define the student's code in a fresh namespace per run, so one run can't leak globals into the next.
 - Each test runs in its own `try/except`. An exception becomes `{ passed: false, actual: null, error: "<Type>: <message>" }`; the other tests still run.
-- Convert results to plain JS with `toJs({ dict_converter: Object.fromEntries })` and compare as JSON values: `None` equals `null`, lists compare element by element, `1` equals `1.0`.
+- Convert results to plain JS with `toJs({ dict_converter: Object.fromEntries })`.
+- Results compare as JSON values: `None` is `null`; numbers by value (`1 == 1.0`); booleans equal only booleans (`true != 1`); strings by value; lists element by element in order; objects by the same keys in any order. NaN, Infinity, sets and other non-JSON values never match.
 
 ## Cases you must handle
 

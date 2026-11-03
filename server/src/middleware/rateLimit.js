@@ -31,5 +31,8 @@ export function createLimiter({ windowMs, limit }) {
 /** 100 requests per 10 minutes per IP, mounted on /api. */
 export const apiLimiter = createLimiter({ windowMs: TEN_MINUTES, limit: 100 });
 
-/** 20 AI calls per 10 minutes per IP, for the hint and evaluation routes. */
+/**
+ * 20 AI calls per 10 minutes per IP. Planned for the evaluation route (worker B
+ * adds it when building that route) and for AI hints (worker C, batch 2).
+ */
 export const aiLimiter = createLimiter({ windowMs: TEN_MINUTES, limit: 20 });
