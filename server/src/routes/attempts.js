@@ -37,11 +37,16 @@ router.post(
   },
 );
 
-// GET /api/attempts?userId=&challengeId=&limit=&cursor=
+// GET /api/attempts?userId=&challengeId=&limit=&cursor=&cursorId=
 router.get('/', validate(AttemptListQuerySchema, 'query'), async (req, res) => {
-  const { userId, challengeId, limit, cursor } = req.valid.query;
+  const { userId, challengeId, limit, cursor, cursorId } = req.valid.query;
   res.json(
-    await attemptService.listAttempts(userId, { challengeId, limit, cursor }),
+    await attemptService.listAttempts(userId, {
+      challengeId,
+      limit,
+      cursor,
+      cursorId,
+    }),
   );
 });
 

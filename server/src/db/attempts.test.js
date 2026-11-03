@@ -227,6 +227,124 @@ describe('listAttemptSummaries', () => {
     expect(after.map((r) => r.id)).toEqual(['a3', 'a2', 'b1', 'a1']);
   });
 
+  it('cursor only still uses lt, never or', async () => {
+    const { calls } = install({ tables: { attempts: rows() } });
+    await listAttemptSummaries(U, { before: '2026-01-03T00:00:00.000Z' });
+    expect(calls.ranges).toHaveLength(1);
+    expect(calls.ors).toEqual([]);
+  });
+
+  // The composite cursor needs UUID ids (the query validates them).
+  // Hex suffixes b and c contain letters, so case handling is exercised.
+  const uid = (n) =>
+    `00000000-0000-4000-8000-${n.toString(16).padStart(12, '0')}`;
+  const [A1, B1, A2, A3] = [1, 2, 11, 12].map(uid);
+  const uuidRows = () => [
+    summary(A1, 'a', '2026-01-01T00:00:00.000Z'),
+    summary(B1, 'b', '2026-01-02T00:00:00.000Z'),
+    summary(A2, 'a', '2026-01-03T00:00:00.000Z'),
+    summary(A3, 'a', '2026-01-03T00:00:00.000Z'),
+  ];
+
+  it('before + beforeId: one quoted or() expression, no lt', async () => {
+    const { calls } = install({ tables: { attempts: uuidRows() } });
+    const before = '2026-01-03T00:00:00.000Z';
+    const out = await listAttemptSummaries(U, { before, beforeId: A3 });
+    expect(calls.ors).toEqual([
+      {
+        table: 'attempts',
+        expr: `created_at.lt."${before}",and(created_at.eq."${before}",id.lt.${A3})`,
+      },
+    ]);
+    expect(calls.ranges).toEqual([]);
+    expect(calls.filters).toEqual([
+      { table: 'attempts', column: 'user_id', value: U },
+    ]);
+    // A3 is the cursor row: A2 (same created_at, smaller id) is next.
+    expect(out.map((r) => r.id)).toEqual([A2, B1, A1]);
+  });
+
+  it.each([
+    ['quote and filter injection', 'x",id.gt.0', A3],
+    ['parenthesis', '2026-01-03T00:00:00.000Z)or(', A3],
+    ['comma in before', '2026-01-03T00:00:00.000Z,id.gt.0', A3],
+    ['plain text before', 'yesterday', A3],
+    ['quote in beforeId', '2026-01-03T00:00:00.000Z', 'x",id.gt.0'],
+    ['comma in beforeId', '2026-01-03T00:00:00.000Z', `${A3},id.gt.0`],
+    ['parenthesis in beforeId', '2026-01-03T00:00:00.000Z', ')or('],
+    ['non-uuid beforeId', '2026-01-03T00:00:00.000Z', 'a3'],
+  ])('fails closed on %s, no or() recorded', async (_n, before, beforeId) => {
+    const { calls } = install({ tables: { attempts: uuidRows() } });
+    await expect(
+      listAttemptSummaries(U, { before, beforeId }),
+    ).rejects.toThrow();
+    expect(calls.ors).toEqual([]);
+  });
+
+  it('accepts offset and microsecond timestamps and uppercase UUIDs', async () => {
+    const { calls } = install({ tables: { attempts: uuidRows() } });
+    await listAttemptSummaries(U, {
+      before: '2026-01-03T02:00:00.123456+02:00',
+      beforeId: A3.toUpperCase(),
+    });
+    expect(calls.ors).toHaveLength(1);
+  });
+
+  it('compares ids case-insensitively', async () => {
+    install({ tables: { attempts: uuidRows() } });
+    const out = await listAttemptSummaries(U, {
+      before: '2026-01-03T00:00:00.000Z',
+      beforeId: A3.toUpperCase(),
+    });
+    expect(out.map((r) => r.id)).toEqual([A2, B1, A1]);
+  });
+
+  it('pages one row at a time through a created_at tie, each row once', async () => {
+    install({ tables: { attempts: uuidRows() } });
+    const seen = [];
+    let cursor;
+    for (let i = 0; i < 10; i += 1) {
+      const page = await listAttemptSummaries(U, {
+        limit: 1,
+        before: cursor?.created_at,
+        beforeId: cursor?.id,
+      });
+      if (page.length === 0) break;
+      seen.push(page[0].id);
+      cursor = page[0];
+    }
+    expect(seen).toEqual([A3, A2, B1, A1]);
+  });
+
+  it('keeps a challenge filter with the composite cursor', async () => {
+    install({ tables: { attempts: uuidRows() } });
+    const out = await listAttemptSummaries(U, {
+      challengeId: 'a',
+      before: '2026-01-03T00:00:00.000Z',
+      beforeId: A3,
+    });
+    expect(out.map((r) => r.id)).toEqual([A2, A1]);
+  });
+
+  it('a microsecond cursor matches the equal row (no Date round trip)', async () => {
+    const micro = '2026-01-03T00:00:00.123456+00:00';
+    const { calls } = install({
+      tables: {
+        attempts: [
+          summary(A2, 'a', micro),
+          summary(A3, 'a', micro),
+          summary(A1, 'a', '2026-01-02T00:00:00.000Z'),
+        ],
+      },
+    });
+    const out = await listAttemptSummaries(U, {
+      before: micro,
+      beforeId: A3,
+    });
+    expect(calls.ors[0].expr).toContain(`created_at.eq."${micro}"`);
+    expect(out.map((r) => r.id)).toEqual([A2, A1]);
+  });
+
   it('returns at most limit rows', async () => {
     install({ tables: { attempts: rows() } });
     const out = await listAttemptSummaries(U, { limit: 1 });
@@ -240,6 +358,7 @@ describe('listAttemptSummaries', () => {
           select: () => chain,
           eq: () => chain,
           lt: () => chain,
+          or: () => chain,
           order: () => chain,
           limit: () => Promise.resolve({ data: null, error: null }),
         };

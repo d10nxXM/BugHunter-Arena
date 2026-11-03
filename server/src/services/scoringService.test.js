@@ -351,6 +351,16 @@ describe('calculateScore totals', () => {
       calculateScore({ ...base, explanationQuality: 99 }).breakdown.explanation,
     ).toBe(30);
   });
+  it('an attempt without edgeCase never scores 20; 0 if the check does not expose the bug', () => {
+    const attempt = { ...base.attempt, edgeCase: undefined };
+    const same = { originalOutput: 1, referenceOutput: 1, error: null };
+    expect(
+      calculateScore({ ...base, attempt, edgeCaseCheck: same }).breakdown
+        .edgeCase,
+    ).toBe(0);
+    // Exposing check, missing expected value: "expected wrong" = 10 (SCORING.md).
+    expect(calculateScore({ ...base, attempt }).breakdown.edgeCase).toBe(10);
+  });
   it('3 hints subtract 20', () => {
     const r = calculateScore({
       ...base,

@@ -6,11 +6,15 @@
  * field, it can only be because its own mapping let it through.
  *
  * Supported chain:
- *   from(t).select(cols).eq(col, v).lt(col, v).order(col, opts).limit(n)
+ *   from(t).select(cols).eq(col, v).lt(col, v).or(expr).order(col, opts).limit(n)
  *     .maybeSingle() | .single() | await (list)
  *     (.eq is an equality filter recorded in calls.filters; .lt keeps rows
  *     with row[col] < v and is recorded apart, in calls.ranges, so
  *     calls.filters stays equality-only; .limit is recorded in calls.limits)
+ *   .or(expr) accepts ONLY the keyset shape
+ *     created_at.lt."T",and(created_at.eq."T",id.lt.ID) and throws on any
+ *     other; recorded in calls.ors as { table, expr }. created_at compares
+ *     as an instant like .lt.
  *   .lt compares like PostgREST on a timestamptz column: when both sides
  *     parse as ISO 8601 dates they are compared as instants (Date.parse), so
  *     '+00:00', '+02:00' and 'Z' offsets mean the same moment. Precision is
@@ -39,6 +43,37 @@ export function lessThan(a, b) {
   return a < b;
 }
 
+const KEYSET_OR =
+  /^created_at\.lt\."([^"]+)",and\(created_at\.eq\."([^"]+)",id\.lt\.([^,()"]+)\)$/;
+
+/** Parses ONLY the composite keyset filter db/attempts.js sends; else throws. */
+function parseKeysetOr(expr) {
+  const m = KEYSET_OR.exec(expr);
+  if (!m || m[1] !== m[2]) {
+    throw new Error(`fakeSupabase: unsupported or() expression: ${expr}`);
+  }
+  return { before: m[1], id: m[3] };
+}
+
+/** a === b, as instants when both are ISO dates (same rules as lessThan). */
+function sameInstant(a, b) {
+  if (typeof a === 'string' && typeof b === 'string') {
+    const ta = ISO_DATE.test(a) ? Date.parse(a) : NaN;
+    const tb = ISO_DATE.test(b) ? Date.parse(b) : NaN;
+    if (!Number.isNaN(ta) && !Number.isNaN(tb)) return ta === tb;
+  }
+  return a === b;
+}
+
+/** created_at < before, or created_at = before and id < id. */
+function keysetAfter(row, before, id) {
+  return (
+    lessThan(row.created_at, before) ||
+    (sameInstant(row.created_at, before) &&
+      String(row.id).toLowerCase() < String(id).toLowerCase())
+  );
+}
+
 const DEFAULTS = {
   attempts: { status: 'submitted', hints_used: 0 },
 };
@@ -55,6 +90,7 @@ export function createFakeSupabase({
     selects: [],
     filters: [],
     ranges: [],
+    ors: [],
     orders: [],
     limits: [],
     upserts: [],
@@ -67,13 +103,15 @@ export function createFakeSupabase({
       op: 'select',
       filters: [],
       ranges: [],
+      ors: [],
       orders: [],
       payload: null,
     };
 
     const matches = (row) =>
       state.filters.every(([column, value]) => row[column] === value) &&
-      state.ranges.every(([column, value]) => lessThan(row[column], value));
+      state.ranges.every(([column, value]) => lessThan(row[column], value)) &&
+      state.ors.every(({ before, id }) => keysetAfter(row, before, id));
 
     function finish(single) {
       if (state.op === 'upsert') {
@@ -132,6 +170,11 @@ export function createFakeSupabase({
       lt(column, value) {
         calls.ranges.push({ table, column, op: 'lt', value });
         state.ranges.push([column, value]);
+        return chain;
+      },
+      or(expr) {
+        calls.ors.push({ table, expr });
+        state.ors.push(parseKeysetOr(expr));
         return chain;
       },
       order(column, options = {}) {

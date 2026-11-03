@@ -326,6 +326,49 @@ describe('AttemptListQuerySchema', () => {
   );
 });
 
+describe('AttemptListQuerySchema cursorId', () => {
+  const CURSOR = '2026-11-03T12:00:00.123456+00:00';
+  const ID = '22222222-2222-4222-8222-222222222222';
+
+  it('accepts cursor with cursorId', () => {
+    const parsed = AttemptListQuerySchema.parse({
+      userId: UUID,
+      cursor: CURSOR,
+      cursorId: ID,
+    });
+    expect(parsed.cursor).toBe(CURSOR);
+    expect(parsed.cursorId).toBe(ID);
+  });
+
+  it('cursorId is optional', () => {
+    expect(
+      AttemptListQuerySchema.parse({ userId: UUID, cursor: CURSOR }).cursorId,
+    ).toBeUndefined();
+  });
+
+  it('rejects cursorId without cursor', () => {
+    expect(ok(AttemptListQuerySchema, { userId: UUID, cursorId: ID })).toBe(
+      false,
+    );
+  });
+
+  it.each(['abc', '', '123', `${ID}x`])('rejects cursorId %j', (cursorId) => {
+    expect(
+      ok(AttemptListQuerySchema, { userId: UUID, cursor: CURSOR, cursorId }),
+    ).toBe(false);
+  });
+
+  it('rejects cursorId with an invalid cursor', () => {
+    expect(
+      ok(AttemptListQuerySchema, {
+        userId: UUID,
+        cursor: 'yesterday',
+        cursorId: ID,
+      }),
+    ).toBe(false);
+  });
+});
+
 describe('CreateUserSchema', () => {
   it('displayName 2-32 chars', () => {
     expect(ok(CreateUserSchema, { displayName: 'a' })).toBe(false);
