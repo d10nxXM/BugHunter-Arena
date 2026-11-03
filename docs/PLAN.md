@@ -11,6 +11,22 @@ The work is split so several agents can run at once without editing the same fil
 | M3 Integration | One agent | Replace client mocks with the real API; full find_max flow | Solve journey passes end to end |
 | M4 Hardening | Parallel reviewers | e2e journeys, security review, AI evaluation set, more challenges | Verification loop READY |
 
+## Status
+
+| Item | State | Notes |
+| --- | --- | --- |
+| Backend batch 1 (A) | Merged | Challenges and written hints |
+| Backend batch 2 (B and C) | Merged | B first, then C. B: attempts, evaluation, scoring, progress, users. C: AI mentor, AI hints, demo mode, eval set. No migration |
+| M2 backend | Complete | `npm test` in `server/` passes on `main` after batch 2 |
+
+Backend remaining before M3:
+
+- Contract changes for `docs/API.md`, `docs/DATA_MODEL.md` and `docs/SCORING.md` need planner approval. The disagreements found after batch 2 are listed in the batch 2 review.
+- Decide whether written hints count toward `aiLimiter`. The code applies it to every hint request; `docs/API.md` says written hints use only the general limit.
+- Add an index on `attempts (user_id, created_at)` and decide whether the history and progress reads need a limit. Both need a migration, pushed after merge.
+- Remove stale comments and test titles that still describe the batch 1 stubs: `server/src/middleware/rateLimit.js` (`aiLimiter` note), `server/src/routes/hints.test.js` ("accepts and ignores currentAnswer"), `server/test/integration.test.js` (parity title), and `server/src/middleware/notImplemented.js`, which no route uses.
+- Run `npm run eval` against the real provider and record the table. No run is recorded in the repo yet.
+
 ## M1: what must exist before parallel work
 
 Server foundation (first Claude Code task):
