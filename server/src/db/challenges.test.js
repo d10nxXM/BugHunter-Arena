@@ -163,3 +163,53 @@ describe('getPublicChallenge', () => {
     expect(err.cause).toBe(dbError);
   });
 });
+
+describe('getChallengeHints', () => {
+  it('selects only id and hints_json and returns the hints', async () => {
+    const calls = install({ tables: { challenges: [loadFindMaxRow()] } });
+    const { getChallengeHints } = await import('./challenges.js');
+    const result = await getChallengeHints('find-max');
+    expect(result).toEqual({ hints: loadFindMaxRow().hints_json });
+    expect(columnsOf(calls.selects[0].columns)).toEqual(['id', 'hints_json']);
+  });
+
+  it('returns null for an unknown id and throws on db error', async () => {
+    const { getChallengeHints } = await import('./challenges.js');
+    install({ tables: { challenges: [] } });
+    expect(await getChallengeHints('nope')).toBeNull();
+    install({ error: { message: 'x' } });
+    await expect(getChallengeHints('nope')).rejects.toThrow(
+      'getChallengeHints failed',
+    );
+  });
+});
+
+describe('getFullChallenge', () => {
+  it('returns the full row, or null', async () => {
+    const { getFullChallenge } = await import('./challenges.js');
+    install({ tables: { challenges: [loadFindMaxRow()] } });
+    const full = await getFullChallenge('find-max');
+    expect(full.reference_solution).toBe(loadFindMaxRow().reference_solution);
+    expect(full.bug_lines).toEqual([2]);
+    expect(full.tests_json).toHaveLength(4);
+    expect(await getFullChallenge('nope')).toBeNull();
+  });
+
+  it('selects an explicit column list, never *', async () => {
+    const { getFullChallenge } = await import('./challenges.js');
+    const calls = install({ tables: { challenges: [loadFindMaxRow()] } });
+    await getFullChallenge('find-max');
+    const sel = calls.selects[0].columns;
+    expect(sel).not.toContain('*');
+    expect(sel).not.toContain('created_at');
+    expect(columnsOf(sel)).toContain('reference_solution');
+  });
+
+  it('throws on db error', async () => {
+    const { getFullChallenge } = await import('./challenges.js');
+    install({ error: { message: 'x' } });
+    await expect(getFullChallenge('a')).rejects.toThrow(
+      'getFullChallenge failed',
+    );
+  });
+});

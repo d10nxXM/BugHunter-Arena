@@ -127,6 +127,44 @@ describe('GET /api/challenges/:id', () => {
   });
 });
 
+describe('public routes never expose hidden challenge data', () => {
+  const FORBIDDEN = [
+    'reference_solution',
+    'bug_lines',
+    'related_lines',
+    'bug_description',
+    'keywords_json',
+    'hints_json',
+    'fallback_feedback',
+    'failsOnOriginal',
+    '"t3"',
+    '"t4"',
+  ];
+
+  it.each(['/api/challenges', '/api/challenges/find-max'])(
+    '%s contains no forbidden key or hidden test',
+    async (path) => {
+      const res = await request(app).get(path);
+      expect(res.status).toBe(200);
+      for (const word of FORBIDDEN) {
+        expect(res.text).not.toContain(word);
+      }
+    },
+  );
+
+  it('never selects a hidden column or the full row', async () => {
+    await request(app).get('/api/challenges');
+    await request(app).get('/api/challenges/find-max');
+    expect(calls.selects.length).toBeGreaterThan(0);
+    for (const { columns } of calls.selects) {
+      expect(columns).not.toBe('*');
+      for (const hidden of FORBIDDEN.slice(0, 7)) {
+        expect(columns).not.toContain(hidden);
+      }
+    }
+  });
+});
+
 describe('response schemas are strict (a leak fails loudly)', () => {
   afterEach(() => {
     vi.doUnmock('../services/challengeService.js');
