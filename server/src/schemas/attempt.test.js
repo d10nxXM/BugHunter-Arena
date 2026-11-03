@@ -1,0 +1,304 @@
+import { describe, it, expect } from 'vitest';
+import {
+  CreateAttemptSchema,
+  EvaluationSchema,
+  AttemptIdParamsSchema,
+  ProgressQuerySchema,
+  AttemptListQuerySchema,
+  CreateUserSchema,
+} from './attempt.js';
+
+const UUID = 'a3f1c2d4-5e6f-4a7b-8c9d-0e1f2a3b4c5d';
+
+const valid = () => ({
+  challengeId: 'find-max',
+  userId: null,
+  selectedLines: [2],
+  explanation: 'a'.repeat(20),
+  edgeCase: { args: [[-8, -3, -10]], expected: -3 },
+  fixedCode: 'def f():\n    pass',
+  hintsUsed: 1,
+  durationSec: 184,
+});
+const ok = (schema, v) => schema.safeParse(v).success;
+
+describe('CreateAttemptSchema', () => {
+  it('selectedLines: duplicates are removed', () => {
+    const r = CreateAttemptSchema.parse({
+      ...valid(),
+      selectedLines: [2, 2, 3, 2],
+    });
+    expect(r.selectedLines).toEqual([2, 3]);
+  });
+
+  it('accepts the example from docs/API.md', () => {
+    expect(ok(CreateAttemptSchema, valid())).toBe(true);
+  });
+  it('accepts a uuid userId and defaults a missing userId to null', () => {
+    expect(ok(CreateAttemptSchema, { ...valid(), userId: UUID })).toBe(true);
+    const rest = valid();
+    delete rest.userId;
+    expect(CreateAttemptSchema.parse(rest).userId).toBeNull();
+  });
+  it('rejects a non-string, non-null userId', () => {
+    expect(ok(CreateAttemptSchema, { ...valid(), userId: 5 })).toBe(false);
+    expect(ok(CreateAttemptSchema, { ...valid(), userId: '' })).toBe(false);
+  });
+
+  it('challengeId must match [a-z0-9-]{1,64}', () => {
+    expect(
+      ok(CreateAttemptSchema, { ...valid(), challengeId: 'a'.repeat(64) }),
+    ).toBe(true);
+    for (const bad of ['', 'a'.repeat(65), 'Find_Max', '../x', undefined]) {
+      expect(ok(CreateAttemptSchema, { ...valid(), challengeId: bad })).toBe(
+        false,
+      );
+    }
+  });
+
+  it('selectedLines: 1-10 positive integers', () => {
+    const lines = (n) => Array.from({ length: n }, (_, i) => i + 1);
+    expect(
+      ok(CreateAttemptSchema, { ...valid(), selectedLines: lines(1) }),
+    ).toBe(true);
+    expect(
+      ok(CreateAttemptSchema, { ...valid(), selectedLines: lines(10) }),
+    ).toBe(true);
+    expect(
+      ok(CreateAttemptSchema, { ...valid(), selectedLines: lines(11) }),
+    ).toBe(false);
+    expect(ok(CreateAttemptSchema, { ...valid(), selectedLines: [] })).toBe(
+      false,
+    );
+    for (const bad of [[0], [-1], [1.5], ['2'], [null]]) {
+      expect(ok(CreateAttemptSchema, { ...valid(), selectedLines: bad })).toBe(
+        false,
+      );
+    }
+    expect(ok(CreateAttemptSchema, { ...valid(), selectedLines: null })).toBe(
+      false,
+    );
+  });
+
+  it('explanation: 20-1000 chars', () => {
+    expect(
+      ok(CreateAttemptSchema, { ...valid(), explanation: 'a'.repeat(19) }),
+    ).toBe(false);
+    expect(
+      ok(CreateAttemptSchema, { ...valid(), explanation: 'a'.repeat(20) }),
+    ).toBe(true);
+    expect(
+      ok(CreateAttemptSchema, { ...valid(), explanation: 'a'.repeat(1000) }),
+    ).toBe(true);
+    expect(
+      ok(CreateAttemptSchema, { ...valid(), explanation: 'a'.repeat(1001) }),
+    ).toBe(false);
+    expect(ok(CreateAttemptSchema, { ...valid(), explanation: null })).toBe(
+      false,
+    );
+  });
+  it('explanation made of whitespace does not count toward the minimum', () => {
+    expect(
+      ok(CreateAttemptSchema, { ...valid(), explanation: ' '.repeat(30) }),
+    ).toBe(false);
+  });
+
+  it('fixedCode: up to 5000 chars', () => {
+    expect(
+      ok(CreateAttemptSchema, { ...valid(), fixedCode: 'x'.repeat(5000) }),
+    ).toBe(true);
+    expect(
+      ok(CreateAttemptSchema, { ...valid(), fixedCode: 'x'.repeat(5001) }),
+    ).toBe(false);
+    expect(ok(CreateAttemptSchema, { ...valid(), fixedCode: '' })).toBe(true);
+    expect(ok(CreateAttemptSchema, { ...valid(), fixedCode: undefined })).toBe(
+      false,
+    );
+  });
+
+  it('hintsUsed: integer 0-3', () => {
+    for (const n of [0, 1, 2, 3]) {
+      expect(ok(CreateAttemptSchema, { ...valid(), hintsUsed: n })).toBe(true);
+    }
+    for (const bad of [-1, 4, 1.5, '1', null]) {
+      expect(ok(CreateAttemptSchema, { ...valid(), hintsUsed: bad })).toBe(
+        false,
+      );
+    }
+  });
+
+  it('durationSec: number >= 0', () => {
+    expect(ok(CreateAttemptSchema, { ...valid(), durationSec: 0 })).toBe(true);
+    expect(ok(CreateAttemptSchema, { ...valid(), durationSec: -1 })).toBe(
+      false,
+    );
+    expect(ok(CreateAttemptSchema, { ...valid(), durationSec: NaN })).toBe(
+      false,
+    );
+    expect(ok(CreateAttemptSchema, { ...valid(), durationSec: '5' })).toBe(
+      false,
+    );
+  });
+
+  it('edgeCase: args array and expected JSON value (null allowed)', () => {
+    expect(
+      ok(CreateAttemptSchema, {
+        ...valid(),
+        edgeCase: { args: [], expected: null },
+      }),
+    ).toBe(true);
+    expect(
+      ok(CreateAttemptSchema, {
+        ...valid(),
+        edgeCase: { args: [[]], expected: [] },
+      }),
+    ).toBe(true);
+    expect(
+      ok(CreateAttemptSchema, { ...valid(), edgeCase: { args: [] } }),
+    ).toBe(false);
+    expect(
+      ok(CreateAttemptSchema, { ...valid(), edgeCase: { expected: 1 } }),
+    ).toBe(false);
+    expect(
+      ok(CreateAttemptSchema, {
+        ...valid(),
+        edgeCase: { args: 'x', expected: 1 },
+      }),
+    ).toBe(false);
+    expect(ok(CreateAttemptSchema, { ...valid(), edgeCase: null })).toBe(false);
+  });
+
+  it('rejects each missing required field', () => {
+    for (const key of [
+      'challengeId',
+      'selectedLines',
+      'explanation',
+      'edgeCase',
+      'fixedCode',
+      'hintsUsed',
+      'durationSec',
+    ]) {
+      const v = valid();
+      delete v[key];
+      expect(ok(CreateAttemptSchema, v), key).toBe(false);
+    }
+  });
+  it('rejects empty and non-object bodies', () => {
+    expect(ok(CreateAttemptSchema, {})).toBe(false);
+    expect(ok(CreateAttemptSchema, null)).toBe(false);
+    expect(ok(CreateAttemptSchema, undefined)).toBe(false);
+  });
+});
+
+describe('EvaluationSchema', () => {
+  const evalBody = () => ({
+    testResults: [
+      { id: 't1', passed: true, actual: 5 },
+      { id: 't2', passed: false, actual: null, error: 'timeout' },
+    ],
+    edgeCaseCheck: { originalOutput: 0, referenceOutput: -3, error: null },
+  });
+  it('accepts the example from docs/API.md', () => {
+    expect(ok(EvaluationSchema, evalBody())).toBe(true);
+  });
+  it('accepts null outputs and an error string', () => {
+    const v = evalBody();
+    v.edgeCaseCheck = {
+      originalOutput: null,
+      referenceOutput: null,
+      error: 'IndexError',
+    };
+    expect(ok(EvaluationSchema, v)).toBe(true);
+  });
+  it('error is optional on edgeCaseCheck and tests', () => {
+    const v = evalBody();
+    v.edgeCaseCheck = { originalOutput: 1, referenceOutput: 2 };
+    expect(ok(EvaluationSchema, v)).toBe(true);
+  });
+  it('accepts an empty testResults list', () => {
+    expect(ok(EvaluationSchema, { ...evalBody(), testResults: [] })).toBe(true);
+  });
+  it('rejects bad test result shapes', () => {
+    for (const bad of [
+      { passed: true, actual: 1 },
+      { id: '', passed: true, actual: 1 },
+      { id: 't1', passed: 'yes', actual: 1 },
+      { id: 't1', passed: 1, actual: 1 },
+      { id: 't1', passed: true, actual: 1, error: 5 },
+    ]) {
+      expect(ok(EvaluationSchema, { ...evalBody(), testResults: [bad] })).toBe(
+        false,
+      );
+    }
+  });
+  it('rejects too many results', () => {
+    const many = Array.from({ length: 101 }, (_, i) => ({
+      id: `t${i}`,
+      passed: true,
+      actual: null,
+    }));
+    expect(ok(EvaluationSchema, { ...evalBody(), testResults: many })).toBe(
+      false,
+    );
+  });
+  it('rejects missing fields', () => {
+    expect(ok(EvaluationSchema, { testResults: [] })).toBe(false);
+    expect(
+      ok(EvaluationSchema, { edgeCaseCheck: evalBody().edgeCaseCheck }),
+    ).toBe(false);
+    expect(
+      ok(EvaluationSchema, {
+        ...evalBody(),
+        edgeCaseCheck: { referenceOutput: 1 },
+      }),
+    ).toBe(false);
+    expect(ok(EvaluationSchema, null)).toBe(false);
+  });
+});
+
+describe('AttemptIdParamsSchema', () => {
+  it('accepts a uuid and rejects anything else', () => {
+    expect(ok(AttemptIdParamsSchema, { id: UUID })).toBe(true);
+    expect(ok(AttemptIdParamsSchema, { id: 'abc' })).toBe(false);
+    expect(ok(AttemptIdParamsSchema, {})).toBe(false);
+  });
+});
+
+describe('ProgressQuerySchema', () => {
+  it('requires a uuid userId', () => {
+    expect(ok(ProgressQuerySchema, { userId: UUID })).toBe(true);
+    expect(ok(ProgressQuerySchema, {})).toBe(false);
+    expect(ok(ProgressQuerySchema, { userId: '' })).toBe(false);
+    expect(ok(ProgressQuerySchema, { userId: 'x' })).toBe(false);
+  });
+});
+
+describe('AttemptListQuerySchema', () => {
+  it('requires userId, challengeId optional', () => {
+    expect(ok(AttemptListQuerySchema, { userId: UUID })).toBe(true);
+    expect(
+      ok(AttemptListQuerySchema, { userId: UUID, challengeId: 'find-max' }),
+    ).toBe(true);
+    expect(ok(AttemptListQuerySchema, { challengeId: 'find-max' })).toBe(false);
+    expect(
+      ok(AttemptListQuerySchema, { userId: UUID, challengeId: 'Bad Id' }),
+    ).toBe(false);
+  });
+});
+
+describe('CreateUserSchema', () => {
+  it('displayName 2-32 chars', () => {
+    expect(ok(CreateUserSchema, { displayName: 'a' })).toBe(false);
+    expect(ok(CreateUserSchema, { displayName: 'ab' })).toBe(true);
+    expect(ok(CreateUserSchema, { displayName: 'a'.repeat(32) })).toBe(true);
+    expect(ok(CreateUserSchema, { displayName: 'a'.repeat(33) })).toBe(false);
+  });
+  it('trims, rejects blank and missing', () => {
+    expect(CreateUserSchema.parse({ displayName: '  dion ' }).displayName).toBe(
+      'dion',
+    );
+    expect(ok(CreateUserSchema, { displayName: '   ' })).toBe(false);
+    expect(ok(CreateUserSchema, {})).toBe(false);
+    expect(ok(CreateUserSchema, { displayName: null })).toBe(false);
+  });
+});
