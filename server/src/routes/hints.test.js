@@ -55,11 +55,6 @@ describe('POST /api/challenges/:id/hints', () => {
     expect(res.text).not.toContain('ignored text');
   });
 
-  it('does not enforce level = hints used + 1', async () => {
-    const res = await post({ level: 3 });
-    expect(res.status).toBe(200);
-  });
-
   it('selects only id and hints_json, never the full row', async () => {
     await post({ level: 1 });
     const cols = calls.selects.map((s) => s.columns.replace(/\s/g, ''));
@@ -172,5 +167,48 @@ describe('POST /api/challenges/:id/hints', () => {
       currentAnswer: { explanation: 'SECRET-STUDENT-TEXT' },
     });
     expect(JSON.stringify(spy.mock.calls)).not.toContain('SECRET-STUDENT-TEXT');
+  });
+});
+
+describe('hint level contract (order not enforced)', () => {
+  const hintOf = (level) => row.hints_json[level - 1];
+  const escaped = (level) => JSON.stringify(hintOf(level)).slice(1, -1);
+
+  it('serves level 3 as the very first request', async () => {
+    const res = await post({ level: 3 });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      level: 3,
+      hint: row.hints_json[2],
+      source: 'written',
+    });
+  });
+
+  it('serves concurrent level 1 and level 2 requests independently', async () => {
+    const [r1, r2] = await Promise.all([
+      post({ level: 1 }),
+      post({ level: 2 }),
+    ]);
+    expect(r1.status).toBe(200);
+    expect(r2.status).toBe(200);
+    expect(r1.body).toEqual({ level: 1, hint: hintOf(1), source: 'written' });
+    expect(r2.body).toEqual({ level: 2, hint: hintOf(2), source: 'written' });
+  });
+
+  it.each([1, 2, 3])(
+    'level %i response holds only its own hint text',
+    async (level) => {
+      const res = await post({ level });
+      expect(res.text).toContain(escaped(level));
+      for (const other of [1, 2, 3].filter((l) => l !== level)) {
+        expect(res.text).not.toContain(escaped(other));
+      }
+    },
+  );
+
+  it.each([0, 4, 1.5, '1'])('rejects level %j with 400', async (level) => {
+    const res = await post({ level });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 });
