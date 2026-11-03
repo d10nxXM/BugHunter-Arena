@@ -424,6 +424,39 @@ describe('GET /api/attempts', () => {
       expect(next.body[0].id).toBe(seeded[53].id);
     });
 
+    it('cursor + cursorId walks 5 identical created_at rows, each once', async () => {
+      const TIE_USER = '55555555-5555-4555-8555-555555555555';
+      const stamp = '2026-02-01T10:00:00.123456+00:00';
+      const ids = Array.from(
+        { length: 5 },
+        (_, i) =>
+          `00000000-0000-4000-8000-0000000001${String(i).padStart(2, '0')}`,
+      );
+      fake.tables.attempts.push(
+        ...ids.map((id) => ({
+          id,
+          user_id: TIE_USER,
+          challenge_id: 'find-max',
+          status: 'submitted',
+          hints_used: 0,
+          created_at: stamp,
+        })),
+      );
+      const seen = [];
+      let query = '';
+      for (let i = 0; i < 10; i += 1) {
+        const res = await request(app).get(
+          `/api/attempts?userId=${TIE_USER}&limit=2${query}`,
+        );
+        expect(res.status).toBe(200);
+        seen.push(...res.body.map((a) => a.id));
+        if (res.body.length < 2) break;
+        const last = res.body.at(-1);
+        query = `&cursor=${encodeURIComponent(last.createdAt)}&cursorId=${last.id}`;
+      }
+      expect(seen).toEqual([...ids].reverse());
+    });
+
     it('defaults to 50 items, newest first', async () => {
       const res = await list();
       expect(res.status).toBe(200);
@@ -436,6 +469,11 @@ describe('GET /api/attempts', () => {
       ['limit=0', '&limit=0'],
       ['limit=101', '&limit=101'],
       ['a bad cursor', '&cursor=yesterday'],
+      [
+        'cursorId without cursor',
+        '&cursorId=22222222-2222-4222-8222-222222222222',
+      ],
+      ['a non-UUID cursorId', '&cursor=2026-01-01T00%3A00%3A00Z&cursorId=abc'],
     ])('400 for %s', async (_name, query) => {
       const res = await list(query);
       expect(res.status).toBe(400);

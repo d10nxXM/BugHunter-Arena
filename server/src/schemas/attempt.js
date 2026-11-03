@@ -50,16 +50,25 @@ export const AttemptIdParamsSchema = z.object({ id: IdSchema });
 export const ProgressQuerySchema = z.object({ userId: IdSchema });
 
 /**
- * GET /api/attempts?userId=&challengeId=&limit=&cursor=
+ * GET /api/attempts?userId=&challengeId=&limit=&cursor=&cursorId=
  * `cursor` is the createdAt of the last item of the previous page (ISO 8601
- * with Z or an offset); the next page holds attempts created strictly before.
+ * with Z or an offset); `cursorId` is its id. With both, the next page holds
+ * attempts ordered after that item (earlier createdAt, or equal createdAt and
+ * smaller id). `cursor` alone keeps the strict createdAt < behaviour.
+ * `cursorId` without `cursor` is a validation error.
  */
-export const AttemptListQuerySchema = z.object({
-  userId: IdSchema,
-  challengeId: ChallengeIdSchema.optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
-  cursor: z.iso.datetime({ offset: true }).optional(),
-});
+export const AttemptListQuerySchema = z
+  .object({
+    userId: IdSchema,
+    challengeId: ChallengeIdSchema.optional(),
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+    cursor: z.iso.datetime({ offset: true }).optional(),
+    cursorId: IdSchema.optional(),
+  })
+  .refine((q) => q.cursorId === undefined || q.cursor !== undefined, {
+    message: 'cursorId requires cursor',
+    path: ['cursorId'],
+  });
 
 /** POST /api/users. */
 export const CreateUserSchema = z.object({

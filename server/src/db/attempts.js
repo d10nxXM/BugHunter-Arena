@@ -53,24 +53,48 @@ export async function completeEvaluation(id, fields) {
   return data !== null;
 }
 
+// Only these shapes may be interpolated into the PostgREST or() string.
+const CURSOR_TIMESTAMP =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Attempt summaries of one user, newest first (created_at desc, then id
- * desc); optionally one challenge. `before` (an ISO timestamp) keeps only
- * attempts created strictly earlier, for keyset pages. At most `limit` rows,
- * always applied. Uses attempts_user_id_created_at_idx.
+ * desc); optionally one challenge. At most `limit` rows, always applied.
+ * Uses attempts_user_id_created_at_idx (user_id, created_at desc, id desc).
  *
- * The cursor is `created_at` only, with a strict `<`: a row whose created_at
- * equals the cursor is skipped on the next page (two attempts in the same
- * microsecond). Accepted for the MVP; the later fix is a composite
- * (created_at, id) cursor.
+ * Keyset paging: `before` (an ISO timestamp) with `beforeId` keeps rows
+ * ordered after that item: created_at < before, or created_at = before and
+ * id < beforeId, so ties are neither skipped nor repeated. `before` alone
+ * keeps a strict `created_at <` (a row equal to the cursor is skipped).
+ * Both values are interpolated into the PostgREST filter string, so this
+ * function fails closed: it throws unless `before` is an ISO 8601 datetime
+ * with an offset and `beforeId` is a UUID (callers also validate with Zod).
+ * The timestamp is double-quoted because it contains ':' and '+'. It is
+ * passed through as a string and never round-tripped through Date, which
+ * would lose microseconds.
+ *
+ * Performance note: the cursor is applied as a filter on the ordered scan,
+ * not as an index range, so a very deep page reads and discards the rows
+ * before it. If that gets slow, the escape hatch is an RPC (SQL function)
+ * using a row-value comparison: (created_at, id) < (before, beforeId).
  */
 export async function listAttemptSummaries(
   userId,
-  { challengeId, before, limit = 1000 } = {},
+  { challengeId, before, beforeId, limit = 1000 } = {},
 ) {
   let query = db.from('attempts').select(SUMMARY_COLUMNS).eq('user_id', userId);
   if (challengeId) query = query.eq('challenge_id', challengeId);
-  if (before) query = query.lt('created_at', before);
+  if (before && beforeId) {
+    if (!CURSOR_TIMESTAMP.test(before) || !UUID.test(beforeId)) {
+      throw new Error('listAttemptSummaries: invalid cursor');
+    }
+    query = query.or(
+      `created_at.lt."${before}",and(created_at.eq."${before}",id.lt.${beforeId})`,
+    );
+  } else if (before) {
+    query = query.lt('created_at', before);
+  }
   const { data, error } = await query
     .order('created_at', { ascending: false })
     .order('id', { ascending: false })

@@ -276,16 +276,19 @@ export async function getProgress(userId) {
 
 /**
  * GET /api/attempts. Summaries only: no answer text, no hidden data. Newest
- * first; `cursor` is the createdAt of the last item of the previous page.
+ * first; `cursor` is the createdAt of the last item of the previous page and
+ * `cursorId` its id (composite cursor, no skipped ties). Both are passed
+ * through as received, never re-parsed as dates.
  */
 export async function listAttempts(
   userId,
-  { challengeId, limit, cursor } = {},
+  { challengeId, limit, cursor, cursorId } = {},
 ) {
   const rows = await listAttemptSummaries(userId, {
     challengeId,
     limit,
     before: cursor,
+    beforeId: cursorId,
   });
   return rows.map((row) => ({
     id: row.id,
