@@ -9,6 +9,9 @@ You own the code editor and the test runner: worker D in `docs/PLAN.md`. This is
 ## Your files
 
 - `client/src/workers/testRunner.worker.js`
+- `client/src/workers/runnerClient.js` (page side: worker lifecycle, timeouts, restarts, queue)
+- `client/src/workers/harness.js` (the Python harness and its JS glue)
+- `client/src/workers/monacoSetup.js` (local Monaco setup)
 - `client/src/hooks/useTestRunner.js` (context and hook; the M1 stub is here)
 - `client/src/components/TestRunnerProvider.jsx` (new; the provider, mounted at the app root in `App.jsx`; the M1 stub is here)
 - `client/src/lib/compareResults.js`
@@ -38,19 +41,28 @@ Consumers never run tests while `ready` is false, and show `loadError` (Monteneg
 
 From the doc comment in `src/hooks/useTestRunner.js`:
 
-- One long-lived module worker, started when the app opens. Init timeout (about 30 s) without `{ type: 'ready' }` sets `loadError`; `ready` stays false.
-- `worker.onerror` and `onmessageerror` set `loadError`, and every pending `run()` settles (rejects).
-- Each run is limited to 3 s. Over the limit: terminate the worker, resolve `{ timedOut: true, results }` with `error: 'timeout'`, `passed: false` and `actual: null` for every test, then start a fresh worker (`ready` is false until it is ready again).
-- Restarts are limited. Past the limit, set `loadError` instead of restarting forever.
-- `run()` while `!ready` rejects with an Error whose message is Montenegrin.
+- Implementation: `workers/runnerClient.js` (React-free: worker, private channel, timers, restarts, queue). `TestRunnerProvider` only wraps it.
+- One long-lived module worker, started when the app opens. Init timeout (30 s) without `{ type: 'ready' }` sets `loadError` to `LOAD_TIMEOUT`; `ready` stays false.
+- Runs go one at a time from a queue. Each run's 3 s limit starts when it is posted to the worker. Queued runs wait while the worker is replaced.
+- `run()` resolves `{ results, timedOut }` in these cases:
+  - Normal run: `results` holds `{ id, passed, actual, error }` per test. Python errors (an exception, `SyntaxError`, a missing function) are failed tests with `error` set to `"<Type>: <message>"`; the other tests still run.
+  - Timeout (3 s): every test gets `passed: false`, `actual: null`, `error: 'timeout'`, and the result has `timedOut: true`. The worker is terminated and replaced. This is not counted as a crash.
+  - Crash: the worker reports `run-error`, or its result is malformed or does not match the tests sent. Every test gets `passed: false`, `actual: null`, `error: 'RuntimeError: <msg>'`, and the result has `timedOut: false`. The worker is replaced and the crash counter goes up; a normal result resets it. More than 3 crashes in a row set `loadError` to `TOO_MANY_RESTARTS`, and that crashing run still resolves first.
+- `run()` rejects with an Error whose message is one of the following. Checks run in this order: disposed, `loadError`, not ready, payload.
+  - `RUNNER_STOPPED` after `dispose()`, including runs still pending at that moment.
+  - The terminal `loadError`: `LOAD_FAILED` (worker `init-error`), `LOAD_TIMEOUT`, `RUNNER_CRASHED` (`worker.onerror` or `onmessageerror`), `TOO_MANY_RESTARTS`, or `RUNNER_UNAVAILABLE` (no `Worker` or `MessageChannel`, or creating or posting to the worker threw). Pending runs reject with the same message.
+  - `RUNNER_NOT_READY` while `!ready`: during loading, and while the worker is replaced after a timeout or crash.
+  - `BAD_REQUEST`: an invalid payload (missing `code` or `functionName`, a test `id` that is not 1-64 characters, `args` that is not an array), or a run that could not be posted to the worker.
+- `fail()` is terminal until the page is reloaded: it stops the worker, sets `loadError`, rejects pending runs and never restarts. `ready` never becomes true again.
+- Worker error text is never rendered as HTML. `loadError` values are fixed Montenegrin constants. Crash text in `error` is shown as plain text (`src/` has no `innerHTML`).
 - StrictMode: the effect that starts the worker terminates it in its cleanup.
 - The context value is memoised (`useMemo` over `ready`, `loadError` and a stable `run` from `useCallback`), so consumers do not re-render on every provider render.
-- Monaco workers are loaded with Vite `?worker` imports in your own files, for example `import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'`.
+- Monaco workers are loaded with Vite `?worker` imports in your own files. The editor worker is imported in `workers/monacoSetup.js`: `import EditorWorker from 'monaco-editor/editor/editor.worker?worker'`.
 
 ## No CDN: Pyodide and Monaco
 
-- Pyodide: `loadPyodide({ indexURL: '/pyodide/' })` explicitly. Never `loadPackage` or `micropip`, which fall back to Pyodide's default CDN (cdn.jsdelivr.net).
-- Monaco: `loader.config({ monaco })` from `@monaco-editor/react`, with the local `monaco-editor` package, before any `<Editor>` renders. Import only the Python language and `editor.worker`.
+- Pyodide: `testRunner.worker.js` calls `loadPyodide({ indexURL, packageBaseUrl })`, with both set to the full URL of `/pyodide/` built from the worker's origin. Never `loadPackage` or `micropip`, which fall back to Pyodide's default CDN (cdn.jsdelivr.net).
+- Monaco: `workers/monacoSetup.js` uses the local `monaco-editor` package directly (`editor/editor.api`, the Python language definition, and `editor/editor.worker` through a `?worker` import). It loads only the Python language and the generic editor worker. `@monaco-editor/react` is not used: its loader defaults to a public-CDN path.
 - Never feed AI or student text to Monaco hovers, markers or markdown.
 - After a build, `grep -rl jsdelivr dist/assets` must be empty.
 
@@ -59,11 +71,11 @@ From the doc comment in `src/hooks/useTestRunner.js`:
 Follow the `useTestRunner` pattern in the `react-patterns` skill and the Pyodide setup in `vite-patterns`:
 
 - One long-lived module worker loads Pyodide once from `/pyodide/` and posts `{ type: 'ready' }`.
-- Each run posts `{ type: 'run', ... }`; the worker answers `{ type: 'result', results }`.
+- The page hands the worker one end of a private MessageChannel (`{ type: 'init', port }`). All later messages use that port, not the worker's global scope. Each run posts `{ type: 'run', runId, ... }` with a crypto-random `runId`; the worker answers `{ type: 'result', runId, results }`, or `{ type: 'run-error', runId, message }` when the run crashed the runtime.
 - The page side times each run at 3 s. On timeout it terminates the worker, reports `timedOut: true`, and starts a fresh worker.
 - Inside the worker, define the student's code in a fresh namespace per run, so one run can't leak globals into the next.
 - Each test runs in its own `try/except`. An exception becomes `{ passed: false, actual: null, error: "<Type>: <message>" }`; the other tests still run.
-- Convert results to plain JS with `toJs({ dict_converter: Object.fromEntries })`.
+- The harness (`workers/harness.js`) checks each value is JSON-safe (no NaN, Infinity, sets or too-deep values) and serialises it with `json.dumps`; the worker parses that text back to JS. The page decides `passed`, never the worker.
 - Results compare as JSON values: `None` is `null`; numbers by value (`1 == 1.0`); booleans equal only booleans (`true != 1`); strings by value; lists element by element in order; objects by the same keys in any order. NaN, Infinity, sets and other non-JSON values never match.
 
 ## Cases you must handle

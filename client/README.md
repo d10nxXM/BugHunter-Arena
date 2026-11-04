@@ -54,11 +54,13 @@ never edited by hand. `pyodide` is pinned to an exact version in `package.json`.
 
 Both libraries default to cdn.jsdelivr.net if they are not configured. The app must not use it.
 
-- Pyodide: call `loadPyodide({ indexURL: '/pyodide/' })` explicitly. Never call `loadPackage` or
-  `micropip`: extra packages fall back to Pyodide's default `packageBaseUrl` on jsdelivr.
-- Monaco: call `loader.config({ monaco })` from `@monaco-editor/react` with the local
-  `monaco-editor` package before any `<Editor>` renders. Import only the Python language and
-  `editor.worker`. Never feed AI or student text to Monaco hovers, markers or markdown.
+- Pyodide: `src/workers/testRunner.worker.js` calls `loadPyodide` with `indexURL` and
+  `packageBaseUrl` both set to the local `/pyodide/`. Never call `loadPackage` or `micropip`: extra
+  packages fall back to Pyodide's default `packageBaseUrl` on jsdelivr.
+- Monaco: `src/workers/monacoSetup.js` imports the local `monaco-editor` package directly, with only
+  the Python language and `editor.worker` (a Vite `?worker` import). `@monaco-editor/react` is not
+  used: its loader defaults to a CDN path. Never feed AI or student text to Monaco hovers, markers
+  or markdown.
 - Check after every build: `grep -rl jsdelivr dist/assets` must be empty.
 
 The full test-runner contract for the worker is in `src/hooks/useTestRunner.js`.
@@ -71,7 +73,8 @@ The full test-runner contract for the worker is in `src/hooks/useTestRunner.js`.
   Monaco ships `dompurify` >= 3.4.17.
 - The moderate `eslint` / `minimatch` advisories are in dev tooling only and never reach the
   browser bundle.
-- `monaco-editor`, `@monaco-editor/react` and `pyodide` are pinned to exact versions.
+- `monaco-editor` and `pyodide` are pinned to exact versions. `@monaco-editor/react` is not used by
+  the code and is being removed from `package.json`.
 
 ## Layout
 
