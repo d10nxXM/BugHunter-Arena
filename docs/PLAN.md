@@ -19,17 +19,20 @@ The work is split so several agents can run at once without editing the same fil
 | Backend batch 2 (B and C) | Merged | B first, then C. B: attempts, evaluation, scoring, progress, users. C: AI mentor, AI hints, demo mode, eval set. No migration |
 | M2 backend | Complete | `npm test` in `server/` passes on `main` after batch 2 |
 | Backend follow-up | Done | AI quota counts LLM-calling requests only, demo hint source, validation before aiLimiter, attempts index and pagination, cleanup |
-| Backend contract follow-up (cursorId paging, hint contract tests) | Merged | C then B, 2026-11-04. New migration 20261104090000, not pushed yet |
+| Backend contract follow-up (cursorId paging, hint contract tests) | Merged, migration pushed, paging verified on production | C then B, 2026-11-04. Migration 20261104090000 pushed to production; manual paging check passed |
+| Production data | Seeded | find-max loaded with `npm run seed`, 2026-11-04 |
+| M1 client shell | Not done | `client/` is still the Vite template; planning in progress. Must land before frontend batch D, E, F |
 
 Backend remaining before M3:
 
-- Push `supabase/migrations/20261104090000_attempts_user_created_at_id_idx.sql` with `npx supabase db push` (`20261103120000` is already applied on production and stays unchanged). Then run a manual tied-createdAt paging check against real Supabase.
+- [x] Push `supabase/migrations/20261104090000_attempts_user_created_at_id_idx.sql` with `npx supabase db push --remote` (`20261103120000` is already applied on production and stays unchanged). Done 2026-11-04. With the current Supabase CLI, `db push` and `migration list` need `--remote`; without it they target a local Docker stack.
+- [x] Manual tied-createdAt paging check against production. Done 2026-11-04: a test user with 3 attempts sharing `created_at` `2026-11-04 10:00:00.123456+00`, paged with `limit=1` using `cursor` + `cursorId`. Each attempt came back once, in order, then an empty page. Microseconds preserved. Test data deleted.
 - [x] Fix `LLM_MODEL` for the Gemini key and run `npm run eval`, then record the table. Done, see the run below.
 - Contract items for planner (all decided 2026-11-03):
   - Hint order: not enforced on the server. Hints are practice-grade; any `level` 1-3 is served.
   - Attempts paging: add optional `cursorId` next to `cursor`. `cursor` alone keeps its strict `<` behaviour for compatibility.
   - SCORING.md reference block: aligned with `scoringService.js`, with the clamp and finite check. An out-of-range `hintsUsed` throws. No behaviour change.
-  - [x] Code follow-up: area B implements `cursorId` paging and edits the unpushed index migration; area C adds hint-contract tests. Done and merged. Still open: the push and the manual check above.
+  - [x] Code follow-up: area B implements `cursorId` paging and edits the unpushed index migration; area C adds hint-contract tests. Done and merged. The push and the manual check above are done (2026-11-04).
 - Later migration: drop the now-redundant `attempts_user_id_idx`.
 
 First AI evaluation run (`npm run eval` in `server/`), 2026-11-03:
