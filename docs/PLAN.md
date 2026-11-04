@@ -19,16 +19,17 @@ The work is split so several agents can run at once without editing the same fil
 | Backend batch 2 (B and C) | Merged | B first, then C. B: attempts, evaluation, scoring, progress, users. C: AI mentor, AI hints, demo mode, eval set. No migration |
 | M2 backend | Complete | `npm test` in `server/` passes on `main` after batch 2 |
 | Backend follow-up | Done | AI quota counts LLM-calling requests only, demo hint source, validation before aiLimiter, attempts index and pagination, cleanup |
+| Backend contract follow-up (cursorId paging, hint contract tests) | Merged | C then B, 2026-11-04. New migration 20261104090000, not pushed yet |
 
 Backend remaining before M3:
 
-- Push `supabase/migrations/20261103120000_attempts_user_created_at_idx.sql` with `npx supabase db push` after this change is committed.
+- Push `supabase/migrations/20261104090000_attempts_user_created_at_id_idx.sql` with `npx supabase db push` (`20261103120000` is already applied on production and stays unchanged). Then run a manual tied-createdAt paging check against real Supabase.
 - [x] Fix `LLM_MODEL` for the Gemini key and run `npm run eval`, then record the table. Done, see the run below.
 - Contract items for planner (all decided 2026-11-03):
   - Hint order: not enforced on the server. Hints are practice-grade; any `level` 1-3 is served.
   - Attempts paging: add optional `cursorId` next to `cursor`. `cursor` alone keeps its strict `<` behaviour for compatibility.
   - SCORING.md reference block: aligned with `scoringService.js`, with the clamp and finite check. An out-of-range `hintsUsed` throws. No behaviour change.
-  - Code follow-up: area B implements `cursorId` paging and edits the unpushed index migration; area C adds hint-contract tests. Hold `npx supabase db push` until that migration edit is merged.
+  - [x] Code follow-up: area B implements `cursorId` paging and edits the unpushed index migration; area C adds hint-contract tests. Done and merged. Still open: the push and the manual check above.
 - Later migration: drop the now-redundant `attempts_user_id_idx`.
 
 First AI evaluation run (`npm run eval` in `server/`), 2026-11-03:
@@ -67,8 +68,8 @@ Shell completion (so M2 workers never edit shared files):
 | Worker | Agent | Owns | Must not touch |
 | --- | --- | --- | --- |
 | A Challenges and hints | backend-dev | `routes/challenges.js`, `routes/hints.js` (batch 1 only; moves to C in batch 2), `db/challenges.js`, `services/challengeService.js`, `schemas/challenge*.js`, `scripts/seed.js`, `scripts/validate-challenges.js`, `data/challenges/` | `app.js`, attempts, AI services |
-| B Attempts and scoring | backend-dev + tdd-guide | `routes/attempts.js`, `routes/progress.js`, `routes/users.js`, `routes/users.test.js`, `db/attempts.js`, `db/users.js` (new), `services/scoringService.js`, `services/attemptService.js`, `schemas/attempt.js`, `test/fakeSupabase.js`, `test/integration.test.js` (batch 2) | `app.js`, AI services, `docs/SCORING.md`, `db/challenges.js` (calls `getFullChallenge` only) |
-| C AI mentor | ai-integration | `services/llmClient.js`, `services/hintService.js` (new), `aiService.js`, `evaluationService.js`, `fallbackService.js`, `schemas/aiOutput.js` (new), `prompts/`, `data/demo-responses.json`, `eval/`, `scripts/run-eval.js` (new), `routes/hints.js` (batch 2, from A) | Routes except `routes/hints.js` in batch 2, scoring, db, `services/challengeService.js` (C only calls `getWrittenHint`), `test/fakeSupabase.js`, `test/integration.test.js` |
+| B Attempts and scoring | backend-dev + tdd-guide | `routes/attempts.js`, `routes/progress.js`, `routes/users.js`, `routes/users.test.js`, `db/attempts.js`, `db/users.js`, `services/scoringService.js`, `services/attemptService.js`, `schemas/attempt.js`, `test/fakeSupabase.js`, `test/integration.test.js` (batch 2) | `app.js`, AI services, `docs/SCORING.md`, `db/challenges.js` (calls `getFullChallenge` only) |
+| C AI mentor | ai-integration | `services/llmClient.js`, `services/hintService.js`, `aiService.js`, `evaluationService.js`, `fallbackService.js`, `schemas/aiOutput.js`, `prompts/`, `data/demo-responses.json`, `eval/`, `scripts/run-eval.js`, `routes/hints.js` (batch 2, from A) | Routes except `routes/hints.js` in batch 2, scoring, db, `services/challengeService.js` (C only calls `getWrittenHint`), `test/fakeSupabase.js`, `test/integration.test.js` |
 
 C keeps its tests next to its own files (for example `services/hintService.test.js`) and mocks `getFullChallenge` at module level instead of editing shared test files.
 

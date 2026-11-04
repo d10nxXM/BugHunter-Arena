@@ -59,7 +59,7 @@ create table attempts (
 
 create index attempts_user_id_idx on attempts (user_id);
 create index attempts_challenge_id_idx on attempts (challenge_id);
--- 20261103120000_attempts_user_created_at_idx.sql
+-- 20261104090000_attempts_user_created_at_id_idx.sql
 create index attempts_user_id_created_at_idx on attempts (user_id, created_at desc, id desc);
 
 alter table users enable row level security;
@@ -73,7 +73,8 @@ Migrations:
 | File | Change |
 | --- | --- |
 | `20261103002608_init_schema.sql` | Initial schema |
-| `20261103120000_attempts_user_created_at_idx.sql` | Index `attempts_user_id_created_at_idx` on `attempts (user_id, created_at desc, id desc)` for history (keyset order) and progress reads |
+| `20261103120000_attempts_user_created_at_idx.sql` | Index `attempts_user_id_created_at_idx` on `attempts (user_id, created_at desc)` for history and progress reads. Applied to production; not changed since |
+| `20261104090000_attempts_user_created_at_id_idx.sql` | Drops and recreates `attempts_user_id_created_at_idx` on `attempts (user_id, created_at desc, id desc)`, so the index follows the composite `(created_at, id)` cursor of `GET /api/attempts` |
 
 ## Attempt columns
 
