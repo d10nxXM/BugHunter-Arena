@@ -1,0 +1,16 @@
+{
+  "name": "bughunter-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Playwright end-to-end tests for BugHunter Arena (self-contained; starts client and server itself)",
+  "scripts": {
+    "install:browsers": "playwright install chromium",
+    "test": "playwright test",
+    "test:repeat": "node scripts/repeat.mjs 5",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
+  }
+}

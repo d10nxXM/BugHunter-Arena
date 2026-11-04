@@ -4,3 +4,8 @@ dist/
 coverage/
 .claude/worktrees/
 __pycache__/
+
+# e2e artifacts
+e2e/test-results/
+e2e/playwright-report/
+e2e/.vite-cache/
