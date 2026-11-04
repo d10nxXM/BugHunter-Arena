@@ -14,7 +14,15 @@ import { createContext, useContext } from 'react';
  * - When run() rejects, treat it as "tests did not run": show the error, do not send results.
  *   A rejection never means "the tests failed".
  *
- * Contract for worker D's real provider (replaces the M1 stub in TestRunnerProvider.jsx):
+ * Results: `passed` is decided on the page with lib/compareResults.js (JSON equality, see
+ * docs/SCORING.md). `error` is null for a test that ran, "<Type>: <message>" (max 200 chars)
+ * when the code raised, or 'timeout'. `actual` is null when there is an error.
+ * run() calls are queued and run one at a time; each run's 3 s starts when it is sent.
+ *
+ * Implementation: components/TestRunnerProvider.jsx (React wrapper), workers/runnerClient.js
+ * (worker lifecycle, timeouts, restarts, queue) and workers/testRunner.worker.js (Pyodide).
+ *
+ * Contract for the provider:
  * - One long-lived module worker, `new Worker(new URL('../workers/testRunner.worker.js',
  *   import.meta.url), { type: 'module' })`, started when the app opens.
  * - Init timeout (~30 s) without { type: 'ready' } -> loadError set, ready stays false.
@@ -32,7 +40,7 @@ import { createContext, useContext } from 'react';
  *   'monaco-editor/esm/vs/editor/editor.worker?worker'`). If a config change seems necessary,
  *   say so in the summary instead of making it.
  * - Security: loadPyodide({ indexURL: '/pyodide/' }) explicitly. Never loadPackage or micropip,
- *   which would fall back to Pyodide's default CDN (cdn.jsdelivr.net).
+ *   which would fall back to Pyodide's default public CDN.
  * - Monaco: loader.config({ monaco }) with the local monaco-editor package before any <Editor>
  *   renders; import only the Python language and editor.worker. Never feed AI or student text to
  *   Monaco hovers, markers or markdown.
