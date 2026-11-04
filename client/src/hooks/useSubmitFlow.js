@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { createAttempt, submitEvaluation } from '../api/client.js';
-import { findAttemptById } from '../lib/attemptRecovery.js';
-import { countPassed, runSubmitTests } from '../lib/runnerPayload.js';
+import { lookupAttempt } from '../lib/attemptRecovery.js';
+import { runSubmitTests } from '../lib/runnerPayload.js';
 import {
   MESSAGES,
   OUTCOME_ID,
@@ -13,11 +13,20 @@ import {
   assertAttemptResponse,
   assertEvaluationResponse,
   errorMessage,
+  isAbortError,
   isAlreadyEvaluated,
   isMaybeSaved,
-  isRetryable,
   reportFailure,
 } from '../lib/submitErrors.js';
+import {
+  NOT_SAVED_OUTCOME,
+  anonymousOutcome,
+  buildAttempt,
+  buildRecovered,
+  buildResultState,
+  evaluationOutcome,
+  unknownOutcome,
+} from '../lib/submitSteps.js';
 import { paths } from '../paths.js';
 
 const EVALUATION_ROUTE = 'POST /api/attempts/:id/evaluation';
@@ -42,40 +51,27 @@ export function useSubmitFlow({ challenge, safeRun, getSignal, requestFocus }) {
   const inFlightRef = useRef(false);
   // Evaluation is re-POSTed after recovery at most once per attempt, across manual retries.
   const repostedRef = useRef(false);
+  // True after a failure that may have stored the evaluation (maybe saved, 409).
+  const lookupNeededRef = useRef(false);
 
   function fail(phase, message, actions = []) {
     setSubmission({ phase, message, actions });
     requestFocus(OUTCOME_ID);
   }
 
-  function failEvaluation(error) {
-    fail('evalFailed', errorMessage(error), [
-      ...(isRetryable(error) ? ['retryEvaluation'] : []),
-      'listLink',
-    ]);
-  }
-
-  function failUnknown() {
-    fail('unknown', MESSAGES.resultMaybeSaved, [
-      'retryEvaluation',
-      ...(attemptRef.current.userId ? ['progressLink'] : []),
-      'listLink',
-    ]);
-  }
+  const failWith = (phase, { message, actions }) => fail(phase, message, actions);
+  const failUnknown = () => failWith('unknown', unknownOutcome(attemptRef.current.userId));
+  const failEvaluation = (error) => failWith('evalFailed', evaluationOutcome(error));
 
   function finish(evaluation) {
-    const attempt = attemptRef.current;
     setSubmission({ phase: 'done' });
-    // ResultState (src/paths.js) plus referenceSolution, which ResultView (F) shows.
     navigate(paths.result(challenge.id), {
-      state: {
-        attemptId: attempt.attemptId,
+      state: buildResultState({
+        attempt: attemptRef.current,
         challengeId: challenge.id,
-        tests: attempt.tests,
-        testResults: payloadRef.current.testResults,
+        payload: payloadRef.current,
         evaluation,
-        referenceSolution: attempt.referenceSolution,
-      },
+      }),
     });
   }
 
@@ -86,69 +82,57 @@ export function useSubmitFlow({ challenge, safeRun, getSignal, requestFocus }) {
         await submitEvaluation(attemptRef.current.attemptId, payloadRef.current, { signal }),
       );
     } catch (error) {
-      if (!signal.aborted) await onError(error);
+      if (signal.aborted) return null;
+      reportFailure(EVALUATION_ROUTE, error);
+      // Only a maybe-saved failure or a 409 makes a lookup worthwhile (429 and 4xx stored nothing; a cut-off request is unknown).
+      lookupNeededRef.current =
+        isMaybeSaved(error) || isAlreadyEvaluated(error) || isAbortError(error);
+      await onError(error);
       return null;
     }
   }
 
   /**
-   * After an evaluation that may be stored, a 409, or a manual retry: looks the attempt up in
-   * GET /api/attempts (by id, paging with cursor + cursorId). Evaluated: shows the stored score.
-   * Still submitted: re-POSTs once per attempt. Not found, or the search failed or ran out of
-   * time: shows the maybe-saved message and never re-POSTs.
+   * After an evaluation that may be stored, a 409, or a manual retry: looks the attempt up
+   * (lib/attemptRecovery.js). Evaluated: shows the stored score. Still submitted: re-POSTs once
+   * per attempt, then says the evaluation was not saved. Not found or search failed: shows the
+   * maybe-saved message and never re-POSTs.
    */
   async function recover(signal) {
     const attempt = attemptRef.current;
     setSubmission({ phase: 'recovering' });
-    let item;
-    try {
-      item = await findAttemptById({
-        userId: attempt.userId,
-        challengeId: challenge.id,
-        attemptId: attempt.attemptId,
-        signal,
-      });
-    } catch (error) {
-      if (signal.aborted) return;
-      reportFailure('GET /api/attempts', error);
-      failUnknown();
-      return;
-    }
-    if (signal.aborted) return;
-    if (item?.status === 'evaluated' && Number.isFinite(item.score)) {
-      setSubmission({
-        phase: 'recovered',
-        item,
-        testsPassed: countPassed(payloadRef.current.testResults),
-        testsTotal: attempt.tests.length,
-      });
+    const found = await lookupAttempt({
+      userId: attempt.userId,
+      challengeId: challenge.id,
+      attemptId: attempt.attemptId,
+      signal,
+    });
+    if (found.status === 'aborted') return;
+    if (found.status === 'evaluated') {
+      setSubmission(buildRecovered({ item: found.item, attempt, payload: payloadRef.current }));
       requestFocus(RECOVERED_HEADING_ID);
       return;
     }
-    // Attempt not found (or not evaluable): the result may exist, so do not POST blindly.
-    if (!item || repostedRef.current) {
+    if (found.status === 'unknown') {
       failUnknown();
       return;
     }
+    if (repostedRef.current) {
+      failWith('unknown', NOT_SAVED_OUTCOME);
+      return;
+    }
     repostedRef.current = true;
-    setSubmission({ phase: 'evaluating' });
-    const evaluation = await post(signal, async (error) => {
-      reportFailure(EVALUATION_ROUTE, error);
-      if (isAlreadyEvaluated(error)) await recover(signal);
-      else failEvaluation(error);
-    });
-    if (evaluation && !signal.aborted) finish(evaluation);
+    await evaluate(signal, true);
   }
 
-  async function evaluate(signal) {
+  async function evaluate(signal, afterLookup = false) {
     setSubmission({ phase: 'evaluating' });
     const evaluation = await post(signal, async (error) => {
-      reportFailure(EVALUATION_ROUTE, error);
-      if (!attemptRef.current.userId && (isMaybeSaved(error) || isAlreadyEvaluated(error))) {
-        // Without a user id the attempt cannot be looked up.
-        fail('evalFailed', MESSAGES.resultMaybeSaved, ['retryEvaluation', 'listLink']);
-      } else if (isMaybeSaved(error) || isAlreadyEvaluated(error)) await recover(signal);
-      else failEvaluation(error);
+      if (!isMaybeSaved(error) && !isAlreadyEvaluated(error)) failEvaluation(error);
+      else if (!attemptRef.current.userId) {
+        failWith('evalFailed', anonymousOutcome(error, repostedRef.current));
+      } else if (afterLookup && !isAlreadyEvaluated(error)) failEvaluation(error);
+      else await recover(signal);
     });
     if (evaluation && !signal.aborted) finish(evaluation);
   }
@@ -212,14 +196,8 @@ export function useSubmitFlow({ challenge, safeRun, getSignal, requestFocus }) {
       if (signal.aborted) return;
       setStoppedAt(Date.now());
       repostedRef.current = false;
-      attemptRef.current = {
-        attemptId: created.attemptId,
-        tests: created.tests,
-        referenceSolution: created.referenceSolution,
-        userId: body.userId,
-        code: body.fixedCode,
-        edgeCase: body.edgeCase,
-      };
+      lookupNeededRef.current = false;
+      attemptRef.current = buildAttempt(created, body);
       await runAndEvaluate(signal);
     });
   }
@@ -229,10 +207,18 @@ export function useSubmitFlow({ challenge, safeRun, getSignal, requestFocus }) {
     return guarded(runAndEvaluate);
   }
 
-  /** With a user id, checks GET /api/attempts first; anonymous students POST directly. */
+  /**
+   * With a user id and a maybe-saved failure, checks GET /api/attempts first. After 429 or
+   * another known-not-stored failure, and for anonymous students, POSTs directly (an anonymous
+   * re-POST after maybe-saved spends the single re-POST budget).
+   */
   function retryEvaluation() {
     requestFocus(SUBMIT_BUTTON_ID);
-    return guarded(attemptRef.current?.userId ? recover : evaluate);
+    return guarded((signal) => {
+      if (attemptRef.current?.userId && lookupNeededRef.current) return recover(signal);
+      if (lookupNeededRef.current) repostedRef.current = true;
+      return evaluate(signal);
+    });
   }
 
   return { submission, stoppedAt, submit, retryTests, retryEvaluation };

@@ -746,7 +746,7 @@ describe('ChallengePage timeouts and recovery', () => {
     expect(submitEvaluation).toHaveBeenCalledTimes(2);
   });
 
-  it('re-POSTs at most once: still submitted after a 409 gives the maybe-saved message', async () => {
+  it('re-POSTs at most once: still submitted after a 409 says the evaluation was not saved', async () => {
     submitEvaluation.mockRejectedValueOnce(timeoutError()).mockRejectedValueOnce(conflictError());
     getAttempts.mockResolvedValue([attemptItem({ status: 'submitted', score: null })]);
     const user = userEvent.setup();
@@ -754,7 +754,8 @@ describe('ChallengePage timeouts and recovery', () => {
     await fillAnswer(user);
     await user.click(submitButton());
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Rezultat je možda sačuvan, ali ga nismo mogli učitati.');
+    expect(alert).toHaveTextContent('Ocjena nije sačuvana na serveru.');
+    expect(alert).not.toHaveTextContent('možda sačuvan');
     expect(submitEvaluation).toHaveBeenCalledTimes(2);
   });
 
@@ -912,7 +913,7 @@ describe('ChallengePage timeouts and recovery', () => {
     const alert = await screen.findByRole('alert');
     expect(submitEvaluation).toHaveBeenCalledTimes(2);
     await user.click(within(alert).getByRole('button', { name: 'Pošalji rezultat ponovo' }));
-    expect(await screen.findByText(/Rezultat je možda sačuvan/)).toBeInTheDocument();
+    expect(await screen.findByText(/Ocjena nije sačuvana/)).toBeInTheDocument();
     expect(submitEvaluation).toHaveBeenCalledTimes(2);
   });
 
@@ -945,5 +946,52 @@ describe('ChallengePage timeouts and recovery', () => {
     await user.click(submitButton());
     expect(await screen.findByRole('alert')).toHaveTextContent('Previše zahtjeva.');
     expect(getAttempts).not.toHaveBeenCalled();
+  });
+
+  it('429 twice then success: retries POST directly, no lookup, no maybe-saved message', async () => {
+    const limited = () => new ApiError('Previše zahtjeva.', { status: 429, code: 'RATE_LIMITED' });
+    submitEvaluation.mockRejectedValueOnce(limited()).mockRejectedValueOnce(limited());
+    const user = userEvent.setup();
+    await renderReady();
+    await fillAnswer(user);
+    await user.click(submitButton());
+    let alert = await screen.findByRole('alert');
+    await user.click(within(alert).getByRole('button', { name: 'Pošalji rezultat ponovo' }));
+    await waitFor(() => expect(submitEvaluation).toHaveBeenCalledTimes(2));
+    alert = await screen.findByRole('alert');
+    expect(alert).not.toHaveTextContent('možda sačuvan');
+    await user.click(within(alert).getByRole('button', { name: 'Pošalji rezultat ponovo' }));
+    await screen.findByTestId('result-state');
+    expect(submitEvaluation).toHaveBeenCalledTimes(3);
+    expect(getAttempts).not.toHaveBeenCalled();
+  });
+
+  it('anonymous 409 on the evaluation POST: message with the list link, no retry button', async () => {
+    submitEvaluation.mockRejectedValueOnce(conflictError());
+    const user = userEvent.setup();
+    await renderReady({ withUser: false });
+    await fillAnswer(user);
+    await user.click(submitButton());
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Rezultat je možda sačuvan');
+    expect(within(alert).queryByRole('button', { name: 'Pošalji rezultat ponovo' })).toBeNull();
+    expect(within(alert).getByRole('link')).toBeInTheDocument();
+    expect(getAttempts).not.toHaveBeenCalled();
+    expect(submitEvaluation).toHaveBeenCalledTimes(1);
+  });
+
+  it('anonymous: a second maybe-saved failure offers no further retry', async () => {
+    submitEvaluation.mockRejectedValue(timeoutError());
+    const user = userEvent.setup();
+    await renderReady({ withUser: false });
+    await fillAnswer(user);
+    await user.click(submitButton());
+    const alert = await screen.findByRole('alert');
+    await user.click(within(alert).getByRole('button', { name: 'Pošalji rezultat ponovo' }));
+    await waitFor(() => expect(submitEvaluation).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Pošalji rezultat ponovo' })).toBeNull(),
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('Rezultat je možda sačuvan');
   });
 });

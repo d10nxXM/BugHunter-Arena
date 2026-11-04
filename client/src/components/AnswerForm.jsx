@@ -19,7 +19,7 @@ function describedBy(...ids) {
 
 /**
  * Explanation and edge case, plus the "Predaj odgovor" button. Controlled: values and errors
- * live in ChallengePage.
+ * live in ChallengeWorkspace.
  *
  * @param {{
  *   values: { explanation: string, edgeArgs: string, edgeExpected: string },

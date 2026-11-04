@@ -51,8 +51,8 @@ function Recovered({ item, testsPassed, testsTotal }) {
 }
 
 /**
- * The outcome of a failed or recovered submission. The failure box is an alert and is focused by the flow.
- * (the focus move makes sure screen readers land on it).
+ * The outcome of a failed or recovered submission. The failure box is an alert, and the flow
+ * moves focus to it so screen readers land on it.
  *
  * @param {{ submission: object, onAction: (action: string) => void }} props
  */

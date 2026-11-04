@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useHints } from '../hooks/useHints.js';
 import { useRunnerGate } from '../hooks/useRunnerGate.js';
 import { useSubmitFlow } from '../hooks/useSubmitFlow.js';
@@ -7,7 +7,7 @@ import { useUser } from '../hooks/useUser.js';
 import { validateAnswer } from '../lib/answerValidation.js';
 import { toRunnerTests, toTestResults } from '../lib/runnerPayload.js';
 import { FIELD_IDS, FIELD_ORDER, PHASES, SUBMIT_BUTTON_ID } from '../lib/submitConstants.js';
-import { errorMessage } from '../lib/submitErrors.js';
+import { errorMessage, reportFailure } from '../lib/submitErrors.js';
 import AnswerForm from './AnswerForm.jsx';
 import ChallengeCodePanel from './ChallengeCodePanel.jsx';
 import { useFocusRequest, useUnmountSignal } from './ChallengeHooks.js';
@@ -29,6 +29,8 @@ export default function ChallengeWorkspace({ challenge, startedAt }) {
   const [values, setValues] = useState({ explanation: '', edgeArgs: '', edgeExpected: '' });
   const [errors, setErrors] = useState({});
   const [visibleRun, setVisibleRun] = useState({ status: 'idle' });
+  // Blocks a second run before the next render (double clicks).
+  const runningRef = useRef(false);
 
   const phase = PHASES[flow.submission.phase];
   const editable = phase.editable;
@@ -64,7 +66,8 @@ export default function ChallengeWorkspace({ challenge, startedAt }) {
   }
 
   async function handleRunVisible() {
-    if (!runner.ready || !editable || visibleRun.status === 'running') return;
+    if (!runner.ready || !editable || runningRef.current) return;
+    runningRef.current = true;
     const signal = getSignal();
     const ranCode = code;
     setVisibleRun({ status: 'running' });
@@ -87,7 +90,12 @@ export default function ChallengeWorkspace({ challenge, startedAt }) {
         });
       }
     } catch (error) {
-      if (!signal.aborted) setVisibleRun({ status: 'error', message: errorMessage(error) });
+      if (!signal.aborted) {
+        reportFailure('browser visible run', error);
+        setVisibleRun({ status: 'error', message: errorMessage(error) });
+      }
+    } finally {
+      runningRef.current = false;
     }
   }
 

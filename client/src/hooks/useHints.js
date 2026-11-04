@@ -12,6 +12,7 @@ export function useHints({ challenge, getSignal, editable, selectedLines, explan
   const [hints, setHints] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const inFlightRef = useRef(false);
   const editableRef = useRef(editable);
   useEffect(() => {
     editableRef.current = editable;
@@ -21,7 +22,8 @@ export function useHints({ challenge, getSignal, editable, selectedLines, explan
 
   async function request() {
     const level = hints.length + 1;
-    if (loading || !editable || level > maxLevel) return;
+    if (inFlightRef.current || !editable || level > maxLevel) return;
+    inFlightRef.current = true;
     const signal = getSignal();
     setLoading(true);
     setError(null);
@@ -40,6 +42,7 @@ export function useHints({ challenge, getSignal, editable, selectedLines, explan
     } catch (caught) {
       if (!signal.aborted) setError(errorMessage(caught));
     } finally {
+      inFlightRef.current = false;
       if (!signal.aborted) setLoading(false);
     }
   }

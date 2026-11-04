@@ -1,5 +1,4 @@
-/** Points subtracted per hint level (docs/SCORING.md). */
-const HINT_PENALTIES = { 1: 5, 2: 5, 3: 10 };
+import { HINT_PENALTIES } from '../lib/submitConstants.js';
 
 const BUTTON =
   'rounded bg-sky-800 px-3 py-2 font-medium text-white hover:bg-sky-900 focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-slate-400';

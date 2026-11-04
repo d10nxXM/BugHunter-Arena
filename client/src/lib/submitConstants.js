@@ -22,6 +22,9 @@ export const RECOVERED_HEADING_ID = 'recovered-heading';
 /** Order in which invalid fields are focused. */
 export const FIELD_ORDER = ['lines', 'code', 'explanation', 'edgeArgs', 'edgeExpected'];
 
+/** Point penalty per hint level (docs/SCORING.md); the server computes the real score. */
+export const HINT_PENALTIES = { 1: 5, 2: 5, 3: 10 };
+
 /** Longest error text the evaluation endpoint accepts. */
 export const MAX_ERROR_LENGTH = 200;
 
@@ -31,6 +34,8 @@ export const EDGE_CASE_TEST_ID = 'edge-case';
 export const MESSAGES = {
   attemptMaybeLost: 'Predaja možda nije stigla do servera. Pokušaj ponovo.',
   resultMaybeSaved: 'Rezultat je možda sačuvan, ali ga nismo mogli učitati.',
+  resultNotSaved:
+    'Ocjena nije sačuvana na serveru. Vrati se na listu izazova ili predaj odgovor ponovo.',
   interrupted: 'Slanje je prekinuto. Pokušaj ponovo.',
   rateLimited: 'Previše zahtjeva. Sačekaj malo pa pokušaj ponovo.',
   generic: 'Došlo je do greške. Pokušaj ponovo.',
