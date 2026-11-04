@@ -1,9 +1,10 @@
 import ChallengeTestSummary from './ChallengeTestSummary.jsx';
-import { FIELD_IDS, countPassed } from './ChallengeSubmitFlow.js';
+import { countPassed } from '../lib/runnerPayload.js';
+import { FIELD_IDS } from '../lib/submitConstants.js';
 import CodeEditor from './CodeEditor.jsx';
 
 const BUTTON =
-  'rounded border border-slate-500 bg-white px-3 py-2 font-medium text-slate-900 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2 focus-visible:outline-none aria-disabled:cursor-not-allowed aria-disabled:text-slate-500';
+  'rounded border border-slate-500 bg-white px-3 py-2 font-medium text-slate-900 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:text-slate-500';
 const NOTICE = 'rounded border-l-4 border-red-700 bg-red-50 px-3 py-2 text-red-900';
 
 function FieldError({ id, message }) {
@@ -67,16 +68,20 @@ export default function ChallengeCodePanel({
       <FieldError id={FIELD_IDS.lines} message={errors.lines} />
       <FieldError id={FIELD_IDS.code} message={errors.code} />
 
-      <button
-        type="button"
-        className={`mt-3 ${BUTTON}`}
-        aria-disabled={runBlocked}
-        onClick={() => {
-          if (!runBlocked) onRunVisible();
-        }}
-      >
-        Pokreni vidljive testove
-      </button>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" className={BUTTON} disabled={runBlocked} onClick={onRunVisible}>
+          Pokreni vidljive testove
+        </button>
+        {/* The M1 CodeEditor stub has no reset; remove this when D's editor renders its own. */}
+        <button
+          type="button"
+          className={BUTTON}
+          disabled={!editable || code === challenge.code}
+          onClick={() => onCodeChange(challenge.code)}
+        >
+          Vrati original
+        </button>
+      </div>
 
       {runner.loadError ? (
         <p className={`mt-2 ${NOTICE}`}>
@@ -84,9 +89,7 @@ export default function ChallengeCodePanel({
           {runner.loadError}
         </p>
       ) : (
-        !runner.ready && (
-          <p className="mt-2 text-sm text-slate-700">Pokretač testova se učitava…</p>
-        )
+        !runner.ready && <p className="mt-2 text-sm text-slate-700">Pokretač testova se učitava…</p>
       )}
 
       <p role="status" aria-live="polite" className="mt-2 font-medium">

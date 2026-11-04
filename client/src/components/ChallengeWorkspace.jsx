@@ -1,25 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
-import { requestHint } from '../api/client.js';
+import { useState } from 'react';
+import { useHints } from '../hooks/useHints.js';
 import { useRunnerGate } from '../hooks/useRunnerGate.js';
 import { useSubmitFlow } from '../hooks/useSubmitFlow.js';
 import { useTestRunner } from '../hooks/useTestRunner.js';
 import { useUser } from '../hooks/useUser.js';
+import { validateAnswer } from '../lib/answerValidation.js';
+import { toRunnerTests, toTestResults } from '../lib/runnerPayload.js';
+import { FIELD_IDS, FIELD_ORDER, PHASES, SUBMIT_BUTTON_ID } from '../lib/submitConstants.js';
+import { errorMessage } from '../lib/submitErrors.js';
 import AnswerForm from './AnswerForm.jsx';
 import ChallengeCodePanel from './ChallengeCodePanel.jsx';
 import { useFocusRequest, useUnmountSignal } from './ChallengeHooks.js';
 import ChallengeSubmissionOutcome from './ChallengeSubmissionOutcome.jsx';
-import {
-  EXPLANATION_MAX,
-  FIELD_IDS,
-  FIELD_ORDER,
-  MAX_SELECTED_LINES,
-  PHASES,
-  SUBMIT_BUTTON_ID,
-  errorMessage,
-  toRunnerTests,
-  toTestResults,
-  validateAnswer,
-} from './ChallengeSubmitFlow.js';
 import ChallengeTimer from './ChallengeTimer.jsx';
 import HintPanel from './HintPanel.jsx';
 
@@ -36,21 +28,19 @@ export default function ChallengeWorkspace({ challenge, startedAt }) {
   const [selectedLines, setSelectedLines] = useState([]);
   const [values, setValues] = useState({ explanation: '', edgeArgs: '', edgeExpected: '' });
   const [errors, setErrors] = useState({});
-  const [hints, setHints] = useState([]);
-  const [hintLoading, setHintLoading] = useState(false);
-  const [hintError, setHintError] = useState(null);
   const [visibleRun, setVisibleRun] = useState({ status: 'idle' });
 
   const phase = PHASES[flow.submission.phase];
   const editable = phase.editable;
-  // Read after awaits: a hint that arrives once the answer is locked is dropped.
-  const editableRef = useRef(editable);
-  useEffect(() => {
-    editableRef.current = editable;
-  }, [editable]);
+  const hints = useHints({
+    challenge,
+    getSignal,
+    editable,
+    selectedLines,
+    explanation: values.explanation,
+  });
 
-  const maxHintLevel = Math.min(3, Number.isInteger(challenge.hintCount) ? challenge.hintCount : 3);
-  const sideBusy = hintLoading || visibleRun.status === 'running';
+  const sideBusy = hints.loading || visibleRun.status === 'running';
   const submitBlocked = !editable || !runner.ready || phase.busy || sideBusy;
 
   function clearError(field) {
@@ -60,7 +50,9 @@ export default function ChallengeWorkspace({ challenge, startedAt }) {
   function toggleLine(line) {
     if (!editable) return;
     setSelectedLines((lines) =>
-      lines.includes(line) ? lines.filter((n) => n !== line) : [...lines, line].sort((a, b) => a - b),
+      lines.includes(line)
+        ? lines.filter((n) => n !== line)
+        : [...lines, line].sort((a, b) => a - b),
     );
     clearError('lines');
   }
@@ -78,40 +70,24 @@ export default function ChallengeWorkspace({ challenge, startedAt }) {
     setVisibleRun({ status: 'running' });
     try {
       const output = await safeRun(
-        { code: ranCode, functionName: challenge.functionName, tests: toRunnerTests(challenge.visibleTests) },
+        {
+          code: ranCode,
+          functionName: challenge.functionName,
+          tests: toRunnerTests(challenge.visibleTests),
+        },
         { signal },
       );
       const results = toTestResults(challenge.visibleTests, output?.results);
       if (!signal.aborted) {
-        setVisibleRun({ status: 'done', code: ranCode, results, timedOut: Boolean(output.timedOut) });
+        setVisibleRun({
+          status: 'done',
+          code: ranCode,
+          results,
+          timedOut: Boolean(output.timedOut),
+        });
       }
     } catch (error) {
       if (!signal.aborted) setVisibleRun({ status: 'error', message: errorMessage(error) });
-    }
-  }
-
-  async function handleHint() {
-    const level = hints.length + 1;
-    if (hintLoading || !editable || level > maxHintLevel) return;
-    const signal = getSignal();
-    setHintLoading(true);
-    setHintError(null);
-    try {
-      const currentAnswer = {
-        selectedLines: selectedLines.slice(0, MAX_SELECTED_LINES),
-        explanation: values.explanation.slice(0, EXPLANATION_MAX),
-      };
-      const data = await requestHint(challenge.id, { level, currentAnswer }, { signal });
-      if (typeof data?.hint !== 'string' || data.hint.trim() === '') {
-        throw new Error('Savjet nije stigao. Pokušaj ponovo.');
-      }
-      if (signal.aborted || !editableRef.current) return;
-      const hint = { level, hint: data.hint, source: data.source };
-      setHints((prev) => (prev.length === level - 1 ? [...prev, hint] : prev));
-    } catch (error) {
-      if (!signal.aborted) setHintError(errorMessage(error));
-    } finally {
-      if (!signal.aborted) setHintLoading(false);
     }
   }
 
@@ -130,7 +106,7 @@ export default function ChallengeWorkspace({ challenge, startedAt }) {
       explanation: values.explanation,
       edgeCase,
       fixedCode: code,
-      hintsUsed: hints.length,
+      hintsUsed: hints.hints.length,
       durationSec: Math.max(0, Math.round((Date.now() - startedAt) / 1000)),
     });
   }
@@ -196,12 +172,12 @@ export default function ChallengeWorkspace({ challenge, startedAt }) {
           </div>
           <ChallengeSubmissionOutcome submission={flow.submission} onAction={handleOutcomeAction} />
           <HintPanel
-            hints={hints}
-            maxLevel={maxHintLevel}
-            loading={hintLoading}
-            error={hintError}
+            hints={hints.hints}
+            maxLevel={hints.maxLevel}
+            loading={hints.loading}
+            error={hints.error}
             disabled={!editable}
-            onRequest={handleHint}
+            onRequest={hints.request}
           />
         </div>
       </div>

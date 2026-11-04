@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -372,13 +372,33 @@ describe('ChallengePage visible tests', () => {
     expect(screen.getByText(/beskonačnoj petlji/)).toBeInTheDocument();
   });
 
+  it('shows a resolved RuntimeError run as failed test results, not a runner error', async () => {
+    const run = vi.fn(async ({ tests }) => ({
+      timedOut: false,
+      results: tests.map((t) => ({
+        id: t.id,
+        passed: false,
+        actual: null,
+        error: 'RuntimeError: <b>Pyodide se srušio</b>',
+      })),
+    }));
+    const user = userEvent.setup();
+    await renderReady({ runner: makeRunner({ run }) });
+    await user.click(screen.getByRole('button', { name: 'Pokreni vidljive testove' }));
+    expect(await screen.findByText('0 od 2 vidljivih testova je prošlo.')).toBeInTheDocument();
+    expect(screen.queryByText(/Testovi nisu pokrenuti/)).not.toBeInTheDocument();
+    // Rendered as text, never as HTML.
+    expect(screen.getAllByText(/RuntimeError: <b>Pyodide se srušio<\/b>/)).toHaveLength(2);
+    expect(document.querySelector('b')).toBeNull();
+  });
+
   it('treats a rejected run as "did not run"', async () => {
     const run = vi.fn().mockRejectedValue(new Error('Pokretač je pao.'));
     const user = userEvent.setup();
     await renderReady({ runner: makeRunner({ run }) });
     await user.click(screen.getByRole('button', { name: 'Pokreni vidljive testove' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Testovi nisu pokrenuti. Pokretač je pao.',
+      'Testovi nisu pokrenuti. Pokretač testova je prijavio grešku.',
     );
     expect(screen.queryByText(/vidljivih testova je prošlo/)).not.toBeInTheDocument();
   });
@@ -499,58 +519,55 @@ describe('ChallengePage submit', () => {
     );
   });
 
-  it('waits for the restarted runner after a timed-out edge-case run', async () => {
+  /** Runner whose first run of the student's fix fails while the worker restarts. */
+  function makeRestartingRunner(onRestart) {
     const runner = makeRunner();
     const base = runner.run.getMockImplementation();
-    runner.run.mockImplementation(async (arg) =>
-      arg.code === findMaxPublic.code
-        ? {
-            timedOut: true,
-            results: [{ id: 'edge-case', passed: false, actual: null, error: 'timeout' }],
-          }
-        : base(arg),
-    );
+    let restarted = false;
+    runner.run.mockImplementation(async (arg) => {
+      if (arg.code === FIXED_CODE && !restarted) {
+        restarted = true;
+        onRestart();
+        throw new Error('worker restarting');
+      }
+      return base(arg);
+    });
+    return runner;
+  }
+
+  it('waits for the restarted runner after a run fails mid-restart, then retries that run', async () => {
+    let setRunner;
+    const runner = makeRestartingRunner(() => act(() => setRunner({ ...runner, ready: false })));
     const user = userEvent.setup();
-    const { setRunner } = await renderReady({ runner });
+    ({ setRunner } = await renderReady({ runner }));
     await fillAnswer(user);
     await user.click(submitButton());
 
-    await waitFor(() => expect(runner.run).toHaveBeenCalledTimes(2));
-    setRunner({ ...runner, ready: false });
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(runner.run).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(runner.run).toHaveBeenCalledTimes(3));
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    expect(runner.run).toHaveBeenCalledTimes(3);
     expect(submitEvaluation).not.toHaveBeenCalled();
 
-    setRunner({ ...runner, ready: true });
+    act(() => setRunner({ ...runner, ready: true }));
     await screen.findByTestId('result-state');
-    expect(runner.run).toHaveBeenCalledTimes(3);
+    expect(runner.run).toHaveBeenCalledTimes(4);
     expect(submitEvaluation.mock.calls[0][1].edgeCaseCheck).toEqual({
-      originalOutput: null,
+      originalOutput: 0,
       referenceOutput: -3,
-      error: 'timeout',
+      error: null,
     });
   });
 
   it('gives up waiting when the restarted runner reports loadError', async () => {
-    const runner = makeRunner();
-    const base = runner.run.getMockImplementation();
-    runner.run.mockImplementation(async (arg) =>
-      arg.code === findMaxPublic.code
-        ? {
-            timedOut: true,
-            results: [{ id: 'edge-case', passed: false, actual: null, error: 'timeout' }],
-          }
-        : base(arg),
+    let setRunner;
+    const runner = makeRestartingRunner(() =>
+      act(() => setRunner({ ...runner, ready: false, loadError: 'Pyodide se nije učitao.' })),
     );
     const user = userEvent.setup();
-    const { setRunner } = await renderReady({ runner });
+    ({ setRunner } = await renderReady({ runner }));
     await fillAnswer(user);
     await user.click(submitButton());
-    await waitFor(() => expect(runner.run).toHaveBeenCalledTimes(2));
-    setRunner({ ...runner, ready: false, loadError: 'Pyodide se nije učitao.' });
-    const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Testovi nisu pokrenuti');
-    expect(alert).toHaveTextContent('Pyodide se nije učitao.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Testovi nisu pokrenuti');
     expect(submitEvaluation).not.toHaveBeenCalled();
   });
 
@@ -750,9 +767,17 @@ describe('ChallengePage timeouts and recovery', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Rezultat je možda sačuvan, ali ga nismo mogli učitati.');
     await waitFor(() => expect(alert).toHaveFocus());
-    expect(within(alert).queryByRole('link')).not.toBeInTheDocument();
+    expect(
+      within(alert).queryByRole('link', { name: 'Pogledaj svoj napredak' }),
+    ).not.toBeInTheDocument();
     expect(getAttempts).not.toHaveBeenCalled();
     expect(submitEvaluation).toHaveBeenCalledTimes(1);
+
+    // An anonymous student cannot look the attempt up, so a manual retry POSTs directly.
+    await user.click(within(alert).getByRole('button', { name: 'Pošalji rezultat ponovo' }));
+    await screen.findByTestId('result-state');
+    expect(submitEvaluation).toHaveBeenCalledTimes(2);
+    expect(getAttempts).not.toHaveBeenCalled();
   });
 
   it('409 on the first POST: recovers the stored result', async () => {
@@ -836,10 +861,75 @@ describe('ChallengePage timeouts and recovery', () => {
     expect(alert).toHaveTextContent('Slanje je prekinuto. Pokušaj ponovo.');
     expect(getAttempts).not.toHaveBeenCalled();
 
+    // The manual retry checks GET /api/attempts first (docs/API.md), then re-POSTs once.
+    getAttempts.mockResolvedValueOnce([attemptItem({ status: 'submitted', score: null })]);
     await user.click(within(alert).getByRole('button', { name: 'Pošalji rezultat ponovo' }));
     await screen.findByTestId('result-state');
+    expect(getAttempts).toHaveBeenCalledTimes(1);
     expect(submitEvaluation).toHaveBeenCalledTimes(2);
     expect(createAttempt).toHaveBeenCalledTimes(1);
+  });
+
+  it('manual retry finds the stored result and does not POST again', async () => {
+    submitEvaluation.mockRejectedValueOnce(new DOMException('aborted', 'AbortError'));
+    const user = userEvent.setup();
+    await renderReady();
+    await fillAnswer(user);
+    await user.click(submitButton());
+    const alert = await screen.findByRole('alert');
+    getAttempts.mockResolvedValueOnce([attemptItem({ score: 71 })]);
+    await user.click(within(alert).getByRole('button', { name: 'Pošalji rezultat ponovo' }));
+    const heading = await screen.findByRole('heading', { name: /Rezultat je sačuvan/ });
+    expect(heading.closest('section')).toHaveTextContent('Bodovi: 71 od 100.');
+    expect(submitEvaluation).toHaveBeenCalledTimes(1);
+  });
+
+  it('a failed re-POST is reported, not shown as maybe saved (400)', async () => {
+    submitEvaluation
+      .mockRejectedValueOnce(timeoutError())
+      .mockRejectedValueOnce(
+        new ApiError('Neispravan unos.', { status: 400, code: 'VALIDATION_ERROR' }),
+      );
+    getAttempts.mockResolvedValueOnce([attemptItem({ status: 'submitted', score: null })]);
+    const user = userEvent.setup();
+    await renderReady();
+    await fillAnswer(user);
+    await user.click(submitButton());
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Neispravan unos.');
+    expect(alert).not.toHaveTextContent('možda sačuvan');
+    expect(within(alert).queryByRole('button', { name: 'Pošalji rezultat ponovo' })).toBeNull();
+  });
+
+  it('a manual retry after a re-POST never POSTs a third time', async () => {
+    submitEvaluation.mockRejectedValue(timeoutError());
+    getAttempts.mockResolvedValue([attemptItem({ status: 'submitted', score: null })]);
+    const user = userEvent.setup();
+    await renderReady();
+    await fillAnswer(user);
+    await user.click(submitButton());
+    // First POST times out, recovery finds it submitted, the single re-POST times out too.
+    const alert = await screen.findByRole('alert');
+    expect(submitEvaluation).toHaveBeenCalledTimes(2);
+    await user.click(within(alert).getByRole('button', { name: 'Pošalji rezultat ponovo' }));
+    expect(await screen.findByText(/Rezultat je možda sačuvan/)).toBeInTheDocument();
+    expect(submitEvaluation).toHaveBeenCalledTimes(2);
+  });
+
+  it('stops paging when the cursor does not advance', async () => {
+    submitEvaluation.mockRejectedValueOnce(timeoutError());
+    const samePage = Array.from({ length: 50 }, (_, i) => ({
+      ...attemptsPage[0],
+      id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`,
+    }));
+    getAttempts.mockResolvedValue(samePage);
+    const user = userEvent.setup();
+    await renderReady();
+    await fillAnswer(user);
+    await user.click(submitButton());
+    expect(await screen.findByRole('alert')).toHaveTextContent('Rezultat je možda sačuvan');
+    expect(getAttempts).toHaveBeenCalledTimes(2);
+    expect(submitEvaluation).toHaveBeenCalledTimes(1);
   });
 
   it('evaluation 429 is shown, not recovered', async () => {

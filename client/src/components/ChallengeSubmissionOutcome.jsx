@@ -1,6 +1,6 @@
 import { Link } from 'react-router';
 import { paths } from '../paths.js';
-import { OUTCOME_ID, RECOVERED_HEADING_ID } from './ChallengeSubmitFlow.js';
+import { OUTCOME_ID, RECOVERED_HEADING_ID } from '../lib/submitConstants.js';
 
 const LINK =
   'text-sky-800 underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:outline-none';
@@ -51,8 +51,8 @@ function Recovered({ item, testsPassed, testsTotal }) {
 }
 
 /**
- * The outcome of a failed or recovered submission. The failure box is focused by the flow
- * (it gets no role="alert", so it is announced once, by focus).
+ * The outcome of a failed or recovered submission. The failure box is an alert and is focused by the flow.
+ * (the focus move makes sure screen readers land on it).
  *
  * @param {{ submission: object, onAction: (action: string) => void }} props
  */
@@ -64,6 +64,7 @@ export default function ChallengeSubmissionOutcome({ submission, onAction }) {
   return (
     <section
       id={OUTCOME_ID}
+      role="alert"
       tabIndex={-1}
       aria-label="Stanje predaje"
       className="rounded border-l-4 border-red-700 bg-red-50 px-3 py-2 text-red-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-700"

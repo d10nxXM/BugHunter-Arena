@@ -5,7 +5,7 @@ const BUTTON =
   'rounded bg-sky-800 px-3 py-2 font-medium text-white hover:bg-sky-900 focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-slate-400';
 
 /**
- * Hints, one level at a time. State lives in ChallengePage: the count is reported in the attempt.
+ * Hints, one level at a time. State lives in ChallengeWorkspace (useHints): the count is reported in the attempt.
  *
  * @param {{
  *   hints: Array<{ level: number, hint: string, source: string }>,
