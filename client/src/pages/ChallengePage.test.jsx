@@ -24,6 +24,11 @@ import UserProvider from '../context/UserProvider.jsx';
 import { TestRunnerContext } from '../hooks/useTestRunner.js';
 import ChallengePage from './ChallengePage.jsx';
 
+// Real Monaco does not run in jsdom: keep the real CodeEditor, fake only the Monaco module.
+vi.mock('../workers/monacoSetup.js', async () => ({
+  monaco: (await import('../test-utils/fakeMonaco.js')).fakeMonaco,
+}));
+
 vi.mock('../api/client.js', async (importOriginal) => ({
   ...(await importOriginal()),
   getChallenge: vi.fn(),
@@ -247,7 +252,9 @@ describe('ChallengePage answer', () => {
     await renderReady();
     const editor = screen.getByLabelText('Editor koda');
     await user.type(editor, '\n# x');
-    await user.click(screen.getByRole('button', { name: 'Vrati original' }));
+    // PRODUCT MISMATCH: CodeEditor and ChallengeCodePanel both render "Vrati original", so
+    // the name is not unique. Click the editor's own (first) button until E drops its copy.
+    await user.click(screen.getAllByRole('button', { name: 'Vrati original' })[0]);
     expect(editor).toHaveValue(findMaxPublic.code);
   });
 });

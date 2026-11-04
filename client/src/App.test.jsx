@@ -10,6 +10,12 @@ import { USER_STORAGE_KEY } from './context/UserContext.js';
 import UserProvider from './context/UserProvider.jsx';
 import { useTestRunner } from './hooks/useTestRunner.js';
 
+// The challenge route lazy-loads ChallengePage, which imports Monaco. Fake it so the route loads
+// fast under jsdom.
+vi.mock('./workers/monacoSetup.js', async () => ({
+  monaco: (await import('./test-utils/fakeMonaco.js')).fakeMonaco,
+}));
+
 function renderAt(path) {
   return render(
     <MemoryRouter initialEntries={[path]}>
