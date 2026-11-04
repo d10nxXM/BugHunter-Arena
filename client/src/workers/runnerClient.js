@@ -1,14 +1,17 @@
 import { compareResults } from '../lib/compareResults.js';
 
 /**
- * Page side of the test runner: owns the long-lived worker, its init timeout, the 3 s run limit,
- * restarts and the run queue. React-free, so TestRunnerProvider stays a thin wrapper.
- * The full contract is the doc comment in src/hooks/useTestRunner.js.
+ * Page side of the test runner: owns the long-lived worker, its private MessageChannel, the init
+ * timeout, the 3 s run limit, restarts and the run queue. React-free, so TestRunnerProvider stays
+ * a thin wrapper. The full contract is the doc comment in src/hooks/useTestRunner.js.
  */
 export const RUN_TIMEOUT_MS = 3000;
 export const INIT_TIMEOUT_MS = 30000;
-// Restarts in a row (after a timeout or a broken run) without one run finishing normally.
-export const MAX_CONSECUTIVE_RESTARTS = 5;
+// Crash restarts in a row without one run finishing normally. Timeouts are caused by student
+// code and never count.
+export const MAX_CRASH_RESTARTS = 3;
+export const MAX_TEST_ID_LENGTH = 64;
+export const MAX_ERROR_LENGTH = 200;
 
 export const RUNNER_UNAVAILABLE = 'Pokretanje testova nije dostupno u ovom pregledaču.';
 export const RUNNER_NOT_READY = 'Python okruženje se još učitava. Pokušaj ponovo za par sekundi.';
@@ -19,8 +22,7 @@ export const LOAD_TIMEOUT =
 export const RUNNER_CRASHED =
   'Python okruženje je prestalo da radi. Osvježi stranicu i pokušaj ponovo.';
 export const TOO_MANY_RESTARTS =
-  'Python okruženje je ponovo pokretano previše puta. Osvježi stranicu.';
-export const RUN_FAILED = 'Testovi nisu pokrenuti zbog greške u Python okruženju. Pokušaj ponovo.';
+  'Python okruženje se ruši pri svakom pokretanju. Osvježi stranicu.';
 export const BAD_REQUEST = 'Testovi nisu pokrenuti: neispravan zahtjev.';
 export const RUNNER_STOPPED = 'Pokretanje testova je prekinuto.';
 
@@ -28,6 +30,22 @@ export const TIMEOUT_ERROR = 'timeout';
 
 function defaultCreateWorker() {
   return new Worker(new URL('./testRunner.worker.js', import.meta.url), { type: 'module' });
+}
+
+function defaultCreateChannel() {
+  return new MessageChannel();
+}
+
+/** A crypto-random run id, so code inside the worker cannot predict it. */
+function randomRunId() {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  // randomUUID needs a secure context; getRandomValues does not.
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function isValidTestId(id) {
+  return typeof id === 'string' && id.length >= 1 && id.length <= MAX_TEST_ID_LENGTH;
 }
 
 function isValidPayload(payload) {
@@ -42,14 +60,19 @@ function isValidPayload(payload) {
       (test) =>
         test !== null &&
         typeof test === 'object' &&
-        (typeof test.id === 'string' || typeof test.id === 'number') &&
+        isValidTestId(test.id) &&
         (test.args === undefined || Array.isArray(test.args)),
     )
   );
 }
 
-function timeoutResults(tests) {
-  return tests.map((test) => ({ id: test.id, passed: false, actual: null, error: TIMEOUT_ERROR }));
+function failedResults(tests, error) {
+  return tests.map((test) => ({ id: test.id, passed: false, actual: null, error }));
+}
+
+function crashError(message) {
+  const detail = typeof message === 'string' && message ? message : 'Python okruženje se srušilo';
+  return `RuntimeError: ${detail}`.slice(0, MAX_ERROR_LENGTH);
 }
 
 /**
@@ -75,7 +98,10 @@ function buildResults(tests, workerResults) {
         id: test.id,
         passed: false,
         actual: null,
-        error: typeof item.error === 'string' && item.error ? item.error.slice(0, 200) : 'Error',
+        error:
+          typeof item.error === 'string' && item.error
+            ? item.error.slice(0, MAX_ERROR_LENGTH)
+            : 'Error',
       });
     }
   }
@@ -83,17 +109,21 @@ function buildResults(tests, workerResults) {
 }
 
 /**
- * createRunnerClient({ onState, createWorker? }) -> { run, dispose }
+ * createRunnerClient({ onState, createWorker?, createChannel? }) -> { run, dispose }
  * onState({ ready, loadError }) is called on every change.
  */
-export function createRunnerClient({ onState, createWorker = defaultCreateWorker }) {
+export function createRunnerClient({
+  onState,
+  createWorker = defaultCreateWorker,
+  createChannel = defaultCreateChannel,
+}) {
   let worker = null;
+  let port = null; // our end of the private channel; results arrive only here
   let ready = false;
   let loadError = null;
   let disposed = false;
   let initTimer = null;
-  let restarts = 0;
-  let nextRunId = 1;
+  let crashRestarts = 0;
   let current = null; // { runId, tests, resolve, reject, timer }
   const queue = [];
 
@@ -113,8 +143,13 @@ export function createRunnerClient({ onState, createWorker = defaultCreateWorker
   function stopWorker() {
     clearTimeout(initTimer);
     initTimer = null;
+    if (port) {
+      port.onmessage = null;
+      port.onmessageerror = null;
+      port.close();
+      port = null;
+    }
     if (worker) {
-      worker.onmessage = null;
       worker.onerror = null;
       worker.onmessageerror = null;
       worker.terminate();
@@ -137,18 +172,30 @@ export function createRunnerClient({ onState, createWorker = defaultCreateWorker
     rejectAll(message);
   }
 
-  function restart() {
+  /** Replaces the worker. Queued runs wait for the fresh one. */
+  function restart({ crashed }) {
     stopWorker();
-    restarts += 1;
-    if (restarts > MAX_CONSECUTIVE_RESTARTS) {
-      fail(TOO_MANY_RESTARTS);
-      return;
+    setState({ ready: false });
+    if (crashed) {
+      crashRestarts += 1;
+      if (crashRestarts > MAX_CRASH_RESTARTS) {
+        fail(TOO_MANY_RESTARTS);
+        return;
+      }
     }
     start();
   }
 
+  /** The current run crashed the runtime: resolve it like a timeout, then replace the worker. */
+  function finishWithCrash(job, message) {
+    clearTimeout(job.timer);
+    current = null;
+    job.resolve({ results: failedResults(job.tests, crashError(message)), timedOut: false });
+    restart({ crashed: true });
+  }
+
   function handleMessage(source, event) {
-    if (source !== worker) return; // a stale message from a terminated worker
+    if (source !== port) return; // a stale message from a replaced worker
     const data = event.data;
     if (!data || typeof data !== 'object') return;
 
@@ -168,50 +215,57 @@ export function createRunnerClient({ onState, createWorker = defaultCreateWorker
     const job = current;
     if (data.type === 'result') {
       const results = buildResults(job.tests, data.results);
+      if (results === null) {
+        finishWithCrash(job, 'neispravan odgovor Python okruženja');
+        return;
+      }
       clearTimeout(job.timer);
       current = null;
-      if (results === null) {
-        job.reject(new Error(RUN_FAILED));
-      } else {
-        restarts = 0;
-        job.resolve({ results, timedOut: false });
-      }
+      crashRestarts = 0;
+      job.resolve({ results, timedOut: false });
       pump();
       return;
     }
     if (data.type === 'run-error') {
-      // The harness itself failed, so Pyodide may be unusable: replace the worker.
-      clearTimeout(job.timer);
-      current = null;
-      job.reject(new Error(RUN_FAILED));
-      setState({ ready: false });
-      restart();
+      finishWithCrash(job, data.message);
     }
   }
 
   function start() {
     if (disposed) return;
-    setState({ ready: false });
-    let created;
+    let createdWorker;
+    let channel;
     try {
-      created = createWorker();
+      channel = createChannel();
+      createdWorker = createWorker();
     } catch {
       fail(RUNNER_UNAVAILABLE);
       return;
     }
-    worker = created;
-    created.onmessage = (event) => handleMessage(created, event);
-    created.onerror = (event) => {
-      if (created !== worker) return;
+    worker = createdWorker;
+    port = channel.port1;
+    const ownPort = channel.port1;
+    ownPort.onmessage = (event) => handleMessage(ownPort, event);
+    ownPort.onmessageerror = () => {
+      if (ownPort === port) fail(RUNNER_CRASHED);
+    };
+    createdWorker.onerror = (event) => {
+      if (createdWorker !== worker) return;
       event?.preventDefault?.();
       fail(RUNNER_CRASHED);
     };
-    created.onmessageerror = () => {
-      if (created !== worker) return;
-      fail(RUNNER_CRASHED);
+    createdWorker.onmessageerror = () => {
+      if (createdWorker === worker) fail(RUNNER_CRASHED);
     };
+    try {
+      // Hand the worker its private port before any student code can run there.
+      createdWorker.postMessage({ type: 'init', port: channel.port2 }, [channel.port2]);
+    } catch {
+      fail(RUNNER_UNAVAILABLE);
+      return;
+    }
     initTimer = setTimeout(() => {
-      if (created !== worker || ready) return;
+      if (createdWorker !== worker || ready) return;
       fail(LOAD_TIMEOUT);
     }, INIT_TIMEOUT_MS);
   }
@@ -219,22 +273,20 @@ export function createRunnerClient({ onState, createWorker = defaultCreateWorker
   function onRunTimeout(job) {
     if (current !== job) return;
     current = null;
-    job.resolve({ results: timeoutResults(job.tests), timedOut: true });
-    setState({ ready: false });
-    restart(); // terminate the stuck worker and load a fresh Pyodide; queued runs wait for it
+    job.resolve({ results: failedResults(job.tests, TIMEOUT_ERROR), timedOut: true });
+    // Terminate the stuck worker and load a fresh Pyodide. Not counted: student code did this.
+    restart({ crashed: false });
   }
 
   function pump() {
-    if (current || !ready || !worker || queue.length === 0) return;
+    if (current || !ready || !port || queue.length === 0) return;
     const job = queue.shift();
-    const runId = nextRunId;
-    nextRunId += 1;
-    job.runId = runId;
+    job.runId = randomRunId();
     current = job;
     try {
-      worker.postMessage({
+      port.postMessage({
         type: 'run',
-        runId,
+        runId: job.runId,
         code: job.code,
         functionName: job.functionName,
         tests: job.tests.map((test) => ({ id: test.id, args: test.args ?? [] })),
