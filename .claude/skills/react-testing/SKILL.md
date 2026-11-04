@@ -13,14 +13,20 @@ npm pkg set 'scripts.test=vitest run'
 ```
 
 ```js
-// client/vite.config.js
-import { defineConfig } from 'vite';
+// client/vite.config.js (excerpt; the real file also has server, preview, worker and optimizeDeps)
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [react()],
-  // ...server and worker settings from the vite-patterns skill...
-  test: { environment: 'jsdom', setupFiles: './src/test/setup.js', globals: true },
+  plugins: [react(), tailwindcss()],
+  // ...server, preview, worker and optimizeDeps: see client/vite.config.js...
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+    include: ['src/**/*.test.{js,jsx}'],
+    globals: false,
+  },
 });
 ```
 
@@ -47,6 +53,7 @@ Test what the student sees and does, not component internals. If a refactor keep
 ```jsx
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { expect, test, vi } from 'vitest';
 
 test('submit is disabled until the explanation is long enough', async () => {
   const user = userEvent.setup();
@@ -67,12 +74,18 @@ Use `userEvent`, not `fireEvent`, for anything a user does.
 Mock `src/api/` at the module boundary. Mock data must match `docs/API.md` exactly (see `api-contract`).
 
 ```jsx
-vi.mock('../api/challenges.js', () => ({
+import { render, screen } from '@testing-library/react';
+import { expect, test, vi } from 'vitest';
+import { ApiError, getChallenge } from '../api/client.js';
+
+// Keeps the real ApiError and replaces only the server call.
+vi.mock('../api/client.js', async (importOriginal) => ({
+  ...(await importOriginal()),
   getChallenge: vi.fn().mockResolvedValue(findMaxPublic), // fixture from docs/API.md example
 }));
 
 test('shows an error when the challenge fails to load', async () => {
-  getChallenge.mockRejectedValueOnce(Object.assign(new Error('Izazov ne postoji.'), { code: 'NOT_FOUND' }));
+  getChallenge.mockRejectedValueOnce(new ApiError('Izazov ne postoji.', { status: 404, code: 'NOT_FOUND' }));
   render(<ChallengePage id="missing" />);
   expect(await screen.findByText(/izazov ne postoji/i)).toBeInTheDocument();
 });

@@ -14,6 +14,8 @@ The AI is a mentor: it gives graded hints and evaluates the student's explanatio
 | Folder | Command | What it does |
 | --- | --- | --- |
 | client | `npm run dev` | Vite dev server on http://localhost:5173 |
+| client | `npm test` | Vitest component and API client tests (jsdom) |
+| client | `npm run pyodide:copy` | Copies Pyodide from the npm package to `client/public/pyodide/`; runs automatically before `dev` and `build` |
 | server | `npm run dev` | API on http://localhost:3000 (`PORT` in `.env`), restarts on change |
 | server | `npm test` | Vitest unit tests (scoring, validation) |
 | server | `npm run validate:challenges` | Checks `data/challenges/*.json` against the challenge format (structure only, runs no code) |

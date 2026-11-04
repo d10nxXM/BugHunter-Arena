@@ -4,7 +4,7 @@ Three tables in Supabase (PostgreSQL): `challenges`, `attempts`, and the optiona
 
 Challenge JSON files in `server/data/challenges/` are the source of truth. `server/scripts/seed.js` (`npm run seed` in `server/`) checks every file against `ChallengeFileSchema` and checks that the file name matches the id, then upserts all of them into `challenges` in one call. If any file is invalid, nothing is written. The seed does not run the extra checks of `validate-challenges` (see Validation rules).
 
-The schema is applied through migrations in `supabase/migrations/`, pushed with `npx supabase db push` after the PR is merged to `main`. The SQL below is the schema after all migrations (see the Migrations table); later changes are new migration files, and this document is updated in the same PR.
+The schema is applied through migrations in `supabase/migrations/`, pushed with `npx supabase db push --remote` after the PR is merged to `main` (without `--remote` the CLI targets a local Docker stack). The SQL below is the schema after all migrations (see the Migrations table); later changes are new migration files, and this document is updated in the same PR.
 
 ## SQL schema
 

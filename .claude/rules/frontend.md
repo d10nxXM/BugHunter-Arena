@@ -10,6 +10,7 @@ paths:
 - `src/pages/` - ChallengeList, ChallengePage, ResultView, Dashboard
 - `src/components/` - CodeEditor, AnswerForm, HintPanel, TestResults, ScoreBreakdown
 - `src/workers/testRunner.worker.js` - the only place user code runs
+- `src/components/TestRunnerProvider.jsx` - the runner provider at the app root, owned by D (`useTestRunner` is in `src/hooks/`)
 - `src/api/` - every call to the server goes through here; base URL from `import.meta.env.VITE_API_URL`
 
 ## Rules

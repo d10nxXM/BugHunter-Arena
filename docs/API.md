@@ -161,7 +161,7 @@ Validation:
 - `testResults` is an array of at most 100 items. Each item is `{ id: string 1-64 chars, passed: boolean, actual?: JSON value, error?: string up to 200 chars or null }`.
 - `edgeCaseCheck` is required: `{ originalOutput: JSON value, referenceOutput: JSON value, error?: string up to 200 chars or null }`. A non-empty `edgeCaseCheck.error` means the original code raised for the edge case. The reference solution is trusted not to raise (see `docs/SCORING.md`).
 
-Invalid input returns `400 VALIDATION_ERROR`. It is checked before the AI rate limit, so a `400` never uses AI quota. An unknown attempt returns `404 NOT_FOUND`. An attempt that is already evaluated returns `409 ALREADY_EVALUATED`.
+Invalid input returns `400 VALIDATION_ERROR`. It is checked before the AI rate limit, so a `400` never uses AI quota. An unknown attempt returns `404 NOT_FOUND`. An attempt that is already evaluated returns `409 ALREADY_EVALUATED` (error envelope only; see Timeouts and retries).
 
 Response `200 OK`:
 
@@ -283,6 +283,16 @@ Order of checks on both AI routes:
 5. Handler
 
 `trust proxy` is off. Behind a reverse proxy every client shares the proxy's IP, so configure it before deploying behind one.
+
+## Timeouts and retries
+
+The POST endpoints are not idempotent. A client that gets no response (timeout, network error, `502`/`503`/`504`) or a `500` cannot tell whether the server stored the request. There are no idempotency keys in the MVP.
+
+- `POST /api/attempts`: the attempt is stored before the response is sent. If the response is lost, the stored attempt stays `submitted`, and its tests and reference solution cannot be fetched again. Retrying stores a second attempt. This is allowed: an unevaluated attempt appears in `GET /api/attempts` with `score: null` and is counted in `perChallenge.attempts` of `GET /api/progress`. When the user has no other attempt on that challenge, it also adds a `perChallenge` entry with `bestScore` 0 and raises `attempted` by one. It does not change `bestScore`, `totalScore`, `solved` or `weakCategories`. Clients should not retry automatically; let the user resubmit.
+- `POST /api/attempts/:id/evaluation`: the result is stored with one atomic update, only while the attempt is `submitted`. Repeating the same request is safe. It returns `200` if no evaluation has been stored yet (and stores this one), or `409 ALREADY_EVALUATED` if one has. A `409` means a result is stored. The `409` body is the error envelope only. To recover the stored result, the client reads `GET /api/attempts?userId=&challengeId=` and follows `cursor` and `cursorId` (the `createdAt` and `id` of the last item on the page) until it finds the item whose `id` equals the attempt id, or the list ends: `status`, `score`, `breakdown` and `feedbackSource` are there; AI feedback text is not. `testsPassed` and `testsTotal` can be computed from the client's own test results: a test counts as passed when `passed` is true and `error` is not `'timeout'`. Attempts with `userId: null` cannot be recovered. A repeat that arrives while the first evaluation is still running may call the AI a second time and use a second AI-quota slot, so clients should check `GET /api/attempts` before repeating.
+- `POST /api/users`: retrying creates a second user. A user with no attempts has no effect anywhere.
+
+`GET` requests are safe to retry.
 
 ## Errors
 
