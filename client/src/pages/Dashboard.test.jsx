@@ -424,6 +424,41 @@ describe('Dashboard with a user', () => {
     expect(screen.queryByText('Ukupni bodovi')).not.toBeInTheDocument();
   });
 
+  it('shows the error state when progress lacks finite attempted, solved and totalScore', async () => {
+    getProgress.mockResolvedValue({});
+    renderDashboard();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Podaci nisu učitani. Pokušaj ponovo.');
+    expect(within(alert).getByRole('button', { name: 'Pokušaj ponovo' })).toBeInTheDocument();
+    expect(screen.queryByText('Ukupni bodovi')).not.toBeInTheDocument();
+  });
+
+  it('ignores a createUser result that arrives after unmount', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    let resolve;
+    createUser.mockImplementation(
+      () =>
+        new Promise((r) => {
+          resolve = r;
+        }),
+    );
+    const user = userEvent.setup();
+    const { unmount } = renderDashboard();
+    await screen.findByText('Ukupni bodovi');
+
+    await user.click(screen.getByRole('button', { name: 'Promijeni ime' }));
+    await user.type(screen.getByLabelText('Ime za prikaz'), '2');
+    await user.click(screen.getByRole('button', { name: 'Sačuvaj novo ime' }));
+    unmount();
+    resolve({ id: '11111111-2222-4333-8444-555555555555', displayName: 'dion2' });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(JSON.parse(localStorage.getItem(USER_STORAGE_KEY))).toEqual(USER);
+    expect(errorSpy).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
   it('announces a loaded page and keeps "Učitaj još" focusable while loading', async () => {
     let resolveSecond;
     getAttempts.mockResolvedValueOnce(makeAttempts(20)).mockImplementationOnce(
