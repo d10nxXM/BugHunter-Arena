@@ -252,9 +252,7 @@ describe('ChallengePage answer', () => {
     await renderReady();
     const editor = screen.getByLabelText('Editor koda');
     await user.type(editor, '\n# x');
-    // PRODUCT MISMATCH: CodeEditor and ChallengeCodePanel both render "Vrati original", so
-    // the name is not unique. Click the editor's own (first) button until E drops its copy.
-    await user.click(screen.getAllByRole('button', { name: 'Vrati original' })[0]);
+    await user.click(screen.getByRole('button', { name: 'Vrati original' }));
     expect(editor).toHaveValue(findMaxPublic.code);
   });
 });
