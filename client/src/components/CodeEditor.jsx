@@ -3,7 +3,7 @@
 export default function CodeEditor({
   code,
   onChange,
-  selectedLines,
+  selectedLines = [],
   onToggleLine,
   readOnly = false,
 }) {
@@ -20,8 +20,9 @@ export default function CodeEditor({
               type="button"
               aria-pressed={selected}
               aria-label={`Linija ${n}`}
-              onClick={() => onToggleLine(n)}
-              className={`px-2 text-right leading-6 focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:outline-none ${
+              disabled={readOnly}
+              onClick={() => onToggleLine?.(n)}
+              className={`px-2 text-right leading-6 focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:outline-none disabled:cursor-default ${
                 selected ? 'bg-amber-200 font-bold text-slate-900' : 'text-slate-300'
               }`}
             >
@@ -34,11 +35,12 @@ export default function CodeEditor({
       <textarea
         aria-label="Editor koda"
         value={code}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={(event) => onChange?.(event.target.value)}
         readOnly={readOnly}
         rows={lineNumbers.length}
+        wrap="off"
         spellCheck={false}
-        className="flex-1 resize-none bg-transparent px-3 py-2 leading-6 focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:outline-none"
+        className="flex-1 resize-none overflow-x-auto bg-transparent px-3 py-2 leading-6 whitespace-pre focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:outline-none"
       />
     </div>
   );

@@ -50,6 +50,29 @@ Run with mocks: put `VITE_USE_MOCKS=true` in `.env.local` and restart `npm run d
 skips the copy when the marker matches the installed version. `public/pyodide/` is gitignored and
 never edited by hand. `pyodide` is pinned to an exact version in `package.json`.
 
+## No CDN: Pyodide and Monaco
+
+Both libraries default to cdn.jsdelivr.net if they are not configured. The app must not use it.
+
+- Pyodide: call `loadPyodide({ indexURL: '/pyodide/' })` explicitly. Never call `loadPackage` or
+  `micropip`: extra packages fall back to Pyodide's default `packageBaseUrl` on jsdelivr.
+- Monaco: call `loader.config({ monaco })` from `@monaco-editor/react` with the local
+  `monaco-editor` package before any `<Editor>` renders. Import only the Python language and
+  `editor.worker`. Never feed AI or student text to Monaco hovers, markers or markdown.
+- Check after every build: `grep -rl jsdelivr dist/assets` must be empty.
+
+The full test-runner contract for the worker is in `src/hooks/useTestRunner.js`.
+
+## Audit notes
+
+- `monaco-editor` 0.57.0 vendors `dompurify` 3.4.15, which has a critical advisory (DOMPurify
+  XSS issues). It is not reachable as we use Monaco: no markdown or HTML rendering of untrusted
+  text in Monaco. An npm `overrides` entry would not change the vendored copy. Re-check when
+  Monaco ships `dompurify` >= 3.4.17.
+- The moderate `eslint` / `minimatch` advisories are in dev tooling only and never reach the
+  browser bundle.
+- `monaco-editor`, `@monaco-editor/react` and `pyodide` are pinned to exact versions.
+
 ## Layout
 
 - `src/App.jsx` - routes (fixed after M1)

@@ -16,7 +16,7 @@
     "prebuild": "npm run pyodide:copy"
   },
   "dependencies": {
-    "@monaco-editor/react": "^4.7.0",
+    "@monaco-editor/react": "4.7.0",
     "monaco-editor": "0.57.0",
     "pyodide": "314.0.7",
     "react": "^19.3.1",

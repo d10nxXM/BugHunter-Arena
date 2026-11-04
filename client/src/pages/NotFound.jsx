@@ -1,7 +1,9 @@
 import { Link } from 'react-router';
+import { usePageTitle } from '../hooks/usePageTitle.js';
 import { paths } from '../paths.js';
 
 export default function NotFound() {
+  usePageTitle('Stranica ne postoji');
   return (
     <>
       <h1 tabIndex={-1} className="text-2xl font-bold focus:outline-none">

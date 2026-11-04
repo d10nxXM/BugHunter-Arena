@@ -1,5 +1,8 @@
+import { usePageTitle } from '../hooks/usePageTitle.js';
+
 // M1 stub. Worker E builds the challenge list here.
 export default function ChallengeList() {
+  usePageTitle('Izazovi');
   return (
     <>
       <h1 tabIndex={-1} className="text-2xl font-bold focus:outline-none">

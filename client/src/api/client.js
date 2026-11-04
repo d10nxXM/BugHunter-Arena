@@ -1,5 +1,13 @@
 // The only module in src/ that talks to the server. Shapes follow docs/API.md.
 // Every function takes { signal } = {} last; aborting it rejects with the AbortError unchanged.
+//
+// ApiError codes:
+//   <server code>  the server's error envelope (VALIDATION_ERROR, NOT_FOUND, ...)
+//   NETWORK_ERROR  fetch failed, or a non-JSON 502/503/504 (dev proxy while the server is down)
+//   TIMEOUT        no answer within the timeout
+//   HTTP_ERROR     another non-2xx without a usable error envelope
+//   BAD_RESPONSE   2xx whose body is not JSON
+//   CLIENT_ERROR   the request body could not be serialised (a bug in the caller)
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '';
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
@@ -12,34 +20,45 @@ const EVALUATION_TIMEOUT_MS = 20000;
 const MESSAGE_GENERIC = 'Greška u komunikaciji sa serverom.';
 const MESSAGE_UNAVAILABLE = 'Server trenutno nije dostupan.';
 const MESSAGE_TIMEOUT = 'Server ne odgovara. Pokušaj ponovo.';
+const MESSAGE_CLIENT = 'Došlo je do greške u aplikaciji. Pokušaj ponovo.';
+
+const GATEWAY_STATUSES = new Set([502, 503, 504]);
 
 export class ApiError extends Error {
   /**
    * @param {string} message - Montenegrin text that is safe to show; never contains the URL or body.
-   * @param {{ status?: number | null, code: string }} details
+   * @param {{ status?: number | null, code: string, cause?: unknown }} details
    */
-  constructor(message, { status = null, code }) {
-    super(message);
+  constructor(message, { status = null, code, cause } = {}) {
+    super(message, cause === undefined ? undefined : { cause });
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
   }
 }
 
-/** Combines the caller's signal with the timeout signal. */
+/** Combines signals. Returns the combined signal and a cleanup that removes any listeners. */
 function combineSignals(signals) {
   const active = signals.filter(Boolean);
-  if (active.length === 1) return active[0];
-  if (typeof AbortSignal.any === 'function') return AbortSignal.any(active);
+  if (active.length === 1) return { signal: active[0], cleanup: () => {} };
+  if (typeof AbortSignal.any === 'function') {
+    return { signal: AbortSignal.any(active), cleanup: () => {} };
+  }
   const controller = new AbortController();
+  const listeners = [];
   for (const s of active) {
     if (s.aborted) {
       controller.abort(s.reason);
       break;
     }
-    s.addEventListener('abort', () => controller.abort(s.reason), { once: true });
+    const onAbort = () => controller.abort(s.reason);
+    s.addEventListener('abort', onAbort, { once: true });
+    listeners.push([s, onAbort]);
   }
-  return controller.signal;
+  return {
+    signal: controller.signal,
+    cleanup: () => listeners.forEach(([s, onAbort]) => s.removeEventListener('abort', onAbort)),
+  };
 }
 
 /**
@@ -55,56 +74,85 @@ function startTimeout(ms) {
   return { signal: controller.signal, clear: () => clearTimeout(timer) };
 }
 
-async function send({ method, path, body, signal }) {
+async function send({ method, path, body, json, signal }) {
   if (USE_MOCKS) {
     const { mockRequest } = await import('./mocks/index.js');
     return mockRequest({ method, path, body, signal });
   }
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    headers: json !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+    body: json,
     signal,
   });
-  const data = await res.json().catch(() => null);
+  const data = await res.json().catch((error) => {
+    // Only an unparseable body becomes null; an abort or a network failure while reading propagates.
+    if (signal.aborted || error?.name !== 'SyntaxError') throw error;
+    return null;
+  });
   return { status: res.status, data };
 }
 
+function report(method, path, error) {
+  if (import.meta.env.DEV) {
+    // Route and code only: never the body, the query string or any student text.
+    console.warn('[api]', method, path.split('?')[0], error.code ?? error.name);
+  }
+  return error;
+}
+
+function errorFromResponse(status, data) {
+  const ok = status >= 200 && status < 300;
+  if (data === null || data === undefined) {
+    if (ok) return new ApiError(MESSAGE_GENERIC, { status, code: 'BAD_RESPONSE' });
+    if (GATEWAY_STATUSES.has(status)) {
+      return new ApiError(MESSAGE_UNAVAILABLE, { status, code: 'NETWORK_ERROR' });
+    }
+    return new ApiError(MESSAGE_GENERIC, { status, code: 'HTTP_ERROR' });
+  }
+  if (ok) return null;
+  const envelope = data?.error;
+  const code = typeof envelope?.code === 'string' ? envelope.code : 'HTTP_ERROR';
+  const message = typeof envelope?.message === 'string' ? envelope.message : MESSAGE_GENERIC;
+  return new ApiError(message, { status, code });
+}
+
 /**
- * Sends one request and returns the parsed JSON body.
- * Throws ApiError with code from the error envelope, NETWORK_ERROR or TIMEOUT.
+ * Sends one request and returns the parsed JSON body. Throws ApiError (codes above);
+ * a caller abort rejects with the caller's AbortError unchanged.
  */
 export async function request(
   path,
   { method = 'GET', body, signal, timeoutMs = DEFAULT_TIMEOUT_MS } = {},
 ) {
-  const timeout = startTimeout(timeoutMs);
-  const combined = combineSignals([signal, timeout.signal]);
+  let json;
+  try {
+    json = body === undefined ? undefined : JSON.stringify(body);
+  } catch (cause) {
+    throw report(method, path, new ApiError(MESSAGE_CLIENT, { code: 'CLIENT_ERROR', cause }));
+  }
 
+  let timeout;
+  let combined;
   let response;
   try {
-    response = await send({ method, path, body, signal: combined });
-  } catch (error) {
-    if (signal?.aborted) throw error;
-    if (timeout.signal.aborted) throw new ApiError(MESSAGE_TIMEOUT, { code: 'TIMEOUT' });
-    throw new ApiError(MESSAGE_UNAVAILABLE, { code: 'NETWORK_ERROR' });
+    timeout = startTimeout(timeoutMs);
+    combined = combineSignals([signal, timeout.signal]);
+    response = await send({ method, path, body, json, signal: combined.signal });
+  } catch (cause) {
+    if (signal?.aborted) throw cause;
+    if (timeout?.signal.aborted) {
+      throw report(method, path, new ApiError(MESSAGE_TIMEOUT, { code: 'TIMEOUT', cause }));
+    }
+    throw report(method, path, new ApiError(MESSAGE_UNAVAILABLE, { code: 'NETWORK_ERROR', cause }));
   } finally {
-    timeout.clear();
+    timeout?.clear();
+    combined?.cleanup();
   }
 
-  const { status, data } = response;
-  const ok = status >= 200 && status < 300;
-  if (data === null || data === undefined) {
-    // Non-JSON body, for example the dev proxy's 502 while the server is down.
-    throw new ApiError(MESSAGE_UNAVAILABLE, { status, code: 'NETWORK_ERROR' });
-  }
-  if (!ok) {
-    throw new ApiError(data?.error?.message ?? MESSAGE_GENERIC, {
-      status,
-      code: data?.error?.code ?? 'NETWORK_ERROR',
-    });
-  }
-  return data;
+  const error = errorFromResponse(response.status, response.data);
+  if (error) throw report(method, path, error);
+  return response.data;
 }
 
 const enc = encodeURIComponent;

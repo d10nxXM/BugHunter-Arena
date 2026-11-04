@@ -116,18 +116,21 @@ export const evaluationAi = {
   },
 };
 
-// Not an API.md example. Derived from docs/SCORING.md "Fallback without the AI": the same answer
-// matched 2 keyword groups -> quality 7 -> explanation round(7 * 3) = 21;
-// total 40 + 21 + 20 + 10 - 5 = 86. feedback is find-max's fallback_feedback.
+// Not an API.md example. Derived from docs/SCORING.md "Fallback without the AI" for the same
+// answer as attemptRequest. Against find-max's keywords_json its explanation matches only the
+// condition group ("negativ"); "počinje" is not the stem "početn", and no fix stem appears.
+// 1 group -> quality 3 -> explanation round(3 * 3) = 9, is_correct false;
+// total 40 + 9 + 20 + 10 - 5 = 74. feedback is find-max's fallback_feedback.
+// mocks.test.js recomputes all of this from server/data/challenges/find-max.json.
 export const evaluationFallback = {
-  score: 86,
-  breakdown: { lineIdentification: 40, explanation: 21, edgeCase: 20, fix: 10, hintPenalty: -5 },
+  score: 74,
+  breakdown: { lineIdentification: 40, explanation: 9, edgeCase: 20, fix: 10, hintPenalty: -5 },
   testsPassed: 4,
   testsTotal: 4,
   feedbackSource: 'fallback',
   feedback: {
-    is_correct: true,
-    explanation_quality: 7,
+    is_correct: false,
+    explanation_quality: 3,
     detected_misconception: null,
     needs_clarification: false,
     hint: null,

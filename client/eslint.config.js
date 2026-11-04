@@ -10,7 +10,7 @@ import prettier from 'eslint-config-prettier';
 export default defineConfig([
   globalIgnores(['dist', 'public/pyodide']),
   {
-    files: ['**/*.{js,jsx}'],
+    files: ['**/*.{js,jsx,mjs}'],
     extends: [
       js.configs.recommended,
       reactHooks.configs.flat.recommended,

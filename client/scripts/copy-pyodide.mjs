@@ -24,6 +24,14 @@ function fail(message) {
   process.exit(1);
 }
 
+function sizeOf(file) {
+  try {
+    return fs.statSync(file).size;
+  } catch {
+    return -1;
+  }
+}
+
 let version;
 try {
   version = JSON.parse(fs.readFileSync(path.join(sourceDir, 'package.json'), 'utf8')).version;
@@ -31,7 +39,7 @@ try {
   fail(`Pyodide package not found in ${sourceDir}. Run "npm install" in client/ first.`);
 }
 
-const missing = FILES.filter((file) => !fs.existsSync(path.join(sourceDir, file)));
+const missing = FILES.filter((file) => sizeOf(path.join(sourceDir, file)) <= 0);
 if (missing.length > 0) {
   fail(`Pyodide ${version} is missing files: ${missing.join(', ')}.`);
 }
@@ -44,19 +52,40 @@ function readMarker() {
   }
 }
 
+// Up to date only when the marker matches and every copied file has the source's (non-zero) size.
 const upToDate =
-  readMarker() === version && FILES.every((file) => fs.existsSync(path.join(targetDir, file)));
+  readMarker() === version &&
+  FILES.every((file) => {
+    const size = sizeOf(path.join(sourceDir, file));
+    return size > 0 && sizeOf(path.join(targetDir, file)) === size;
+  });
 
 if (upToDate) {
   console.log(`[pyodide:copy] public/pyodide/ is up to date (pyodide ${version}).`);
   process.exit(0);
 }
 
-fs.mkdirSync(targetDir, { recursive: true });
-for (const file of FILES) {
-  fs.copyFileSync(path.join(sourceDir, file), path.join(targetDir, file));
+// Drop the marker first, so an interrupted copy is never reported as up to date.
+try {
+  fs.mkdirSync(targetDir, { recursive: true });
+  fs.rmSync(markerFile, { force: true });
+} catch (error) {
+  fail(`Cannot prepare ${targetDir}: ${error.message}`);
 }
-fs.writeFileSync(markerFile, `${version}\n`);
+
+for (const file of FILES) {
+  try {
+    fs.copyFileSync(path.join(sourceDir, file), path.join(targetDir, file));
+  } catch (error) {
+    fail(`Copying ${file} failed: ${error.message}`);
+  }
+}
+
+try {
+  fs.writeFileSync(markerFile, `${version}\n`);
+} catch (error) {
+  fail(`Writing the version marker failed: ${error.message}`);
+}
 console.log(
   `[pyodide:copy] Copied ${FILES.length} files of pyodide ${version} to public/pyodide/.`,
 );

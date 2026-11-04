@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as api from './client.js';
-import { ApiError, nextAttemptsPage } from './client.js';
+import { ApiError, nextAttemptsPage, request } from './client.js';
 import * as f from './mocks/fixtures.js';
 
 function jsonResponse(status, data) {
@@ -20,17 +20,35 @@ function hangingFetch() {
   );
 }
 
+/** fetch whose headers arrive at once but whose body stream errors when the signal aborts. */
+function stalledBodyFetch() {
+  return vi.fn((_url, { signal }) => {
+    const body = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('{"status":'));
+        signal.addEventListener('abort', () => controller.error(signal.reason), { once: true });
+      },
+    });
+    return Promise.resolve(
+      new Response(body, { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
+  });
+}
+
 let fetchMock;
+let warnSpy;
 
 beforeEach(() => {
   fetchMock = vi.fn();
   vi.stubGlobal('fetch', fetchMock);
+  warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
 
 function lastCall() {
@@ -161,32 +179,73 @@ describe('errors', () => {
     });
   });
 
-  it('a JSON error without an envelope gets the generic message', async () => {
+  it('a JSON error without an envelope is HTTP_ERROR with the generic message', async () => {
     fetchMock.mockResolvedValue(jsonResponse(500, { oops: true }));
     await expect(api.getHealth()).rejects.toMatchObject({
-      code: 'NETWORK_ERROR',
+      status: 500,
+      code: 'HTTP_ERROR',
       message: 'Greška u komunikaciji sa serverom.',
     });
   });
 
-  it('a non-JSON 502 from the proxy is NETWORK_ERROR without the URL', async () => {
-    fetchMock.mockResolvedValue(new Response('<html>Bad Gateway</html>', { status: 502 }));
+  it('a non-string envelope message is replaced by the generic one', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse(400, { error: { code: 'VALIDATION_ERROR', message: { html: '<b>x</b>' } } }),
+    );
+    await expect(api.getHealth()).rejects.toMatchObject({
+      code: 'VALIDATION_ERROR',
+      message: 'Greška u komunikaciji sa serverom.',
+    });
+  });
+
+  it.each([502, 503, 504])('a non-JSON %i is NETWORK_ERROR without the URL', async (status) => {
+    fetchMock.mockResolvedValue(new Response('<html>Bad Gateway</html>', { status }));
     const error = await api.getChallenge('find-max').catch((e) => e);
     expect(error).toMatchObject({
-      status: 502,
+      status,
       code: 'NETWORK_ERROR',
       message: 'Server trenutno nije dostupan.',
     });
     expect(error.message).not.toContain('/api');
   });
 
-  it('a rejected fetch is NETWORK_ERROR', async () => {
-    fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+  it.each([404, 500])('another non-JSON %i is HTTP_ERROR', async (status) => {
+    fetchMock.mockResolvedValue(new Response('nope', { status }));
+    await expect(api.getHealth()).rejects.toMatchObject({
+      status,
+      code: 'HTTP_ERROR',
+      message: 'Greška u komunikaciji sa serverom.',
+    });
+  });
+
+  it('a 2xx with a non-JSON body is BAD_RESPONSE', async () => {
+    fetchMock.mockResolvedValue(new Response('<!doctype html>', { status: 200 }));
     await expect(api.getChallenges()).rejects.toMatchObject({
+      status: 200,
+      code: 'BAD_RESPONSE',
+      message: 'Greška u komunikaciji sa serverom.',
+    });
+  });
+
+  it('a rejected fetch is NETWORK_ERROR with the cause kept', async () => {
+    const cause = new TypeError('Failed to fetch');
+    fetchMock.mockRejectedValue(cause);
+    const error = await api.getChallenges().catch((e) => e);
+    expect(error).toMatchObject({
       name: 'ApiError',
       code: 'NETWORK_ERROR',
       message: 'Server trenutno nije dostupan.',
     });
+    expect(error.cause).toBe(cause);
+  });
+
+  it('a body that cannot be serialised is CLIENT_ERROR and nothing is sent', async () => {
+    const error = await request('/api/attempts', { method: 'POST', body: { n: 1n } }).catch(
+      (e) => e,
+    );
+    expect(error).toMatchObject({ name: 'ApiError', code: 'CLIENT_ERROR' });
+    expect(error.cause).toBeInstanceOf(TypeError);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('times out after 10 s by default', async () => {
@@ -235,6 +294,48 @@ describe('errors', () => {
     expect(error).not.toBeInstanceOf(ApiError);
     expect(error.name).toBe('AbortError');
     expect(error).toBe(controller.signal.reason);
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('a caller abort while the body is read stays an AbortError', async () => {
+    vi.stubGlobal('fetch', stalledBodyFetch());
+    const controller = new AbortController();
+    const result = api.getHealth({ signal: controller.signal }).catch((e) => e);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    controller.abort();
+    const error = await result;
+    expect(error).not.toBeInstanceOf(ApiError);
+    expect(error.name).toBe('AbortError');
+  });
+
+  it('our timeout while the body is read is TIMEOUT', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', stalledBodyFetch());
+    const result = api.getHealth().catch((e) => e);
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(await result).toMatchObject({ name: 'ApiError', code: 'TIMEOUT' });
+  });
+
+  it('in dev, warns with method, route and code only', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(400, f.errorValidation));
+    await api.createAttempt(f.attemptRequest).catch(() => {});
+    expect(warnSpy).toHaveBeenCalledWith('[api]', 'POST', '/api/attempts', 'VALIDATION_ERROR');
+    const logged = JSON.stringify(warnSpy.mock.calls);
+    expect(logged).not.toContain(f.attemptRequest.explanation);
+
+    fetchMock.mockResolvedValue(jsonResponse(404, f.errorChallengeNotFound));
+    await api.getProgress('6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b').catch(() => {});
+    expect(warnSpy).toHaveBeenLastCalledWith('[api]', 'GET', '/api/progress', 'NOT_FOUND');
+  });
+});
+
+describe('ApiError', () => {
+  it('keeps status, code and cause', () => {
+    const cause = new Error('x');
+    const error = new ApiError('Poruka.', { status: 500, code: 'HTTP_ERROR', cause });
+    expect(error).toBeInstanceOf(Error);
+    expect(error).toMatchObject({ name: 'ApiError', status: 500, code: 'HTTP_ERROR' });
+    expect(error.cause).toBe(cause);
   });
 });
 

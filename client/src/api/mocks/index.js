@@ -38,10 +38,17 @@ function delay(signal) {
 
 const reply = (status, data) => ({ status, data: structuredClone(data) });
 
+const CHALLENGE_ID = /^[a-z0-9-]{1,64}$/;
+let idCounter = 0;
+
+/** A fresh UUID; without crypto.randomUUID, the fallback UUID with a counter as its last group. */
 function newId(fallback) {
-  return typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : fallback;
+  if (typeof crypto?.randomUUID === 'function') return crypto.randomUUID();
+  idCounter += 1;
+  return `${fallback.slice(0, 24)}${idCounter.toString(16).padStart(12, '0')}`;
 }
 
+// The server validates path and body before the handler, so 400 comes before 404 everywhere.
 function route(method, url, body) {
   const path = url.pathname;
   const query = url.searchParams;
@@ -52,18 +59,18 @@ function route(method, url, body) {
 
   if ((match = path.match(/^\/api\/challenges\/([^/]+)$/)) && method === 'GET') {
     const id = decodeURIComponent(match[1]);
+    if (!CHALLENGE_ID.test(id)) return reply(400, f.errorValidationGeneric);
     return id === f.findMaxPublic.id
       ? reply(200, f.findMaxPublic)
       : reply(404, f.errorChallengeNotFound);
   }
 
   if ((match = path.match(/^\/api\/challenges\/([^/]+)\/hints$/)) && method === 'POST') {
-    // Validation runs before the handler on the server, so a bad level is 400 even when unknown.
+    const id = decodeURIComponent(match[1]);
     const level = body?.level;
-    if (!Number.isInteger(level) || level < 1 || level > 3) {
+    if (!CHALLENGE_ID.test(id) || !Number.isInteger(level) || level < 1 || level > 3) {
       return reply(400, f.errorValidationGeneric);
     }
-    const id = decodeURIComponent(match[1]);
     if (id !== f.findMaxPublic.id) return reply(404, f.errorChallengeNotFound);
     return reply(200, HINTS[level]);
   }
@@ -71,6 +78,9 @@ function route(method, url, body) {
   if (method === 'POST' && path === '/api/attempts') {
     if (typeof body?.explanation !== 'string' || body.explanation.trim().length < 20) {
       return reply(400, f.errorValidation);
+    }
+    if (typeof body.challengeId !== 'string' || !CHALLENGE_ID.test(body.challengeId)) {
+      return reply(400, f.errorValidationGeneric);
     }
     if (body.challengeId !== f.findMaxPublic.id) return reply(404, f.errorChallengeNotFound);
     return reply(201, { ...f.attemptCreated, attemptId: newId(f.attemptCreated.attemptId) });

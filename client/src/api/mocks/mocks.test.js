@@ -10,6 +10,14 @@ const apiDoc = readFileSync(
   'utf8',
 );
 
+// Read-only: the challenge file holds the hidden fields the fixtures are derived from.
+const findMax = JSON.parse(
+  readFileSync(
+    fileURLToPath(new URL('../../../../server/data/challenges/find-max.json', import.meta.url)),
+    'utf8',
+  ),
+);
+
 /** Every ```json block in docs/API.md, in document order, parsed. */
 const docBlocks = [...apiDoc.matchAll(/```json\r?\n([\s\S]*?)```/g)].map((m) => JSON.parse(m[1]));
 
@@ -60,24 +68,52 @@ describe('fixtures match docs/API.md', () => {
     expect(Object.keys(f.userCreated).sort()).toEqual(Object.keys(created).sort());
     expect(f.userCreated.displayName).toBe(created.displayName);
   });
+});
 
-  it('fallback evaluation follows docs/SCORING.md', () => {
+describe('fixtures match server/data/challenges/find-max.json', () => {
+  // docs/SCORING.md "Fallback without the AI": groups matched -> quality.
+  const QUALITY_BY_GROUPS = [0, 3, 7, 10];
+
+  /** A group matches if the lowercased text contains any non-blank lowercased stem. */
+  function keywordQuality(explanation, groups) {
+    const text = explanation.toLowerCase();
+    const matched = groups.filter((stems) =>
+      stems.some((stem) => stem.trim() !== '' && text.includes(stem.toLowerCase())),
+    ).length;
+    return QUALITY_BY_GROUPS[Math.min(matched, 3)];
+  }
+
+  it('fallback evaluation is what SCORING.md gives for attemptRequest', () => {
+    const quality = keywordQuality(f.attemptRequest.explanation, findMax.keywords_json);
     const { feedback, breakdown } = f.evaluationFallback;
+
     expect(f.evaluationFallback.feedbackSource).toBe('fallback');
-    expect([0, 3, 7, 10]).toContain(feedback.explanation_quality);
-    expect(breakdown.explanation).toBe(Math.round(feedback.explanation_quality * 3));
-    const sum = Object.values(breakdown).reduce((a, b) => a + b, 0);
-    expect(f.evaluationFallback.score).toBe(sum);
     expect(feedback).toEqual({
-      is_correct: feedback.explanation_quality >= 7,
-      explanation_quality: 7,
+      is_correct: quality >= 7,
+      explanation_quality: quality,
       detected_misconception: null,
       needs_clarification: false,
       hint: null,
-      feedback: expect.any(String),
+      feedback: findMax.fallback_feedback,
       practice_tip: null,
     });
+    expect(breakdown.explanation).toBe(Math.round(quality * 3));
+    // Same deterministic components and hint penalty as the AI worked example.
+    expect({ ...breakdown, explanation: undefined }).toEqual({
+      ...f.evaluationAi.breakdown,
+      explanation: undefined,
+    });
+    const sum = Object.values(breakdown).reduce((a, b) => a + b, 0);
+    expect(f.evaluationFallback.score).toBe(Math.min(100, Math.max(0, sum)));
     expect(Object.keys(feedback).sort()).toEqual(Object.keys(f.evaluationAi.feedback).sort());
+  });
+
+  it.each([
+    [1, f.hintLevel1],
+    [2, f.hintLevel2],
+    [3, f.hintLevel3],
+  ])('hint level %i is the written hint', (level, fixture) => {
+    expect(fixture).toEqual({ level, hint: findMax.hints_json[level - 1], source: 'written' });
   });
 });
 
@@ -152,6 +188,45 @@ describe('mockRequest', () => {
       body: { level: 1 },
     });
     expect(hint.status).toBe(404);
+  });
+
+  it.each([['Find-Max'], ['a b'], ['x'.repeat(65)]])(
+    'challenge id %j not matching [a-z0-9-]{1,64} is 400',
+    async (id) => {
+      const path = `/api/challenges/${encodeURIComponent(id)}`;
+      expect((await mockRequest({ path })).status).toBe(400);
+      const hint = await mockRequest({ method: 'POST', path: `${path}/hints`, body: { level: 1 } });
+      expect(hint.status).toBe(400);
+      const attempt = await mockRequest({
+        method: 'POST',
+        path: '/api/attempts',
+        body: { ...f.attemptRequest, challengeId: id },
+      });
+      expect(attempt.status).toBe(400);
+      expect(attempt.data.error.code).toBe('VALIDATION_ERROR');
+    },
+  );
+
+  it('without crypto.randomUUID, attempt ids stay unique UUIDs', async () => {
+    vi.stubGlobal('crypto', {});
+    try {
+      const a = await mockRequest({
+        method: 'POST',
+        path: '/api/attempts',
+        body: f.attemptRequest,
+      });
+      const b = await mockRequest({
+        method: 'POST',
+        path: '/api/attempts',
+        body: f.attemptRequest,
+      });
+      expect(a.data.attemptId).not.toBe(b.data.attemptId);
+      expect(a.data.attemptId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('unknown route is 404', async () => {
