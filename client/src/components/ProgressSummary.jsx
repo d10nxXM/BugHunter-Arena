@@ -1,8 +1,4 @@
-import { challengeName, formatDuration } from './ProgressFormat.js';
-
-// docs/DATA_MODEL.md "Solved challenge": its best attempt scores at least 70. GET /api/progress
-// has no per-challenge solved flag, so the label is derived from the server's bestScore.
-const SOLVED_MIN_SCORE = 70;
+import { challengeName, formatDuration } from '../lib/progressFormat.js';
 
 /**
  * GET /api/progress statistics.
@@ -46,37 +42,21 @@ export default function ProgressSummary({ progress, titles }) {
                 <th scope="col" className="py-2 pr-4 text-right font-semibold">
                   Najbolji rezultat
                 </th>
-                <th scope="col" className="py-2 pr-4 text-right font-semibold">
+                <th scope="col" className="py-2 text-right font-semibold">
                   Pokušaji
-                </th>
-                <th scope="col" className="py-2 font-semibold">
-                  Status
                 </th>
               </tr>
             </thead>
             <tbody>
-              {perChallenge.map((item) => {
-                const solved = item.bestScore >= SOLVED_MIN_SCORE;
-                return (
-                  <tr key={item.challengeId} className="border-b border-slate-200">
-                    <th scope="row" className="py-2 pr-4 font-normal">
-                      {challengeName(titles, item.challengeId)}
-                    </th>
-                    <td className="py-2 pr-4 text-right tabular-nums">{item.bestScore} / 100</td>
-                    <td className="py-2 pr-4 text-right tabular-nums">{item.attempts}</td>
-                    <td className="py-2">
-                      <span
-                        className={`inline-flex items-center gap-1 font-medium ${
-                          solved ? 'text-emerald-800' : 'text-slate-700'
-                        }`}
-                      >
-                        <span aria-hidden="true">{solved ? '✓' : '○'}</span>
-                        {solved ? 'Riješen' : 'Nije riješen'}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
+              {perChallenge.map((item) => (
+                <tr key={item.challengeId} className="border-b border-slate-200">
+                  <th scope="row" className="py-2 pr-4 font-normal">
+                    {challengeName(titles, item.challengeId)}
+                  </th>
+                  <td className="py-2 pr-4 text-right tabular-nums">{item.bestScore} / 100</td>
+                  <td className="py-2 text-right tabular-nums">{item.attempts}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

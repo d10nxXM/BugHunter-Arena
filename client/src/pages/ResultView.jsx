@@ -1,8 +1,11 @@
+import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
+import { getChallenges } from '../api/client.js';
 import ResultFeedback from '../components/ResultFeedback.jsx';
 import ScoreBreakdown from '../components/ScoreBreakdown.jsx';
 import TestResults from '../components/TestResults.jsx';
 import { usePageTitle } from '../hooks/usePageTitle.js';
+import { isFeedbackSource } from '../lib/progressFormat.js';
 import { paths } from '../paths.js';
 
 const FOCUS_RING = 'focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:outline-none';
@@ -18,9 +21,47 @@ function isResultState(state, id) {
     evaluation !== null &&
     typeof evaluation === 'object' &&
     typeof evaluation.score === 'number' &&
+    Number.isFinite(evaluation.score) &&
     evaluation.breakdown !== null &&
-    typeof evaluation.breakdown === 'object'
+    typeof evaluation.breakdown === 'object' &&
+    isFeedbackSource(evaluation.feedbackSource)
   );
+}
+
+const EMPTY_CONTEXT = { forId: null, title: null, nextId: null, nextTitle: null };
+
+/**
+ * Loads the challenge list for this challenge's title and the next challenge in list order.
+ * Both are optional: while loading, on error, or for the last challenge, nextId is null.
+ */
+function useChallengeContext(id, enabled) {
+  const [context, setContext] = useState(EMPTY_CONTEXT);
+
+  useEffect(() => {
+    if (!enabled) return undefined;
+    const controller = new AbortController();
+    getChallenges({ signal: controller.signal })
+      .then((list) => {
+        if (!Array.isArray(list)) return;
+        const index = list.findIndex((c) => c?.id === id);
+        const next = index >= 0 ? list[index + 1] : undefined;
+        setContext({
+          forId: id,
+          title: index >= 0 ? (list[index].title ?? null) : null,
+          nextId: next?.id ?? null,
+          nextTitle: next?.title ?? null,
+        });
+      })
+      .catch((error) => {
+        if (controller.signal.aborted || error?.name === 'AbortError') return;
+        // Cosmetic: the page keeps the id and the "Svi izazovi" link.
+        if (import.meta.env.DEV) console.warn('[result] challenge list not loaded');
+      });
+    return () => controller.abort();
+  }, [id, enabled]);
+
+  // Ignore a result loaded for another id.
+  return context.forId === id ? context : EMPTY_CONTEXT;
 }
 
 function Heading() {
@@ -46,8 +87,10 @@ export default function ResultView() {
   usePageTitle('Rezultat');
   const { id } = useParams();
   const { state } = useLocation();
+  const valid = isResultState(state, id);
+  const challenge = useChallengeContext(id, valid);
 
-  if (!isResultState(state, id)) {
+  if (!valid) {
     return (
       <>
         <Heading />
@@ -69,7 +112,7 @@ export default function ResultView() {
     <>
       <Heading />
       <p className="mt-2 text-slate-700">
-        Izazov <span className="font-mono">{id}</span>
+        Izazov: {challenge.title ? challenge.title : <span className="font-mono">{id}</span>}
       </p>
       <p className="mt-4 text-3xl font-bold">Ukupno: {evaluation.score} / 100</p>
 
@@ -109,6 +152,11 @@ export default function ResultView() {
         <Link to={paths.progress} className={LINK}>
           Moj napredak
         </Link>
+        {challenge.nextId && (
+          <Link to={paths.challenge(challenge.nextId)} className={LINK}>
+            Sljedeći izazov: {challenge.nextTitle ?? challenge.nextId}
+          </Link>
+        )}
         <Link to={paths.home} className={LINK}>
           Svi izazovi
         </Link>

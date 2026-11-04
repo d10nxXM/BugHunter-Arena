@@ -118,16 +118,19 @@ export default function ProgressNameForm({
       <div className="flex flex-wrap gap-3">
         <button
           type="submit"
-          disabled={pending}
-          className={`rounded bg-sky-800 px-4 py-2 font-semibold text-white hover:bg-sky-900 disabled:opacity-70 ${FOCUS_RING} focus-visible:ring-offset-2`}
+          aria-disabled={pending || undefined}
+          className={`rounded bg-sky-800 px-4 py-2 font-semibold text-white hover:bg-sky-900 aria-disabled:opacity-70 ${FOCUS_RING} focus-visible:ring-offset-2`}
         >
           {pending ? 'Čuvanje…' : submitLabel}
         </button>
         {onCancel && (
           <button
             type="button"
-            onClick={onCancel}
-            className={`rounded border border-slate-500 px-4 py-2 ${FOCUS_RING}`}
+            onClick={() => {
+              if (!pending) onCancel();
+            }}
+            aria-disabled={pending || undefined}
+            className={`rounded border border-slate-500 px-4 py-2 aria-disabled:opacity-70 ${FOCUS_RING}`}
           >
             Odustani
           </button>

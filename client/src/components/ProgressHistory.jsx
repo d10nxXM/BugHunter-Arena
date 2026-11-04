@@ -1,9 +1,14 @@
-import { challengeName, formatDateTime, formatDuration, SOURCE_LABELS } from './ProgressFormat.js';
+import {
+  challengeName,
+  formatDateTime,
+  formatDuration,
+  SOURCE_LABELS,
+} from '../lib/progressFormat.js';
 
 const FOCUS_RING = 'focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:outline-none';
 
 /**
- * GET /api/attempts history with a "Učitaj još" button. Data lives in the page.
+ * GET /api/attempts history with a "Učitaj još" button. Data lives in UserProgress.
  * @param {{
  *   items: Array<{ id: string, challengeId: string, status: string, score: number | null,
  *     feedbackSource: string | null, hintsUsed: number, durationSec: number, createdAt: string }>,
@@ -11,6 +16,7 @@ const FOCUS_RING = 'focus-visible:ring-2 focus-visible:ring-sky-700 focus-visibl
  *   hasMore: boolean,
  *   loadingMore: boolean,
  *   loadMoreError: string | null,
+ *   announcement: string,
  *   onLoadMore: () => void,
  *   endRef: import('react').Ref<HTMLParagraphElement>,
  * }} props
@@ -21,6 +27,7 @@ export default function ProgressHistory({
   hasMore,
   loadingMore,
   loadMoreError,
+  announcement,
   onLoadMore,
   endRef,
 }) {
@@ -36,10 +43,10 @@ export default function ProgressHistory({
           <thead>
             <tr className="border-b border-slate-300 text-slate-700">
               <th scope="col" className="py-2 pr-4 font-semibold">
-                Vrijeme
+                Izazov
               </th>
               <th scope="col" className="py-2 pr-4 font-semibold">
-                Izazov
+                Vrijeme
               </th>
               <th scope="col" className="py-2 pr-4 text-right font-semibold">
                 Rezultat
@@ -56,25 +63,20 @@ export default function ProgressHistory({
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => {
-              const evaluated = typeof item.score === 'number';
-              return (
-                <tr key={item.id} className="border-b border-slate-200">
-                  <td className="py-2 pr-4 whitespace-nowrap">{formatDateTime(item.createdAt)}</td>
-                  <th scope="row" className="py-2 pr-4 font-normal">
-                    {challengeName(titles, item.challengeId)}
-                  </th>
-                  <td className="py-2 pr-4 text-right tabular-nums">
-                    {evaluated ? `${item.score} / 100` : 'Nije ocijenjen'}
-                  </td>
-                  <td className="py-2 pr-4">{SOURCE_LABELS[item.feedbackSource] ?? '—'}</td>
-                  <td className="py-2 pr-4 text-right tabular-nums">{item.hintsUsed ?? '—'}</td>
-                  <td className="py-2 text-right tabular-nums">
-                    {formatDuration(item.durationSec)}
-                  </td>
-                </tr>
-              );
-            })}
+            {items.map((item) => (
+              <tr key={item.id} className="border-b border-slate-200">
+                <th scope="row" className="py-2 pr-4 font-normal">
+                  {challengeName(titles, item.challengeId)}
+                </th>
+                <td className="py-2 pr-4 whitespace-nowrap">{formatDateTime(item.createdAt)}</td>
+                <td className="py-2 pr-4 text-right tabular-nums">
+                  {typeof item.score === 'number' ? `${item.score} / 100` : 'Nije ocijenjen'}
+                </td>
+                <td className="py-2 pr-4">{SOURCE_LABELS[item.feedbackSource] ?? '—'}</td>
+                <td className="py-2 pr-4 text-right tabular-nums">{item.hintsUsed ?? '—'}</td>
+                <td className="py-2 text-right tabular-nums">{formatDuration(item.durationSec)}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -86,11 +88,14 @@ export default function ProgressHistory({
           </p>
         )}
         {hasMore ? (
+          // aria-disabled, not disabled: a disabled button would drop focus to the body.
           <button
             type="button"
-            onClick={onLoadMore}
-            disabled={loadingMore}
-            className={`rounded border border-sky-800 px-4 py-2 font-medium text-sky-900 hover:bg-sky-50 disabled:opacity-70 ${FOCUS_RING}`}
+            onClick={() => {
+              if (!loadingMore) onLoadMore();
+            }}
+            aria-disabled={loadingMore || undefined}
+            className={`rounded border border-sky-800 px-4 py-2 font-medium text-sky-900 hover:bg-sky-50 aria-disabled:opacity-70 ${FOCUS_RING}`}
           >
             {loadingMore ? 'Učitavanje…' : loadMoreError ? 'Pokušaj ponovo' : 'Učitaj još'}
           </button>
@@ -100,7 +105,7 @@ export default function ProgressHistory({
           </p>
         )}
         <p role="status" className="sr-only">
-          {loadingMore ? 'Učitavanje pokušaja…' : ''}
+          {announcement}
         </p>
       </div>
     </>

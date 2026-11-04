@@ -1,8 +1,34 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { describe, expect, it } from 'vitest';
-import { attemptCreated, evaluationAi, evaluationFallback } from '../api/mocks/fixtures.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiError, getChallenges } from '../api/client.js';
+import {
+  attemptCreated,
+  challengeList,
+  evaluationAi,
+  evaluationFallback,
+} from '../api/mocks/fixtures.js';
+import ScoreBreakdown from '../components/ScoreBreakdown.jsx';
 import ResultView from './ResultView.jsx';
+
+vi.mock('../api/client.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, getChallenges: vi.fn() };
+});
+
+const TWO_CHALLENGES = [
+  ...challengeList,
+  { ...challengeList[0], id: 'sum-list', title: 'Zbir liste' },
+];
+
+beforeEach(() => {
+  getChallenges.mockResolvedValue(TWO_CHALLENGES);
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.clearAllMocks();
+});
 
 const ALL_PASSED = [
   { id: 't1', passed: true, actual: 5, error: null },
@@ -188,5 +214,82 @@ describe('ResultView', () => {
   it('omits the solution section when the state has no referenceSolution', () => {
     renderResult({ state: makeState({ referenceSolution: undefined }) });
     expect(screen.queryByText('Referentno rješenje')).not.toBeInTheDocument();
+  });
+
+  it('shows the challenge title and links the next challenge in list order', async () => {
+    renderResult({ state: makeState() });
+
+    expect(await screen.findByText('Izazov: Najveći element liste')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Sljedeći izazov: Zbir liste' })).toHaveAttribute(
+      'href',
+      '/challenges/sum-list',
+    );
+    expect(screen.getByRole('link', { name: 'Svi izazovi' })).toHaveAttribute('href', '/');
+  });
+
+  it('offers only "Svi izazovi" for the last challenge', async () => {
+    getChallenges.mockResolvedValue([...TWO_CHALLENGES].reverse());
+    renderResult({ state: makeState() });
+
+    expect(await screen.findByText('Izazov: Najveći element liste')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Sljedeći izazov/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Svi izazovi' })).toBeInTheDocument();
+  });
+
+  it('falls back to the id and "Svi izazovi" when the list fails to load', async () => {
+    getChallenges.mockRejectedValue(new ApiError('x', { code: 'NETWORK_ERROR' }));
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    renderResult({ state: makeState() });
+
+    await waitFor(() => expect(getChallenges).toHaveBeenCalled());
+    expect(screen.getByText('find-max')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Sljedeći izazov/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Svi izazovi' })).toBeInTheDocument();
+  });
+
+  it('aborts the challenge list request on unmount', () => {
+    getChallenges.mockReturnValue(new Promise(() => {}));
+    const { unmount } = renderResult({ state: makeState() });
+    const { signal } = getChallenges.mock.calls[0][0];
+    expect(signal.aborted).toBe(false);
+    unmount();
+    expect(signal.aborted).toBe(true);
+  });
+
+  it('does not load the challenge list when the result is unavailable', () => {
+    renderResult({ state: undefined });
+    expect(getChallenges).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['an unknown feedbackSource', { feedbackSource: 'gpt' }],
+    ['a missing feedbackSource', { feedbackSource: undefined }],
+    ['a string score', { score: '89' }],
+    ['a NaN score', { score: Number.NaN }],
+  ])('treats %s as unavailable', (_, change) => {
+    renderResult({ state: makeState({ evaluation: { ...evaluationAi, ...change } }) });
+    expect(screen.getByText('Rezultat nije dostupan.')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+});
+
+describe('ScoreBreakdown', () => {
+  it('shows a zero hint penalty as "0" without the negative color', () => {
+    render(
+      <ScoreBreakdown
+        score={94}
+        breakdown={{ ...evaluationAi.breakdown, hintPenalty: 0, explanation: 24 }}
+      />,
+    );
+    const row = screen.getByRole('row', { name: /Kazna za nagovještaje/ });
+    const cell = within(row).getAllByRole('cell')[0];
+    expect(cell).toHaveTextContent(/^0$/);
+    expect(cell).not.toHaveClass('text-red-800');
+  });
+
+  it('shows a negative hint penalty in red', () => {
+    render(<ScoreBreakdown score={89} breakdown={evaluationAi.breakdown} />);
+    const row = screen.getByRole('row', { name: /Kazna za nagovještaje/ });
+    expect(within(row).getAllByRole('cell')[0]).toHaveClass('text-red-800');
   });
 });

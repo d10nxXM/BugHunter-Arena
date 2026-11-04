@@ -1,17 +1,19 @@
+import { SOURCE_LABELS } from '../lib/progressFormat.js';
+
 // AI or fallback feedback for one attempt. Every field is untrusted text: it is rendered only as
 // React text children, never as HTML, markdown or Monaco content.
 
 const SOURCE = {
   ai: {
-    label: 'Pomoćna AI procjena',
+    label: SOURCE_LABELS.ai,
     note: 'Procjenu objašnjenja je dao AI mentor. AI utiče na najviše 30 od 100 bodova.',
   },
   demo: {
-    label: 'Pomoćna AI procjena (demo)',
+    label: SOURCE_LABELS.demo,
     note: 'Demo režim: prikazan je unaprijed snimljen odgovor AI mentora.',
   },
   fallback: {
-    label: 'Procjena bez AI-ja',
+    label: SOURCE_LABELS.fallback,
     note: 'AI mentor trenutno nije dostupan. Objašnjenje je ocijenjeno prema ključnim pojmovima.',
   },
 };
