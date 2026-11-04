@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Pyodide core files, copied from node_modules by scripts/copy-pyodide.mjs
+public/pyodide/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
