@@ -50,7 +50,7 @@ function clampHeight(contentHeight) {
  *   onChange      (code) => void
  *   selectedLines line numbers (1-based) marked as bug lines, default []
  *   onToggleLine  (lineNumber) => void
- *   readOnly      default false; also disables the gutter and "Vrati original"
+ *   readOnly      default false; also makes the gutter aria-disabled (still focusable) and disables "Vrati original"
  *   originalCode  optional; what "Vrati original" restores. Defaults to the first `code` value.
  */
 export default function CodeEditor({
@@ -188,13 +188,16 @@ export default function CodeEditor({
                   tabIndex={n === activeLine ? 0 : -1}
                   aria-pressed={selected}
                   aria-label={`Linija ${n}`}
-                  disabled={readOnly}
-                  onClick={() => onToggleLine?.(n)}
+                  aria-disabled={readOnly}
+                  onClick={() => {
+                    // aria-disabled (not disabled) keeps the button focusable for keyboard users.
+                    if (!readOnly) onToggleLine?.(n);
+                  }}
                   onFocus={() => {
                     setFocusLine(n);
                     editorRef.current?.revealLine(n);
                   }}
-                  className={`h-6 min-w-14 border-l-4 px-2 text-right leading-6 focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:outline-none focus-visible:ring-inset disabled:cursor-default ${
+                  className={`h-6 min-w-14 border-l-4 px-2 text-right leading-6 focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:outline-none focus-visible:ring-inset aria-disabled:cursor-default ${
                     selected
                       ? 'border-amber-400 bg-amber-200 font-bold text-slate-900'
                       : 'border-transparent text-slate-300 hover:bg-slate-700'

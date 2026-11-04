@@ -14,6 +14,12 @@ import { createContext, useContext } from 'react';
  * - When run() rejects, treat it as "tests did not run": show the error, do not send results.
  *   A rejection never means "the tests failed".
  *
+ * Lifecycle notes:
+ * - fail() (runner gives up: init failure, worker error, restarts exhausted) is terminal until
+ *   the page is reloaded; `loadError` stays set and `ready` never becomes true again.
+ * - run() rejects while the runner is not ready (loading, restarting after a timeout, or failed).
+ * - Worker error text must never be rendered as HTML: show `loadError` and `error` as plain text.
+ *
  * Results: `passed` is decided on the page with lib/compareResults.js (JSON equality, see
  * docs/SCORING.md). `error` is null for a test that ran, "<Type>: <message>" (max 200 chars)
  * when the code raised, or 'timeout'. `actual` is null when there is an error.

@@ -239,15 +239,19 @@ describe('CodeEditor', () => {
     );
     expect(lastEditor().options.readOnly).toBe(true);
     for (const button of screen.getAllByRole('button', { name: /^Linija/ })) {
-      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+      expect(button).not.toBeDisabled();
     }
     expect(screen.getByRole('button', { name: 'Vrati original' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Linija 1' }));
+    await user.keyboard('{Enter}');
     expect(onToggleLine).not.toHaveBeenCalled();
+    screen.getByRole('button', { name: 'Linija 1' }).focus();
+    expect(screen.getByRole('button', { name: 'Linija 1' })).toHaveFocus();
 
     rerender(<CodeEditor code={CODE} onChange={() => {}} onToggleLine={onToggleLine} />);
     expect(lastEditor().updateOptions).toHaveBeenLastCalledWith({ readOnly: false });
-    expect(screen.getByRole('button', { name: 'Linija 1' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Linija 1' })).toHaveAttribute('aria-disabled', 'false');
   });
 
   it('keeps the gutter scrolled with the editor', () => {
