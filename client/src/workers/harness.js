@@ -15,6 +15,8 @@
  */
 export const HARNESS_ENTRY = '_bughunter_run';
 export const MAX_ERROR_LENGTH = 200;
+// A test result whose JSON encoding is longer than this is reported as an error, not returned.
+export const MAX_ACTUAL_LENGTH = 100000;
 
 export const HARNESS = String.raw`
 def _bh_make():
@@ -47,7 +49,8 @@ def _bh_make():
     _sys_dict = sys.__dict__
     _modules = sys.modules
     _MAX_DEPTH = 100
-    _MAX_ERROR = 200
+    _MAX_ERROR = ${MAX_ERROR_LENGTH}
+    _MAX_ACTUAL = ${MAX_ACTUAL_LENGTH}
     _MAX_SAFE_INT = 2 ** 53 - 1
     _INF = _float("inf")
 
@@ -159,6 +162,10 @@ def _bh_make():
                 encoded = _dumps(check_json(value, 0), allow_nan=False)
             except _BaseException:
                 error = clip("TypeError: rezultat tipa '" + type_name(value) + "' nije JSON vrijednost")
+                results.append({"id": test_id, "ok": False, "actual": None, "error": error})
+                continue
+            if _len(encoded) > _MAX_ACTUAL:
+                error = clip("ValueError: rezultat je prevelik (preko " + _str(_MAX_ACTUAL) + " znakova)")
                 results.append({"id": test_id, "ok": False, "actual": None, "error": error})
                 continue
             results.append({"id": test_id, "ok": True, "actual": encoded, "error": None})

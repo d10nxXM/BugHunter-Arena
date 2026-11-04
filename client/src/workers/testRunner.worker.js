@@ -30,7 +30,13 @@
  *   objects reachable through the garbage collector are not restored between runs.
  * - The student owns the browser and can change any of this with dev tools anyway.
  */
-import { HARNESS, HARNESS_CLEANUP, HARNESS_ENTRY, callHarness } from './harness.js';
+import {
+  HARNESS,
+  HARNESS_CLEANUP,
+  HARNESS_ENTRY,
+  MAX_ERROR_LENGTH,
+  callHarness,
+} from './harness.js';
 
 const PYODIDE_PATH = '/pyodide/';
 
@@ -38,8 +44,8 @@ let port = null;
 let entry = null;
 
 function describe(error) {
-  if (error instanceof Error) return `${error.name}: ${error.message}`.slice(0, 200);
-  return String(error).slice(0, 200);
+  if (error instanceof Error) return `${error.name}: ${error.message}`.slice(0, MAX_ERROR_LENGTH);
+  return String(error).slice(0, MAX_ERROR_LENGTH);
 }
 
 function send(message) {

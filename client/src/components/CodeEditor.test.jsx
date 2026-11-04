@@ -127,6 +127,20 @@ describe('CodeEditor', () => {
     });
   });
 
+  it('never feeds text to hovers, markers or links', () => {
+    render(<Harness />);
+    const { options } = lastEditor();
+    expect(options.hover).toEqual({ enabled: false });
+    expect(options.links).toBe(false);
+    expect(options.quickSuggestions).toBe(false);
+    expect(options.parameterHints).toEqual({ enabled: false });
+    expect(options.renderValidationDecorations).toBe('off');
+    expect(options.contextmenu).toBe(false);
+    // The fake exposes no marker or hover provider API; the component must not need one.
+    expect(fake.monaco.editor.setModelMarkers).toBeUndefined();
+    expect(fake.monaco.languages).toBeUndefined();
+  });
+
   it('shows one gutter button per line', () => {
     render(<Harness />);
     const buttons = screen.getAllByRole('button', { name: /^Linija \d+$/ });

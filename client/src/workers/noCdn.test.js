@@ -23,6 +23,36 @@ function offenders(dir) {
     .map((file) => path.relative(clientDir, file));
 }
 
+const read = (...parts) => fs.readFileSync(path.join(clientDir, 'src', ...parts), 'utf8');
+
+describe('Monaco loads locally', () => {
+  it.each([
+    ['workers/monacoSetup.js', ['workers', 'monacoSetup.js']],
+    ['components/CodeEditor.jsx', ['components', 'CodeEditor.jsx']],
+  ])('%s has no CDN strings', (_name, parts) => {
+    const source = read(...parts);
+    expect(source.length).toBeGreaterThan(0);
+    expect(source).not.toMatch(CDN_PATTERN);
+  });
+
+  it('monacoSetup.js uses the local monaco-editor package and a ?worker import', () => {
+    const source = read('workers', 'monacoSetup.js');
+    expect(source).toMatch(/from 'monaco-editor\//);
+    expect(source).toMatch(/\?worker'/);
+  });
+
+  it('nothing in src imports @monaco-editor/react or its loader (it defaults to a CDN path)', () => {
+    const pkg = ['@monaco-editor', 'react'].join('/');
+    const loader = ['monaco-editor', 'loader'].join('/');
+    const banned = new RegExp(String.raw`(from|import\()\s*['"](${pkg}|${loader})`);
+    const bad = filesUnder(path.join(clientDir, 'src'))
+      .filter((f) => /\.(jsx?|mjs)$/.test(f) && !f.endsWith('noCdn.test.js'))
+      .filter((f) => banned.test(fs.readFileSync(f, 'utf8')))
+      .map((f) => path.relative(clientDir, f));
+    expect(bad).toEqual([]);
+  });
+});
+
 describe('no CDN references', () => {
   it('client/src does not reference a public CDN', () => {
     expect(filesUnder(path.join(clientDir, 'src')).length).toBeGreaterThan(0);

@@ -1,4 +1,7 @@
 import { compareResults } from '../lib/compareResults.js';
+import { MAX_ERROR_LENGTH } from './harness.js';
+
+export { MAX_ERROR_LENGTH };
 
 /**
  * Page side of the test runner: owns the long-lived worker, its private MessageChannel, the init
@@ -11,7 +14,6 @@ export const INIT_TIMEOUT_MS = 30000;
 // code and never count.
 export const MAX_CRASH_RESTARTS = 3;
 export const MAX_TEST_ID_LENGTH = 64;
-export const MAX_ERROR_LENGTH = 200;
 
 export const RUNNER_UNAVAILABLE = 'Pokretanje testova nije dostupno u ovom pregledaču.';
 export const RUNNER_NOT_READY = 'Python okruženje se još učitava. Pokušaj ponovo za par sekundi.';

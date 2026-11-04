@@ -35,14 +35,12 @@ import { createContext, useContext } from 'react';
  * - StrictMode: the effect that starts the worker terminates it in its cleanup.
  * - Memoise the context value (useMemo over ready, loadError and a stable run from useCallback),
  *   so consumers do not re-render or re-run effects on every provider render.
- * - Do not edit vite.config.js (frozen after M1). Load Monaco's workers with Vite `?worker`
- *   imports in D's own files (e.g. `import EditorWorker from
- *   'monaco-editor/esm/vs/editor/editor.worker?worker'`). If a config change seems necessary,
- *   say so in the summary instead of making it.
+ * - Do not edit vite.config.js (frozen after M1). Monaco comes from the local `monaco-editor`
+ *   package through workers/monacoSetup.js (editor worker via a Vite `?worker` import), not
+ *   through @monaco-editor/react, whose loader has a public-CDN default.
  * - Security: loadPyodide({ indexURL: '/pyodide/' }) explicitly. Never loadPackage or micropip,
  *   which would fall back to Pyodide's default public CDN.
- * - Monaco: loader.config({ monaco }) with the local monaco-editor package before any <Editor>
- *   renders; import only the Python language and editor.worker. Never feed AI or student text to
+ * - Monaco: only the Python language and the editor worker. Never feed AI or student text to
  *   Monaco hovers, markers or markdown.
  */
 export const TestRunnerContext = createContext(null);
