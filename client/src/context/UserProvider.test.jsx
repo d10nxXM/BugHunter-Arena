@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, createUser } from '../api/client.js';
 import { useUser } from '../hooks/useUser.js';
 import { USER_STORAGE_KEY } from './UserContext.js';
-import UserProvider from './UserProvider.jsx';
+import UserProvider, { USER_CHANGED_MESSAGE } from './UserProvider.jsx';
 
 vi.mock('../api/client.js', async (importOriginal) => ({
   ...(await importOriginal()),
@@ -152,7 +152,8 @@ describe('ensureUser', () => {
     await act(async () => {
       created = await result.current.ensureUser('ana');
     });
-    expect(createUser).toHaveBeenCalledWith('ana', { signal: undefined });
+    // The shared request gets no caller signal, only the client's own timeout.
+    expect(createUser).toHaveBeenCalledWith('ana');
     expect(created).toEqual(other);
     expect(result.current.user).toEqual(other);
     expect(JSON.parse(localStorage.getItem(USER_STORAGE_KEY))).toEqual(other);
@@ -165,6 +166,98 @@ describe('ensureUser', () => {
       await Promise.all([result.current.ensureUser('ana'), result.current.ensureUser('ana')]);
     });
     expect(createUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('a caller abort rejects only that caller; the other still gets the user', async () => {
+    let finish;
+    createUser.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const { result } = renderHook(() => useUser(), { wrapper });
+    const controller = new AbortController();
+    const first = result.current.ensureUser('ana', { signal: controller.signal });
+    const second = result.current.ensureUser('ana');
+    controller.abort();
+    await expect(first).rejects.toMatchObject({ name: 'AbortError' });
+
+    await act(async () => {
+      finish({ id: other.userId, displayName: 'ana' });
+      await expect(second).resolves.toEqual(other);
+    });
+    expect(createUser).toHaveBeenCalledTimes(1);
+    expect(result.current.user).toEqual(other);
+  });
+
+  it('a later call still resolves from the request an aborted caller started', async () => {
+    let finish;
+    createUser.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const { result } = renderHook(() => useUser(), { wrapper });
+    const controller = new AbortController();
+    const aborted = result.current.ensureUser('ana', { signal: controller.signal });
+    controller.abort();
+    await expect(aborted).rejects.toMatchObject({ name: 'AbortError' });
+
+    const later = result.current.ensureUser('ana');
+    await act(async () => {
+      finish({ id: other.userId, displayName: 'ana' });
+      await expect(later).resolves.toEqual(other);
+    });
+    expect(createUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('an already aborted signal rejects at once without a request', async () => {
+    const { result } = renderHook(() => useUser(), { wrapper });
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      result.current.ensureUser('ana', { signal: controller.signal }),
+    ).rejects.toMatchObject({ name: 'AbortError' });
+    expect(createUser).not.toHaveBeenCalled();
+  });
+
+  it('clearUser during an in-flight ensureUser leaves the user cleared', async () => {
+    let finish;
+    createUser.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const { result } = renderHook(() => useUser(), { wrapper });
+    const pending = result.current.ensureUser('ana');
+    act(() => {
+      result.current.clearUser();
+    });
+    await act(async () => {
+      finish({ id: other.userId, displayName: 'ana' });
+      await expect(pending).rejects.toThrow(USER_CHANGED_MESSAGE);
+    });
+    expect(result.current.user).toBeNull();
+    expect(localStorage.getItem(USER_STORAGE_KEY)).toBeNull();
+  });
+
+  it('setUser during an in-flight ensureUser wins over the created user', async () => {
+    let finish;
+    createUser.mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    );
+    const { result } = renderHook(() => useUser(), { wrapper });
+    const pending = result.current.ensureUser('ana');
+    act(() => {
+      result.current.setUser(stored);
+    });
+    await act(async () => {
+      finish({ id: other.userId, displayName: 'ana' });
+      await expect(pending).resolves.toEqual(stored);
+    });
+    expect(result.current.user).toEqual(stored);
   });
 
   it('propagates an ApiError and stores nothing', async () => {

@@ -1,10 +1,10 @@
-import { render, renderHook, screen, within } from '@testing-library/react';
+import { act, render, renderHook, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { lazy } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.jsx';
-import Layout from './components/Layout.jsx';
+import Layout, { HEADING_WAIT_MS } from './components/Layout.jsx';
 import TestRunnerProvider, { RUNNER_UNAVAILABLE } from './components/TestRunnerProvider.jsx';
 import { USER_STORAGE_KEY } from './context/UserContext.js';
 import UserProvider from './context/UserProvider.jsx';
@@ -193,6 +193,68 @@ describe('Layout', () => {
     resolvePage({ default: () => <Page title="Moj napredak" /> });
     const h1 = await screen.findByRole('heading', { name: 'Moj napredak' });
     await expect.poll(() => document.activeElement).toBe(h1);
+  });
+});
+
+describe('Layout late h1', () => {
+  function deferredPage() {
+    let resolvePage;
+    const Later = lazy(
+      () =>
+        new Promise((resolve) => {
+          resolvePage = resolve;
+        }),
+    );
+    return { Later, resolve: () => resolvePage({ default: () => <Page title="Moj napredak" /> }) };
+  }
+
+  afterEach(() => vi.useRealTimers());
+
+  it(`gives up after ${HEADING_WAIT_MS} ms, so a very late h1 does not take focus`, async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const page = deferredPage();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderLayout(
+      '/',
+      <>
+        <Route path="/" element={<Page title="Izazovi" />} />
+        <Route path="/progress" element={<page.Later />} />
+      </>,
+    );
+    await screen.findByRole('heading', { name: 'Izazovi' });
+    const link = screen.getByRole('link', { name: 'Moj napredak' });
+    await user.click(link);
+    await screen.findByRole('status');
+
+    await act(async () => {
+      vi.advanceTimersByTime(HEADING_WAIT_MS + 100);
+    });
+    page.resolve();
+    const h1 = await screen.findByRole('heading', { name: 'Moj napredak' });
+    expect(document.activeElement).not.toBe(h1);
+    expect(link).toHaveFocus();
+  });
+
+  it('does not take focus when the user moved focus while the page loaded', async () => {
+    const page = deferredPage();
+    const user = userEvent.setup();
+    renderLayout(
+      '/',
+      <>
+        <Route path="/" element={<Page title="Izazovi" />} />
+        <Route path="/progress" element={<page.Later />} />
+      </>,
+    );
+    await screen.findByRole('heading', { name: 'Izazovi' });
+    await user.click(screen.getByRole('link', { name: 'Moj napredak' }));
+    await screen.findByRole('status');
+    const logo = screen.getByRole('link', { name: 'BugHunter Arena' });
+    act(() => logo.focus());
+
+    page.resolve();
+    const h1 = await screen.findByRole('heading', { name: 'Moj napredak' });
+    expect(document.activeElement).not.toBe(h1);
+    expect(logo).toHaveFocus();
   });
 });
 

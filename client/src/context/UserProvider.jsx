@@ -57,11 +57,33 @@ function readStoredState() {
   return { user: null, persisted: removeStoredUser() };
 }
 
+/** Message when the user was cleared while POST /api/users was in flight. */
+export const USER_CHANGED_MESSAGE = 'Korisnik je u međuvremenu promijenjen. Pokušaj ponovo.';
+
+function abortReason(signal) {
+  return signal.reason ?? new DOMException('The operation was aborted.', 'AbortError');
+}
+
+/** Lets one caller stop waiting for a shared promise without cancelling it for the others. */
+function withCallerAbort(shared, signal) {
+  if (!signal) return shared;
+  if (signal.aborted) return Promise.reject(abortReason(signal));
+  return new Promise((resolve, reject) => {
+    const onAbort = () => reject(abortReason(signal));
+    signal.addEventListener('abort', onAbort, { once: true });
+    shared.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
+  });
+}
+
 /**
  * Provides { user, persisted, setUser, clearUser, ensureUser }.
  * - setUser({ userId, displayName }) stores the user and returns whether it was saved.
- * - ensureUser(displayName) returns the current user, or creates one with POST /api/users.
- *   ApiError from the server propagates to the caller.
+ * - ensureUser(displayName, { signal }) returns the current user, or creates one with
+ *   POST /api/users. Concurrent calls share one request, which only the API client's own timeout
+ *   can cancel; a caller's signal only stops that caller waiting (it rejects with AbortError).
+ *   ApiError from the server propagates to the caller. If setUser or clearUser runs while the
+ *   request is in flight, the created user is not applied: the call resolves with the user set in
+ *   the meantime, or rejects with Error(USER_CHANGED_MESSAGE) if the user was cleared.
  * - persisted is false when localStorage is unavailable: the user lasts only this page session.
  */
 export default function UserProvider({ children }) {
@@ -69,10 +91,14 @@ export default function UserProvider({ children }) {
   // Mirrors state.user for ensureUser, so ensureUser keeps a stable identity.
   const userRef = useRef(state.user);
   const pendingRef = useRef(null);
+  // Bumped by every setUser and clearUser, so a late createUser cannot overwrite them.
+  const generationRef = useRef(0);
 
   const setUser = useCallback((next) => {
     const user = { userId: next.userId, displayName: next.displayName };
     const persisted = writeStoredUser(user);
+    generationRef.current += 1;
+    pendingRef.current = null;
     userRef.current = user;
     setState({ user, persisted });
     return persisted;
@@ -80,26 +106,36 @@ export default function UserProvider({ children }) {
 
   const clearUser = useCallback(() => {
     const persisted = removeStoredUser();
+    generationRef.current += 1;
+    pendingRef.current = null;
     userRef.current = null;
     setState({ user: null, persisted });
   }, []);
 
   const ensureUser = useCallback(
     (displayName, { signal } = {}) => {
+      if (signal?.aborted) return Promise.reject(abortReason(signal));
       if (userRef.current) return Promise.resolve(userRef.current);
-      // Two calls at once share one POST /api/users.
       if (!pendingRef.current) {
-        pendingRef.current = createUser(displayName, { signal })
+        const generation = generationRef.current;
+        const shared = createUser(displayName)
           .then((created) => {
+            if (generationRef.current !== generation) {
+              if (userRef.current) return userRef.current;
+              throw new Error(USER_CHANGED_MESSAGE);
+            }
             const user = { userId: created.id, displayName: created.displayName };
             setUser(user);
             return user;
           })
           .finally(() => {
-            pendingRef.current = null;
+            if (pendingRef.current === shared) pendingRef.current = null;
           });
+        // The shared promise may settle with no caller left waiting; keep that rejection handled.
+        shared.catch(() => {});
+        pendingRef.current = shared;
       }
-      return pendingRef.current;
+      return withCallerAbort(pendingRef.current, signal);
     },
     [setUser],
   );

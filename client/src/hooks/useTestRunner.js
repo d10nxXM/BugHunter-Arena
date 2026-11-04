@@ -25,6 +25,12 @@ import { createContext, useContext } from 'react';
  * - Limit the number of restarts; past it, set loadError instead of restarting forever.
  * - run() while !ready rejects with an Error whose message is Montenegrin.
  * - StrictMode: the effect that starts the worker terminates it in its cleanup.
+ * - Memoise the context value (useMemo over ready, loadError and a stable run from useCallback),
+ *   so consumers do not re-render or re-run effects on every provider render.
+ * - Do not edit vite.config.js (frozen after M1). Load Monaco's workers with Vite `?worker`
+ *   imports in D's own files (e.g. `import EditorWorker from
+ *   'monaco-editor/esm/vs/editor/editor.worker?worker'`). If a config change seems necessary,
+ *   say so in the summary instead of making it.
  * - Security: loadPyodide({ indexURL: '/pyodide/' }) explicitly. Never loadPackage or micropip,
  *   which would fall back to Pyodide's default CDN (cdn.jsdelivr.net).
  * - Monaco: loader.config({ monaco }) with the local monaco-editor package before any <Editor>
