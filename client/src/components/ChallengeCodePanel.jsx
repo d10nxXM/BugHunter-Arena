@@ -72,15 +72,6 @@ export default function ChallengeCodePanel({
         <button type="button" className={BUTTON} disabled={runBlocked} onClick={onRunVisible}>
           Pokreni vidljive testove
         </button>
-        {/* The M1 CodeEditor stub has no reset; remove this when D's editor renders its own. */}
-        <button
-          type="button"
-          className={BUTTON}
-          disabled={!editable || code === challenge.code}
-          onClick={() => onCodeChange(challenge.code)}
-        >
-          Vrati original
-        </button>
       </div>
 
       {runner.loadError ? (
