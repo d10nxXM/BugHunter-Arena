@@ -14,5 +14,37 @@
       "Šta funkcija vraća ako su svi brojevi u listi negativni?",
       "Pogledaj početnu vrijednost promjenljive max_value."
     ]
+  },
+  "remove-negatives": {
+    "evaluation": {
+      "is_correct": true,
+      "explanation_quality": 8,
+      "detected_misconception": "Pretpostavka da je bezbjedno brisati elemente iz liste kroz koju petlja upravo prolazi.",
+      "needs_clarification": false,
+      "hint": null,
+      "feedback": "Tačno si prepoznao da numbers.remove unutar petlje pravi problem i da se zbog toga preskače sljedeći element. Dobar je primjer sa dva negativna broja jedan do drugog. Za punu ocjenu objasni i zašto se elementi pomjeraju ulijevo.",
+      "practice_tip": "Kada iz liste izbacuješ elemente, gradi novu listu sa onima koje zadržavaš, umjesto da mijenjaš listu kroz koju petlja prolazi."
+    },
+    "hints": [
+      "Da li funkcija radi za svaki raspored brojeva u listi, ili samo za neke?",
+      "Šta funkcija vraća za listu [-1, -2, 3], u kojoj su dva negativna broja jedan do drugog?",
+      "Pogledaj šta se dešava sa listom kroz koju petlja prolazi kada se pozove numbers.remove."
+    ]
+  },
+  "binary-search": {
+    "evaluation": {
+      "is_correct": true,
+      "explanation_quality": 8,
+      "detected_misconception": "Pretpostavka da pretraga može stati čim low i high postanu jednaki.",
+      "needs_clarification": false,
+      "hint": null,
+      "feedback": "Tačno si prepoznao da uslov while petlje prekida pretragu prerano. Dobro je što si naveo primjer sa traženim brojem na kraju liste. Za punu ocjenu objasni i šta se dešava sa listom od jednog elementa.",
+      "practice_tip": "Za svaku petlju provjeri šta se dešava na granici: kada ostane tačno jedan kandidat, da li ga petlja još provjerava?"
+    },
+    "hints": [
+      "Da li funkcija pronalazi svaki broj iz liste, bez obzira na to gdje se nalazi?",
+      "Šta funkcija vraća kada lista ima samo jedan element, i to baš traženi broj?",
+      "Pogledaj uslov while petlje: šta se dešava kada low i high postanu jednaki?"
+    ]
   }
 }

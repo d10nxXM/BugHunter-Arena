@@ -1,0 +1,32 @@
+{
+  "id": "remove-negatives",
+  "title": "Uklanjanje negativnih brojeva",
+  "description": "Funkcija remove_negatives vraća listu bez negativnih brojeva. Ostali brojevi ostaju u istom redoslijedu. Nula nije negativan broj.",
+  "language": "python",
+  "function_name": "remove_negatives",
+  "difficulty": "srednje",
+  "code": "def remove_negatives(numbers):\n    for number in numbers:\n        if number < 0:\n            numbers.remove(number)\n    return numbers",
+  "bug_lines": [4],
+  "related_lines": [2],
+  "bug_category": "Izmjena kolekcije tokom iteracije",
+  "bug_description": "Poziv numbers.remove(number) briše element iz iste liste kroz koju petlja for prolazi. Preostali elementi se pomjeraju ulijevo, pa petlja preskače element odmah iza obrisanog. Kada su dva negativna broja jedan do drugog, drugi ostaje u rezultatu: [-1, -2, 3] vraća [-2, 3] umjesto [3].",
+  "reference_solution": "def remove_negatives(numbers):\n    result = []\n    for number in numbers:\n        if number >= 0:\n            result.append(number)\n    return result",
+  "tests_json": [
+    { "id": "t1", "args": [[1, -2, 3]], "expected": [1, 3], "visible": true, "failsOnOriginal": false },
+    { "id": "t2", "args": [[4, 0, 5]], "expected": [4, 0, 5], "visible": true, "failsOnOriginal": false },
+    { "id": "t3", "args": [[-1, -2, 3]], "expected": [3], "visible": false, "failsOnOriginal": true },
+    { "id": "t4", "args": [[-5, -5]], "expected": [], "visible": false, "failsOnOriginal": true },
+    { "id": "t5", "args": [[]], "expected": [], "visible": false, "failsOnOriginal": false }
+  ],
+  "hints_json": [
+    "Da li funkcija radi za svaki raspored brojeva u listi, ili samo za neke?",
+    "Šta funkcija vraća za listu [-1, -2, 3], u kojoj su dva negativna broja jedan do drugog?",
+    "Pogledaj šta se dešava sa listom kroz koju petlja prolazi kada se pozove numbers.remove."
+  ],
+  "keywords_json": [
+    ["uklanj", "remove", "briš", "brisan", "izmjen", "mijenja"],
+    ["jedan do drug", "uzastop", "susjed", "preskač", "presk"],
+    ["nov", "kopij", "comprehension", "append", "filtrir"]
+  ],
+  "fallback_feedback": "Greška je u pozivu numbers.remove(number) unutar petlje koja prolazi kroz istu listu. Kada se element obriše, ostali se pomjere ulijevo i petlja preskoči sljedeći element, pa drugi od dva uzastopna negativna broja ostaje u rezultatu. Rezultat treba graditi u novoj listi umjesto brisanja iz liste kroz koju petlja prolazi."
+}

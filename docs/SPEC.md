@@ -89,17 +89,17 @@ Priority: **Must** = the core flow does not work without it; **Should** = MVP go
 
 ## Bug categories
 
-The Montenegrin names are the exact `bug_category` values used in challenge files and API responses. Names marked Proposed have no challenge yet and need the user's confirmation before a challenge uses them.
+The Montenegrin names are the exact `bug_category` values used in challenge files and API responses. All names below were confirmed by the user on 2026-11-05. A new category name needs the user's confirmation before a challenge uses it.
 
 | Category | Status | Typical example |
 | --- | --- | --- |
-| Pogrešna inicijalizacija | Official (in `find-max.json`) | Maximum starts at 0 instead of the first element |
-| Granični uslov | Proposed, to confirm | `<` instead of `<=` at the edge of a range |
-| Greška za jedan | Proposed, to confirm | Loop stops one step early (off-by-one) |
-| Pogrešan operator | Proposed, to confirm | `//` instead of `/` |
-| Redoslijed uslova | Proposed, to confirm | General condition checked before the specific one |
-| Izmjena kolekcije tokom iteracije | Proposed, to confirm | Removing from the list the loop walks over |
-| Podrazumijevano ponašanje funkcije | Proposed, to confirm | JavaScript `sort()` compares numbers as text |
+| Pogrešna inicijalizacija | Official (`find-max.json`) | Maximum starts at 0 instead of the first element |
+| Granični uslov | Official, no challenge yet | `<` instead of `<=` at the edge of a range |
+| Greška za jedan | Official (`binary-search.json`) | Loop stops one step early (off-by-one) |
+| Pogrešan operator | Official, no challenge yet | `//` instead of `/` |
+| Redoslijed uslova | Official, no challenge yet | General condition checked before the specific one |
+| Izmjena kolekcije tokom iteracije | Official (`remove-negatives.json`) | Removing from the list the loop walks over |
+| Podrazumijevano ponašanje funkcije | Official, no challenge yet | JavaScript `sort()` compares numbers as text |
 
 ## Challenge set
 
@@ -107,13 +107,13 @@ The Montenegrin names are the exact `bug_category` values used in challenge file
 | --- | --- | --- | --- | --- | --- |
 | 1 | find_max - largest element (demo) | Python | Pogrešna inicijalizacija | lako | Must |
 | 2 | remove_negatives | Python | Izmjena kolekcije tokom iteracije | srednje | Must |
-| 3 | binary_search | Python | Greška za jedan (uslov petlje) | teško | Must |
+| 3 | binary_search | Python | Greška za jedan | teško | Must |
 | 4 | count_in_range | Python | Granični uslov | lako | Should |
 | 5 | average | Python | Pogrešan operator | lako | Should |
 | 6 | fizzbuzz | Python | Redoslijed uslova | lako | Should |
 | 7 | topThree | JavaScript | Podrazumijevano ponašanje funkcije | srednje | Could |
 
-Category names other than `Pogrešna inicijalizacija` are proposed; see Bug categories.
+Challenges 1-3 are in `server/data/challenges/` (`find-max`, `remove-negatives`, `binary-search`).
 
 How the bug shows in the three Must challenges:
 
