@@ -317,3 +317,38 @@ describe('missingLlmVariables', () => {
     expect(missingLlmVariables(undefined)).toEqual([]);
   });
 });
+
+describe('parseConfig: TRUST_PROXY', () => {
+  it('leaves trustProxy undefined when unset', () => {
+    expect(parseConfig(base).trustProxy).toBeUndefined();
+  });
+
+  it('leaves trustProxy undefined when empty', () => {
+    expect(
+      parseConfig({ ...base, TRUST_PROXY: '' }).trustProxy,
+    ).toBeUndefined();
+  });
+
+  it('parses a hop count of 1 as the number 1', () => {
+    expect(parseConfig({ ...base, TRUST_PROXY: '1' }).trustProxy).toBe(1);
+  });
+
+  it('parses 0 as the number 0', () => {
+    expect(parseConfig({ ...base, TRUST_PROXY: '0' }).trustProxy).toBe(0);
+  });
+
+  it.each(['true', 'false', '-1', 'abc', '1.5', ' 1', 'loopback', '1e3'])(
+    'rejects %j and names TRUST_PROXY without leaking a secret',
+    (value) => {
+      const message = messageOf({ ...base, TRUST_PROXY: value });
+      expect(message).toContain('TRUST_PROXY');
+      expect(message).not.toContain('service-key-secret');
+    },
+  );
+
+  it('rejects a hop count beyond the safe integer range', () => {
+    expect(messageOf({ ...base, TRUST_PROXY: '9'.repeat(20) })).toContain(
+      'TRUST_PROXY',
+    );
+  });
+});

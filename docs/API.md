@@ -282,7 +282,21 @@ Order of checks on both AI routes:
 4. AI limit (`429`)
 5. Handler
 
-`trust proxy` is off. Behind a reverse proxy every client shares the proxy's IP, so configure it before deploying behind one.
+The client IP is Express's `req.ip`. `trust proxy` is off unless `TRUST_PROXY` is set in `server/.env`. Without it, behind a reverse proxy every client shares the proxy's IP. Set `TRUST_PROXY` to the number of proxies in front of the server (a non-negative integer, e.g. `1`); the client IP is then taken from `X-Forwarded-For`, skipping that many hops from the right. Any other value (including `true`) stops the server at startup with a config error naming `TRUST_PROXY`. Never set it higher than the real number of proxies, or a client can choose its own rate-limit key.
+
+## Response headers
+
+Every response (success, error, `404` and CORS preflight) carries:
+
+| Header | Value |
+| --- | --- |
+| `X-Content-Type-Options` | `nosniff` |
+| `Referrer-Policy` | `no-referrer` |
+| `X-Frame-Options` | `DENY` |
+| `Content-Security-Policy` | `default-src 'none'; frame-ancestors 'none'` |
+| `Cross-Origin-Resource-Policy` | `same-site` |
+
+The API serves JSON only. CORS allows only `ALLOWED_ORIGIN`. `X-Powered-By` is not sent.
 
 ## Timeouts and retries
 
