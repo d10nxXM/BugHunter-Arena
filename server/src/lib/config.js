@@ -40,6 +40,15 @@ const EnvSchema = z.object({
   AI_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
   DEMO_MODE: z.enum(['true', 'false']).default('false'),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
+  // Hop count for Express `trust proxy`. Unset = off. Only a non-negative
+  // integer up to 10 is accepted: `true` would trust any X-Forwarded-For value,
+  // and a typo such as `11` would let clients choose their own IP.
+  TRUST_PROXY: z
+    .string()
+    .regex(/^\d+$/)
+    .transform(Number)
+    .refine((n) => Number.isSafeInteger(n) && n <= 10)
+    .optional(),
 });
 
 /** Empty values (e.g. `PORT=` in .env) count as unset, so defaults apply. */
@@ -86,6 +95,7 @@ export function parseConfig(env) {
     demoMode,
     aiStatus,
     logLevel: e.LOG_LEVEL,
+    trustProxy: e.TRUST_PROXY,
   };
 }
 

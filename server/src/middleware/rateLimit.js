@@ -9,8 +9,10 @@ const TEN_MINUTES = 10 * 60 * 1000;
  * handler. Each call creates its own counter store. Extra express-rate-limit
  * options are spread before `handler`, so the error shape cannot be replaced.
  *
- * `trust proxy` is off, so behind a reverse proxy every client shares the
- * proxy's IP. Configure it before deploying behind one.
+ * Keys on req.ip. `trust proxy` is off unless TRUST_PROXY is set (app.js):
+ * without it, behind a reverse proxy every client shares the proxy's IP.
+ * Set TRUST_PROXY to the number of proxies in front of the server (e.g. 1),
+ * never more, or clients can pick their own key via X-Forwarded-For.
  */
 export function createLimiter({ windowMs, limit, ...options }) {
   return rateLimit({

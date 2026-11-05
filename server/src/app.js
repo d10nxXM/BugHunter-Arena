@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { config } from './lib/config.js';
+import { securityHeaders } from './middleware/securityHeaders.js';
 import { requestLogger } from './middleware/requestLogger.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
@@ -14,6 +15,10 @@ import usersRouter from './routes/users.js';
 export const app = express();
 
 app.disable('x-powered-by');
+// Behind a reverse proxy, TRUST_PROXY (hop count) makes req.ip the client IP
+// from X-Forwarded-For, so the per-IP rate limiters see real clients.
+if (config.trustProxy !== undefined) app.set('trust proxy', config.trustProxy);
+app.use(securityHeaders);
 app.use(cors({ origin: config.allowedOrigin }));
 app.use(requestLogger);
 app.use(express.json({ limit: '50kb' }));
