@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react';
+import { useFocusRequest } from '../hooks/useFocusRequest.js';
 import { useHints } from '../hooks/useHints.js';
 import { useRunnerGate } from '../hooks/useRunnerGate.js';
 import { useSubmitFlow } from '../hooks/useSubmitFlow.js';
 import { useTestRunner } from '../hooks/useTestRunner.js';
+import { useUnmountSignal } from '../hooks/useUnmountSignal.js';
 import { useUser } from '../hooks/useUser.js';
 import { validateAnswer } from '../lib/answerValidation.js';
 import { toRunnerTests, toTestResults } from '../lib/runnerPayload.js';
@@ -10,7 +12,6 @@ import { FIELD_IDS, FIELD_ORDER, PHASES, SUBMIT_BUTTON_ID } from '../lib/submitC
 import { errorMessage, reportFailure } from '../lib/submitErrors.js';
 import AnswerForm from './AnswerForm.jsx';
 import ChallengeCodePanel from './ChallengeCodePanel.jsx';
-import { useFocusRequest, useUnmountSignal } from './ChallengeHooks.js';
 import ChallengeSubmissionOutcome from './ChallengeSubmissionOutcome.jsx';
 import ChallengeTimer from './ChallengeTimer.jsx';
 import HintPanel from './HintPanel.jsx';

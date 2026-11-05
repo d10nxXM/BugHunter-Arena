@@ -131,8 +131,8 @@ Found in the M1 shell review. They apply to the M2 workers unless marked otherwi
 - [ ] M4: track the `monaco-editor` `dompurify` advisory (the accepted risk above is still open). When a Monaco release ships `dompurify` 3.4.17 or later, bump `monaco-editor`, then re-check `client/README.md` Audit notes.
 - [ ] M4: CSP at deployment, which the repo does not set yet: `connect-src 'self'` plus the API origin, and `worker-src 'self' blob:`.
 - [x] M4: e2e coverage of a real infinite-loop timeout in the browser. Done in `e2e/infinite-loop.spec.js` (journey 4), passing 2026-11-05.
-- [ ] M4: split `hooks/useSubmitFlow.js` (225 lines) and `pages/ChallengePage.test.jsx` (1004 lines).
-- [ ] M4: move `components/ChallengeHooks.js` to `hooks/`.
+- [x] M4: split `hooks/useSubmitFlow.js` (225 lines) and `pages/ChallengePage.test.jsx` (1004 lines). Done: `hooks/useSubmitFlow.js` (orchestration) + `hooks/useEvaluationStep.js` (evaluation POST and recovery) + `lib/submitDecisions.js` (pure retry/recovery decisions, tested in `lib/submitDecisions.test.js`). The page tests are `pages/ChallengePage.{loading,hints,visibleTests,submit,recovery}.test.jsx` with shared setup in `test-utils/challengePageSetup.jsx` and `test-utils/ResultProbe.jsx`.
+- [x] M4: move `components/ChallengeHooks.js` to `hooks/`. Done: `hooks/useUnmountSignal.js` and `hooks/useFocusRequest.js`.
 - [ ] A hint that arrives after the answer is locked is dropped silently (`hooks/useHints.js`). The student sees nothing for it.
 - [ ] Waiting for a user decision: the client-side "solved" label.
 - [ ] Waiting for a user decision: Montenegrin labels for weak categories.
