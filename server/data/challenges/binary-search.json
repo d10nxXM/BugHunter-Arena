@@ -1,0 +1,33 @@
+{
+  "id": "binary-search",
+  "title": "Binarna pretraga",
+  "description": "Funkcija binary_search traži broj target u rastuće sortiranoj listi items i vraća njegov indeks. Ako broja nema u listi, vraća -1.",
+  "language": "python",
+  "function_name": "binary_search",
+  "difficulty": "teško",
+  "code": "def binary_search(items, target):\n    low = 0\n    high = len(items) - 1\n    while low < high:\n        mid = (low + high) // 2\n        if items[mid] == target:\n            return mid\n        elif items[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1",
+  "bug_lines": [4],
+  "related_lines": [3, 9, 11],
+  "bug_category": "Greška za jedan",
+  "bug_description": "Uslov petlje while low < high prekida pretragu kada su low i high jednaki, pa se posljednji preostali kandidat nikad ne provjeri. Funkcija vraća -1 iako je broj u listi kada pretraga stigne do jednog preostalog elementa: traženje 9 u [1, 3, 5, 7, 9] vraća -1 umjesto 4, a traženje 42 u [42] vraća -1 umjesto 0.",
+  "reference_solution": "def binary_search(items, target):\n    low = 0\n    high = len(items) - 1\n    while low <= high:\n        mid = (low + high) // 2\n        if items[mid] == target:\n            return mid\n        elif items[mid] < target:\n            low = mid + 1\n        else:\n            high = mid - 1\n    return -1",
+  "tests_json": [
+    { "id": "t1", "args": [[1, 3, 5, 7, 9], 7], "expected": 3, "visible": true, "failsOnOriginal": false },
+    { "id": "t2", "args": [[1, 3, 5, 7, 9], 4], "expected": -1, "visible": true, "failsOnOriginal": false },
+    { "id": "t3", "args": [[1, 3, 5, 7, 9], 9], "expected": 4, "visible": false, "failsOnOriginal": true },
+    { "id": "t4", "args": [[42], 42], "expected": 0, "visible": false, "failsOnOriginal": true },
+    { "id": "t5", "args": [[1, 3, 5, 7, 9], 3], "expected": 1, "visible": false, "failsOnOriginal": true },
+    { "id": "t6", "args": [[], 5], "expected": -1, "visible": false, "failsOnOriginal": false }
+  ],
+  "hints_json": [
+    "Da li funkcija pronalazi svaki broj iz liste, bez obzira na to gdje se nalazi?",
+    "Šta funkcija vraća kada lista ima samo jedan element, i to baš traženi broj?",
+    "Pogledaj uslov while petlje: šta se dešava kada low i high postanu jednaki?"
+  ],
+  "keywords_json": [
+    ["uslov", "while", "low < high", "petlj"],
+    ["jednak", "jedan element", "posljednj", "zadnj", "jednočlan", "low == high"],
+    ["<=", "manje ili jednako", "low <= high"]
+  ],
+  "fallback_feedback": "Greška je u uslovu petlje while low < high. Kada low i high postanu jednaki, ostao je još jedan kandidat, ali petlja staje prije nego što ga provjeri, pa funkcija vraća -1 iako je broj u listi. Petlja treba da radi i kada su low i high jednaki."
+}
