@@ -23,6 +23,7 @@ The work is split so several agents can run at once without editing the same fil
 | Production data | Seeded | find-max loaded with `npm run seed`, 2026-11-04 |
 | M1 client shell | Merged (2026-11-04) | Routes, API client with mocks matching `docs/API.md`, providers, stubs at D's paths, tooling. Pyodide 314.0.7, Monaco 0.57.0, react-router, Tailwind 4, Vitest. jsx-a11y deferred (no ESLint 10 support). Frontend follow-ups are listed under "Frontend follow-ups (open)" below |
 | M2 frontend D, E and F | Merged | Editor and runner (D), challenge flow (E), results and progress (F). Tip of `main`: aa4cbe0. Open items are under "Frontend follow-ups (open)" |
+| M3 Integration | Complete (2026-11-05) | The client uses the real API (`VITE_USE_MOCKS=false`). `npm test` in `e2e/` passes 7/7 against the real server and Supabase: solve, hints, infinite loop, dashboard and validation in demo mode, plus the AI fallback with an unreachable LLM. The suite does not clean up the attempts and display names it creates |
 
 Backend remaining before M3:
 
@@ -129,7 +130,7 @@ Found in the M1 shell review. They apply to the M2 workers unless marked otherwi
 - [ ] M3/M4 (later): `GET /api/attempts/:id` with the summary plus `feedback`, `testsPassed` and `testsTotal`, and no hidden fields. It recovers feedback text and anonymous attempts, which the list endpoint cannot. This endpoint is not in `docs/API.md` yet, so the planner adds it first. Idempotency keys only if duplicate submissions become a problem.
 - [ ] M4: track the `monaco-editor` `dompurify` advisory (the accepted risk above is still open). When a Monaco release ships `dompurify` 3.4.17 or later, bump `monaco-editor`, then re-check `client/README.md` Audit notes.
 - [ ] M4: CSP at deployment, which the repo does not set yet: `connect-src 'self'` plus the API origin, and `worker-src 'self' blob:`.
-- [ ] M4: e2e coverage of a real infinite-loop timeout in the browser. There is no e2e journey for it yet; unit tests use a fake worker.
+- [x] M4: e2e coverage of a real infinite-loop timeout in the browser. Done in `e2e/infinite-loop.spec.js` (journey 4), passing 2026-11-05.
 - [ ] M4: split `hooks/useSubmitFlow.js` (225 lines) and `pages/ChallengePage.test.jsx` (1004 lines).
 - [ ] M4: move `components/ChallengeHooks.js` to `hooks/`.
 - [ ] A hint that arrives after the answer is locked is dropped silently (`hooks/useHints.js`). The student sees nothing for it.
