@@ -282,7 +282,7 @@ Order of checks on both AI routes:
 4. AI limit (`429`)
 5. Handler
 
-The client IP is Express's `req.ip`. `trust proxy` is off unless `TRUST_PROXY` is set in `server/.env`. Without it, behind a reverse proxy every client shares the proxy's IP. Set `TRUST_PROXY` to the number of proxies in front of the server (a non-negative integer, e.g. `1`); the client IP is then taken from `X-Forwarded-For`, skipping that many hops from the right. Any other value (including `true`) stops the server at startup with a config error naming `TRUST_PROXY`. Never set it higher than the real number of proxies, or a client can choose its own rate-limit key.
+The client IP is Express's `req.ip`. `trust proxy` is off unless `TRUST_PROXY` is set in `server/.env`. Without it, behind a reverse proxy every client shares the proxy's IP. Set `TRUST_PROXY` to the number of proxies in front of the server (a non-negative integer, e.g. `1`); `req.ip` then becomes the address that many hops back, counting the connecting proxy as the first, so with `1` it is the right-most `X-Forwarded-For` entry. Valid values are 0 to 10. Never set it when clients reach the server directly: they could then write their own IP into `X-Forwarded-For`. Any other value (including `true` or a number above 10) stops the server at startup with a config error naming `TRUST_PROXY`. Never set it higher than the real number of proxies, or a client can choose its own rate-limit key.
 
 ## Response headers
 

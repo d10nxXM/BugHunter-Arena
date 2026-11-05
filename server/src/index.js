@@ -8,7 +8,14 @@ app.listen(config.port, (error) => {
     process.exitCode = 1;
     return;
   }
-  logger.info({ port: config.port, ai: config.aiStatus }, 'API listening');
+  logger.info(
+    {
+      port: config.port,
+      ai: config.aiStatus,
+      trustProxy: config.trustProxy ?? false,
+    },
+    'API listening',
+  );
   const missing = missingLlmVariables(config);
   if (missing.length > 0) {
     logger.warn(

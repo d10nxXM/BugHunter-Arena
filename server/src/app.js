@@ -15,10 +15,10 @@ import usersRouter from './routes/users.js';
 export const app = express();
 
 app.disable('x-powered-by');
-app.use(securityHeaders);
 // Behind a reverse proxy, TRUST_PROXY (hop count) makes req.ip the client IP
 // from X-Forwarded-For, so the per-IP rate limiters see real clients.
 if (config.trustProxy !== undefined) app.set('trust proxy', config.trustProxy);
+app.use(securityHeaders);
 app.use(cors({ origin: config.allowedOrigin }));
 app.use(requestLogger);
 app.use(express.json({ limit: '50kb' }));

@@ -12,7 +12,7 @@ Learning platform where students find, explain and fix a deliberate bug in short
 
 ### Behind a reverse proxy (`server/.env`)
 
-- Set `TRUST_PROXY` to the number of proxies in front of the server (usually `1`) so the per-IP rate limits see real client IPs. Leave it empty when the server is reached directly. Only a non-negative integer is accepted. See "Rate limits" in `docs/API.md`.
+- Set `TRUST_PROXY` to the number of proxies in front of the server (usually `1`) so the per-IP rate limits see real client IPs. Leave it empty when the server is reached directly. Only an integer from 0 to 10 is accepted. See "Rate limits" in `docs/API.md`.
 
 ### Client (`client/`)
 

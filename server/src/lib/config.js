@@ -41,12 +41,13 @@ const EnvSchema = z.object({
   DEMO_MODE: z.enum(['true', 'false']).default('false'),
   LOG_LEVEL: z.enum(LOG_LEVELS).default('info'),
   // Hop count for Express `trust proxy`. Unset = off. Only a non-negative
-  // integer is accepted: `true` would trust any X-Forwarded-For value.
+  // integer up to 10 is accepted: `true` would trust any X-Forwarded-For value,
+  // and a typo such as `11` would let clients choose their own IP.
   TRUST_PROXY: z
     .string()
     .regex(/^\d+$/)
     .transform(Number)
-    .refine(Number.isSafeInteger)
+    .refine((n) => Number.isSafeInteger(n) && n <= 10)
     .optional(),
 });
 

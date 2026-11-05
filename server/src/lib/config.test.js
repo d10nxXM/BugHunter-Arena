@@ -337,7 +337,11 @@ describe('parseConfig: TRUST_PROXY', () => {
     expect(parseConfig({ ...base, TRUST_PROXY: '0' }).trustProxy).toBe(0);
   });
 
-  it.each(['true', 'false', '-1', 'abc', '1.5', ' 1', 'loopback', '1e3'])(
+  it('accepts the upper bound 10', () => {
+    expect(parseConfig({ ...base, TRUST_PROXY: '10' }).trustProxy).toBe(10);
+  });
+
+  it.each(['true', 'false', '-1', 'abc', '1.5', ' 1', 'loopback', '1e3', '11'])(
     'rejects %j and names TRUST_PROXY without leaking a secret',
     (value) => {
       const message = messageOf({ ...base, TRUST_PROXY: value });

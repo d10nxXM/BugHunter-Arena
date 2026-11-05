@@ -1,8 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { afterAll, describe, it, expect, vi } from 'vitest';
 import request from 'supertest';
 import { createFakeSupabase } from './fakeSupabase.js';
 
 // Must be set before config.js is first imported (vi.hoisted runs first).
+// Relies on Vitest's default per-file isolation; afterAll removes it anyway.
 vi.hoisted(() => {
   process.env.TRUST_PROXY = '1';
 });
@@ -22,6 +23,10 @@ function remaining(res) {
   if (!match) throw new Error('missing RateLimit header');
   return Number(match[1]);
 }
+
+afterAll(() => {
+  delete process.env.TRUST_PROXY;
+});
 
 const from = (ip) => request(app).get('/api/health').set('X-Forwarded-For', ip);
 
