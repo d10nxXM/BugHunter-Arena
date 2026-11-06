@@ -93,7 +93,8 @@ export function publicUser(account) {
 /**
  * POST /api/auth/signup. Handle check, then the auth user, then the users
  * row (claim or insert). If the row write fails the auth user is deleted
- * again. Returns { session, user }.
+ * again. Returns { session, user, claimed }: `claimed` is true only when
+ * claimUserId named a guest row that this signup turned into the account.
  */
 export async function signup({ handle, email, password, claimUserId = null }) {
   if (await findAccountByHandle(handle)) throw handleTaken();
@@ -103,9 +104,15 @@ export async function signup({ handle, email, password, claimUserId = null }) {
   );
 
   let account;
+  let claimed = false;
   try {
     if (claimUserId) {
       account = await claimGuestRow(claimUserId, { authUserId, handle });
+      claimed = account !== null;
+      if (!claimed) {
+        // Missing or already claimed. No ids: they would link guest and account.
+        logger.info({ route: 'auth', claim: 'failed' }, 'guest claim failed');
+      }
     }
     account ??= await createAccountRow({ authUserId, handle });
   } catch (err) {
@@ -129,7 +136,7 @@ export async function signup({ handle, email, password, claimUserId = null }) {
   const { session } = await guard('signInAfterSignup', () =>
     signInWithPassword({ email, password }),
   );
-  return { session, user: publicUser(account) };
+  return { session, user: publicUser(account), claimed };
 }
 
 /** POST /api/auth/login. Returns { session, user }. */

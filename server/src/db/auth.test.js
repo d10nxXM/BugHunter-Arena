@@ -210,6 +210,77 @@ describe('error kinds', () => {
     expect(await kindOf(auth.getAuthUser('j'))).toBe('invalid_token');
   });
 
+  describe('a 401/403 from Supabase itself means our keys are wrong: unavailable', () => {
+    // Invalid API key (gateway, no code), bad_jwt, no_authorization.
+    const cases = [
+      [401, undefined],
+      [403, undefined],
+      [401, 'bad_jwt'],
+      [403, 'no_authorization'],
+      [400, 'no_authorization'],
+      [400, 'bad_jwt'],
+    ];
+
+    it.each(cases)('createAuthUser: %i %s', async (status, code) => {
+      shared.auth.admin.createUser.mockResolvedValue({
+        data: { user: null },
+        error: apiError(status, code),
+      });
+      expect(
+        await kindOf(auth.createAuthUser({ email: 'x', password: 'y' })),
+      ).toBe('unavailable');
+    });
+
+    it.each(cases)('signInWithPassword: %i %s', async (status, code) => {
+      anon.signInWithPassword.mockResolvedValue({
+        data: { user: null, session: null },
+        error: apiError(status, code),
+      });
+      expect(
+        await kindOf(auth.signInWithPassword({ email: 'x', password: 'y' })),
+      ).toBe('unavailable');
+    });
+
+    it.each(cases)('refreshSession: %i %s', async (status, code) => {
+      anon.refreshSession.mockResolvedValue({
+        data: { user: null, session: null },
+        error: apiError(status, code),
+      });
+      expect(await kindOf(auth.refreshSession('r'))).toBe('unavailable');
+    });
+
+    it('but GoTrue 400s keep their meaning (wrong password, bad refresh token)', async () => {
+      anon.signInWithPassword.mockResolvedValue({
+        data: { user: null, session: null },
+        error: apiError(400, 'invalid_credentials'),
+      });
+      expect(
+        await kindOf(auth.signInWithPassword({ email: 'x', password: 'y' })),
+      ).toBe('invalid_credentials');
+      for (const code of [
+        'refresh_token_not_found',
+        'refresh_token_already_used',
+        'session_not_found',
+      ]) {
+        anon.refreshSession.mockResolvedValue({
+          data: { user: null, session: null },
+          error: apiError(400, code),
+        });
+        expect(await kindOf(auth.refreshSession('r'))).toBe('invalid_token');
+      }
+    });
+
+    it("getUser keeps 401/403 as invalid_token: it is the user's jwt", async () => {
+      for (const status of [401, 403]) {
+        shared.auth.getUser.mockResolvedValue({
+          data: { user: null },
+          error: apiError(status, 'bad_jwt'),
+        });
+        expect(await kindOf(auth.getAuthUser('j'))).toBe('invalid_token');
+      }
+    });
+  });
+
   it('5xx, network errors and throws are unavailable; 429 is rate_limited', async () => {
     shared.auth.getUser.mockResolvedValue({
       data: { user: null },

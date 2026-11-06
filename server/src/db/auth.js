@@ -61,12 +61,30 @@ async function withTimeout(promiseFactory, timeoutMs) {
 
 const EMAIL_TAKEN_CODES = new Set(['email_exists', 'user_already_exists']);
 
-/** Maps a supabase-js auth error to an AuthDbError. `onClientError` is the
- * kind used for a 4xx that has no more specific meaning. */
-function mapError(error, onClientError) {
+// Codes GoTrue uses when the request's own key or bearer is rejected.
+const KEY_REJECTED_CODES = new Set(['bad_jwt', 'no_authorization']);
+
+/**
+ * Maps a supabase-js auth error to an AuthDbError. `onClientError` is the
+ * kind used for a 4xx that has no more specific meaning.
+ *
+ * `keyAuth`: the call is authorized by our own key (service key for admin
+ * calls, anon key for login and refresh), not by a user's jwt. A 401/403 or
+ * a bad_jwt/no_authorization code then means our key is wrong (for example
+ * "Invalid API key"), a misconfiguration, so it is `unavailable` (503) and
+ * never a user-facing 401. A wrong password (400 invalid_credentials) and a
+ * bad refresh token (400 refresh_token_not_found etc.) are unaffected.
+ */
+function mapError(error, onClientError, { keyAuth = false } = {}) {
   if (error instanceof AuthDbError) return error;
   const status = Number.isInteger(error?.status) ? error.status : undefined;
   const code = typeof error?.code === 'string' ? error.code : '';
+  if (
+    keyAuth &&
+    (status === 401 || status === 403 || KEY_REJECTED_CODES.has(code))
+  ) {
+    return new AuthDbError('unavailable', status);
+  }
   if (EMAIL_TAKEN_CODES.has(code))
     return new AuthDbError('email_taken', status);
   if (code === 'weak_password') return new AuthDbError('rejected', status);
@@ -78,16 +96,18 @@ function mapError(error, onClientError) {
   return new AuthDbError('unavailable', status);
 }
 
-async function call(factory, onClientError, timeoutMs) {
+async function call(factory, onClientError, timeoutMs, options) {
   let result;
   try {
     result = await withTimeout(factory, timeoutMs);
   } catch (err) {
-    throw mapError(err, onClientError);
+    throw mapError(err, onClientError, options);
   }
-  if (result?.error) throw mapError(result.error, onClientError);
+  if (result?.error) throw mapError(result.error, onClientError, options);
   return result?.data;
 }
+
+const KEY_AUTH = { keyAuth: true };
 
 function toSession(session) {
   if (!session?.access_token || !session?.refresh_token) {
@@ -112,6 +132,7 @@ export async function createAuthUser(
     () => db.auth.admin.createUser({ email, password, email_confirm: true }),
     'rejected',
     timeoutMs,
+    KEY_AUTH,
   );
   if (!data?.user?.id) throw new AuthDbError('unavailable');
   return data.user.id;
@@ -122,7 +143,12 @@ export async function deleteAuthUser(
   authUserId,
   { timeoutMs = AUTH_TIMEOUT_MS } = {},
 ) {
-  await call(() => db.auth.admin.deleteUser(authUserId), 'rejected', timeoutMs);
+  await call(
+    () => db.auth.admin.deleteUser(authUserId),
+    'rejected',
+    timeoutMs,
+    KEY_AUTH,
+  );
 }
 
 /** Password login on a throwaway client. Returns { authUserId, session }. */
@@ -134,6 +160,7 @@ export async function signInWithPassword(
     () => createAnonClient().auth.signInWithPassword({ email, password }),
     'invalid_credentials',
     timeoutMs,
+    KEY_AUTH,
   );
   if (!data?.user?.id) throw new AuthDbError('unavailable');
   return { authUserId: data.user.id, session: toSession(data.session) };
@@ -149,6 +176,7 @@ export async function refreshSession(
       createAnonClient().auth.refreshSession({ refresh_token: refreshToken }),
     'invalid_token',
     timeoutMs,
+    KEY_AUTH,
   );
   if (!data?.user?.id) throw new AuthDbError('invalid_token');
   return { authUserId: data.user.id, session: toSession(data.session) };

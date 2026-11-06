@@ -24,7 +24,11 @@ vi.mock('../db/users.js', async (importOriginal) => ({
   ...users,
 }));
 
-const log = vi.hoisted(() => ({ warn: vi.fn(), error: vi.fn() }));
+const log = vi.hoisted(() => ({
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+}));
 vi.mock('../lib/logger.js', () => ({ logger: log }));
 
 const { AuthDbError } = await import('../db/auth.js');
@@ -94,7 +98,7 @@ beforeEach(() => {
 });
 
 describe('signup', () => {
-  it('creates the auth user, the row, logs in, returns { session, user }', async () => {
+  it('creates the auth user, the row, logs in, returns { session, user, claimed }', async () => {
     const out = await service.signup(INPUT);
     expect(out).toEqual({
       session: SESSION,
@@ -104,7 +108,10 @@ describe('signup', () => {
         displayName: 'dion_m',
         memberSince: '2026-11-06T18:00:00Z',
       },
+      claimed: false,
     });
+    expect(users.claimGuestRow).not.toHaveBeenCalled();
+    expect(log.info).not.toHaveBeenCalled();
     expect(out.user).not.toHaveProperty('authUserId');
     expect(users.createAccountRow).toHaveBeenCalledWith({
       authUserId: 'auth-1',
@@ -171,22 +178,51 @@ describe('signup', () => {
     expectCleanLogs();
   });
 
+  it('a misconfigured key (unavailable from db/auth) is 503 with one warn line, never 401', async () => {
+    authDb.signInWithPassword.mockRejectedValue(
+      new AuthDbError('unavailable', 401),
+    );
+    const err = await errorOf(
+      service.login({ email: INPUT.email, password: 'x' }),
+    );
+    expect(err).toMatchObject({ status: 503, code: 'AUTH_UNAVAILABLE' });
+    expect(log.warn).toHaveBeenCalledTimes(1);
+    expect(log.warn.mock.calls[0][0]).toEqual({
+      route: 'auth',
+      op: 'signIn',
+      kind: 'unavailable',
+      status: 401,
+    });
+    expectCleanLogs();
+  });
+
   it('claims an unclaimed guest row', async () => {
     users.claimGuestRow.mockResolvedValue({ ...ACCOUNT, id: GUEST });
     const out = await service.signup({ ...INPUT, claimUserId: GUEST });
     expect(out.user.id).toBe(GUEST);
+    expect(out.claimed).toBe(true);
     expect(users.claimGuestRow).toHaveBeenCalledWith(GUEST, {
       authUserId: 'auth-1',
       handle: 'dion_m',
     });
     expect(users.createAccountRow).not.toHaveBeenCalled();
+    expect(log.info).not.toHaveBeenCalled();
   });
 
-  it('a claim of a missing or already-claimed row creates a new row silently', async () => {
+  it('a failed claim (missing or already claimed) creates a new row and says claimed: false', async () => {
     users.claimGuestRow.mockResolvedValue(null);
     const out = await service.signup({ ...INPUT, claimUserId: GUEST });
     expect(out.user.id).toBe(ACCOUNT.id);
+    expect(out.claimed).toBe(false);
     expect(users.createAccountRow).toHaveBeenCalledTimes(1);
+    // One info line: route and outcome only, no ids or email.
+    expect(log.info).toHaveBeenCalledTimes(1);
+    expect(log.info.mock.calls[0][0]).toEqual({
+      route: 'auth',
+      claim: 'failed',
+    });
+    expect(JSON.stringify(log.info.mock.calls)).not.toContain(GUEST);
+    expectCleanLogs();
   });
 
   it('login failing right after signup is 503 (the account exists)', async () => {

@@ -152,7 +152,8 @@ beforeAll(async () => {
 
 describe('POST /api/auth/signup', () => {
   it('201 { session, user } with exactly the documented keys', () => {
-    expect(Object.keys(alice).sort()).toEqual(['session', 'user']);
+    expect(Object.keys(alice).sort()).toEqual(['claimed', 'session', 'user']);
+    expect(alice.claimed).toBe(false);
     expect(Object.keys(alice.session).sort()).toEqual([
       'accessToken',
       'expiresAt',
@@ -221,6 +222,7 @@ describe('POST /api/auth/signup', () => {
     );
     expect(res.status).toBe(201);
     expect(res.body.user.id).toBe(guest.body.id);
+    expect(res.body.claimed).toBe(true);
     expect(res.body.user.handle).toBe('bob_2');
     // The guest id now needs Bob's token.
     const progress = await send(
@@ -605,13 +607,11 @@ describe('tripwires', () => {
 describe('rate limits (last: they use up this file’s counters)', () => {
   it('signup: the 6th request in an hour is 429', async () => {
     // 5 signups so far in this file.
-    const res = await request(app)
-      .post('/api/auth/signup')
-      .send({
-        handle: 'carol',
-        email: 'carol@example.com',
-        password: 'carol-password',
-      });
+    const res = await request(app).post('/api/auth/signup').send({
+      handle: 'carol',
+      email: 'carol@example.com',
+      password: 'carol-password',
+    });
     envelope(res, 429, 'RATE_LIMITED');
   });
 

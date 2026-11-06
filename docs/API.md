@@ -35,7 +35,7 @@ Optional auth (`POST /api/attempts`, `POST /api/attempts/:id/evaluation`, `GET /
 
 Required auth (`POST /api/auth/logout`, `GET /api/me`): a missing header also returns `401 UNAUTHORIZED`.
 
-A valid token whose Supabase user has no account row returns `401 UNAUTHORIZED`. If Supabase Auth does not answer within 5 s or is down, auth checks and auth endpoints return `503 AUTH_UNAVAILABLE`.
+A valid token whose Supabase user has no account row returns `401 UNAUTHORIZED`. If Supabase Auth does not answer within 5 s or is down, auth checks and auth endpoints return `503 AUTH_UNAVAILABLE`. So does a server misconfiguration: when Supabase rejects the server's own service or anon key (401/403) on signup, login or refresh, the response is `503`, never a `401` the user could act on.
 
 Session object (`expiresAt` is epoch seconds; the access token lives about 1 h, the refresh token rotates on every refresh):
 
@@ -309,19 +309,20 @@ Response `201 Created`:
 ```json
 {
   "session": { "accessToken": "eyJ...", "refreshToken": "v1.abc...", "expiresAt": 1793980800 },
-  "user": { "id": "6c1f9a0e-2b3d-4e5f-8a9b-0c1d2e3f4a5b", "handle": "dion_m", "displayName": "dion_m", "memberSince": "2026-11-06T18:00:00.000000+00:00" }
+  "user": { "id": "6c1f9a0e-2b3d-4e5f-8a9b-0c1d2e3f4a5b", "handle": "dion_m", "displayName": "dion_m", "memberSince": "2026-11-06T18:00:00.000000+00:00" },
+  "claimed": false
 }
 ```
 
 No confirmation email is sent; the account can log in at once.
 
-Claim: when `claimUserId` names a guest row that has no account yet, that row becomes the account (its attempts move with it) and `user.id` equals `claimUserId`. If the row does not exist or already belongs to an account, a new row is created instead, without an error.
+Claim: when `claimUserId` names a guest row that has no account yet, that row becomes the account (its attempts move with it), `user.id` equals `claimUserId` and `claimed` is `true`. If the row does not exist or already belongs to an account, a new row is created instead, without an error, and `claimed` is `false`; the client can then tell the user that the guest progress stayed on this device as a guest. `claimed` is always present: `false` when no `claimUserId` was sent.
 
 Errors: `400 VALIDATION_ERROR`, `409 HANDLE_TAKEN`, `409 EMAIL_TAKEN`, `429 RATE_LIMITED`, `503 AUTH_UNAVAILABLE`. If the account was created but the automatic login right after it fails, the response is `503 AUTH_UNAVAILABLE`; the account exists and the user can log in.
 
 ## POST /api/auth/login
 
-Request `{ "email": "dion@example.com", "password": "correct horse battery" }`. Response `200 OK` with the same `{ session, user }` shape as signup.
+Request `{ "email": "dion@example.com", "password": "correct horse battery" }`. Response `200 OK` `{ session, user }` (no `claimed`; login never claims).
 
 A wrong email or password returns `401 INVALID_CREDENTIALS` with the fixed message `Invalid email or password.` Login is by email only.
 
