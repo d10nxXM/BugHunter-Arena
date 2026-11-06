@@ -26,12 +26,12 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path={paths.home} element={<Landing />} />
             <Route element={<PageContainer legacy />}>
-              <Route path={paths.problems} element={<ChallengeList />} />
               <Route path="/challenges/:id" element={<ChallengePage />} />
               <Route path="/challenges/:id/result" element={<ResultView />} />
               <Route path={paths.dashboard} element={<Dashboard />} />
             </Route>
             <Route element={<PageContainer />}>
+              <Route path={paths.problems} element={<ChallengeList />} />
               <Route path={paths.login} element={<Login />} />
               <Route path={paths.signup} element={<Signup />} />
               <Route path="*" element={<NotFound />} />

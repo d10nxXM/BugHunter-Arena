@@ -46,7 +46,7 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('App routes', () => {
   it.each([
-    ['/problems', 'Izazovi'],
+    ['/problems', 'Problems'],
     ['/challenges/find-max', 'Izazov find-max'],
     ['/challenges/find-max/result', 'Rezultat'],
     ['/dashboard', 'Moj napredak'],
@@ -64,7 +64,7 @@ describe('App routes', () => {
   it('/ is the landing page with a link to the problems', async () => {
     renderAt('/');
     const h1 = await screen.findByRole('heading', { level: 1 });
-    expect(h1).toHaveTextContent('AI writes the code. You find the bugs.');
+    expect(h1).toHaveTextContent('Find the bug. Explain it. Fix it.');
     expect(h1).toHaveAttribute('tabindex', '-1');
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(document.title).toBe('BugHunter Arena');
@@ -142,7 +142,7 @@ describe('App routes', () => {
   it('navigating moves focus to the new h1', async () => {
     const user = userEvent.setup();
     renderAt('/problems');
-    await screen.findByRole('heading', { level: 1, name: 'Izazovi' });
+    await screen.findByRole('heading', { level: 1, name: 'Problems' });
     await user.click(screen.getByRole('link', { name: 'Dashboard' }));
     const h1 = await screen.findByRole('heading', { level: 1, name: 'Moj napredak' });
     await expect.poll(() => document.activeElement).toBe(h1);
