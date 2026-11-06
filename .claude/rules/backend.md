@@ -18,7 +18,7 @@ paths:
 
 - Every body and query is validated with a Zod schema before the handler runs.
 - Limits: explanation 20-1000 chars, `fixedCode` up to 5000 chars, request body up to 50 KB.
-- Errors always use `{ "error": { "code": "...", "message": "..." } }` with the codes in `docs/API.md`. Messages are Montenegrin and safe to show to users.
+- Errors always use `{ "error": { "code": "...", "message": "..." } }` with the codes in `docs/API.md`. Messages are English and safe to show to users.
 - Never put stack traces or internal details in responses.
 
 ## AI calls
