@@ -30,6 +30,12 @@ export function errorHandler(err, req, res, next) {
     return send(res, err.status, err.code, err.message);
   }
 
+  // 503 AUTH_UNAVAILABLE: a fixed, safe message. Logged where it is raised
+  // (authService, without Supabase error bodies), so not logged again here.
+  if (err instanceof AppError && err.code === 'AUTH_UNAVAILABLE') {
+    return send(res, 503, err.code, err.message);
+  }
+
   if (err?.type === 'entity.too.large') {
     return send(
       res,

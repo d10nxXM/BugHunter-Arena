@@ -8,7 +8,9 @@
  * Supported chain:
  *   from(t).select(cols).eq(col, v).lt(col, v).or(expr).order(col, opts).limit(n)
  *     .maybeSingle() | .single() | await (list)
- *     (.eq is an equality filter recorded in calls.filters; .lt keeps rows
+ *     (.is(col, null) matches null or a missing column, recorded in
+     calls.ises;
+     .eq is an equality filter recorded in calls.filters; .lt keeps rows
  *     with row[col] < v and is recorded apart, in calls.ranges, so
  *     calls.filters stays equality-only; .limit is recorded in calls.limits)
  *   .or(expr) accepts ONLY the keyset shape
@@ -89,6 +91,7 @@ export function createFakeSupabase({
     from: [],
     selects: [],
     filters: [],
+    ises: [],
     ranges: [],
     ors: [],
     orders: [],
@@ -102,6 +105,7 @@ export function createFakeSupabase({
     const state = {
       op: 'select',
       filters: [],
+      ises: [],
       ranges: [],
       ors: [],
       orders: [],
@@ -110,6 +114,7 @@ export function createFakeSupabase({
 
     const matches = (row) =>
       state.filters.every(([column, value]) => row[column] === value) &&
+      state.ises.every(([column, value]) => (row[column] ?? null) === value) &&
       state.ranges.every(([column, value]) => lessThan(row[column], value)) &&
       state.ors.every(({ before, id }) => keysetAfter(row, before, id));
 
@@ -165,6 +170,12 @@ export function createFakeSupabase({
       eq(column, value) {
         calls.filters.push({ table, column, value });
         state.filters.push([column, value]);
+        return chain;
+      },
+      is(column, value) {
+        // Like PostgREST `is`: null matches null and undefined (missing column).
+        calls.ises.push({ table, column, value });
+        state.ises.push([column, value]);
         return chain;
       },
       lt(column, value) {

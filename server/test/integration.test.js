@@ -249,6 +249,7 @@ describe('contract: attempts, evaluation, progress, users', () => {
       'perChallenge',
       'solved',
       'totalScore',
+      'totalXp',
       'weakCategories',
     ]);
     expect(progress.body.attempted).toBe(1);

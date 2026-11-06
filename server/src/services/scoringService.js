@@ -150,3 +150,76 @@ export function calculateScore({
     },
   };
 }
+
+// XP and ranks (docs/SCORING.md, "XP and ranks"). Display data only: never
+// part of an attempt score.
+
+/** Score at or above which an evaluated attempt solves its challenge. */
+export const SOLVED_MIN_SCORE = 70;
+
+/** Rank tiers, ascending. Same names and thresholds as client/src/lib/xp.js. */
+export const RANKS = Object.freeze([
+  Object.freeze({ name: 'Larva', minXp: 0 }),
+  Object.freeze({ name: 'Hunter', minXp: 100 }),
+  Object.freeze({ name: 'Exterminator', minXp: 200 }),
+  Object.freeze({ name: 'Arena Legend', minXp: 300 }),
+]);
+
+function instant(value) {
+  const t = Date.parse(value);
+  return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+}
+
+/** True if row a was created before row b (created_at as instant, then id). */
+function createdBefore(a, b) {
+  const ta = instant(a.created_at);
+  const tb = instant(b.created_at);
+  if (ta !== tb) return ta < tb;
+  return String(a.id) < String(b.id);
+}
+
+/**
+ * XP per challenge: the score of the first evaluated attempt (oldest
+ * created_at, then smallest id) that scored at least SOLVED_MIN_SCORE; 0 if
+ * unsolved. Pure; rows in any order.
+ * Returns { totalXp, byChallenge: Map<challengeId, { xp, solvedAt }> }.
+ */
+export function computeXp(rows) {
+  const firstSolve = new Map();
+  const seen = new Set();
+  for (const row of rows) {
+    seen.add(row.challenge_id);
+    if (row.status !== 'evaluated' || !(row.score >= SOLVED_MIN_SCORE)) {
+      continue;
+    }
+    const current = firstSolve.get(row.challenge_id);
+    if (!current || createdBefore(row, current)) {
+      firstSolve.set(row.challenge_id, row);
+    }
+  }
+  const byChallenge = new Map();
+  let totalXp = 0;
+  for (const challengeId of seen) {
+    const solve = firstSolve.get(challengeId);
+    const xp = solve ? solve.score : 0;
+    totalXp += xp;
+    byChallenge.set(challengeId, { xp, solvedAt: solve?.created_at ?? null });
+  }
+  return { totalXp, byChallenge };
+}
+
+/** Rank object { name, xp, nextName, xpToNext } for a total XP. Pure. */
+export function rankForXp(totalXp) {
+  const xp = Number.isFinite(totalXp) && totalXp > 0 ? Math.round(totalXp) : 0;
+  let index = 0;
+  for (let i = 0; i < RANKS.length; i += 1) {
+    if (xp >= RANKS[i].minXp) index = i;
+  }
+  const next = RANKS[index + 1];
+  return {
+    name: RANKS[index].name,
+    xp,
+    nextName: next?.name ?? null,
+    xpToNext: next ? next.minXp - xp : 0,
+  };
+}

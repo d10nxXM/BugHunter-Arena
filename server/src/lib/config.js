@@ -32,6 +32,10 @@ function isAllowedLlmUrl(value) {
 const EnvSchema = z.object({
   SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_KEY: z.string().min(1),
+  // Anon (publishable) key, server only: login and refresh run on a throwaway
+  // anon client. Optional so a missing key never takes guest play down;
+  // without it, login and refresh return 503 AUTH_UNAVAILABLE.
+  SUPABASE_ANON_KEY: z.string().default(''),
   ALLOWED_ORIGIN: z.url().default('http://localhost:5173'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   LLM_API_KEY: z.string().default(''),
@@ -85,6 +89,7 @@ export function parseConfig(env) {
   return {
     supabaseUrl: e.SUPABASE_URL,
     supabaseServiceKey: e.SUPABASE_SERVICE_KEY,
+    supabaseAnonKey: e.SUPABASE_ANON_KEY,
     allowedOrigin: e.ALLOWED_ORIGIN,
     port: e.PORT,
     llmApiKey: e.LLM_API_KEY,

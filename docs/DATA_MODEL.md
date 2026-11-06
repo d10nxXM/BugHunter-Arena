@@ -14,7 +14,12 @@ create extension if not exists pgcrypto;
 create table users (
   id uuid primary key default gen_random_uuid(),
   display_name text not null check (char_length(display_name) between 2 and 32),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- 20261106200000_user_accounts.sql: accounts. Guests have both null.
+  auth_user_id uuid unique references auth.users (id),
+  handle text unique constraint users_handle_format check (handle ~ '^[a-z0-9_]{3,20}$'),
+  bio text constraint users_bio_length check (char_length(bio) <= 280),
+  constraint users_account_pair check ((auth_user_id is null) = (handle is null))
 );
 
 create table challenges (
@@ -76,7 +81,15 @@ Migrations:
 | `20261103002608_init_schema.sql` | Initial schema |
 | `20261103120000_attempts_user_created_at_idx.sql` | Index `attempts_user_id_created_at_idx` on `attempts (user_id, created_at desc)` for history and progress reads. Applied to production; not changed since |
 | `20261104090000_attempts_user_created_at_id_idx.sql` | Drops and recreates `attempts_user_id_created_at_idx` on `attempts (user_id, created_at desc, id desc)`, so the index follows the composite `(created_at, id)` cursor of `GET /api/attempts` |
+| `20261106200000_user_accounts.sql` | Accounts: adds `users.auth_user_id` (unique, references `auth.users`), `users.handle` (unique, `^[a-z0-9_]{3,20}$`), `users.bio` (at most 280 characters, unused until profile editing ships) and the check `users_account_pair` (both `auth_user_id` and `handle` set, or both null). Additive only, safe to push before the code deploys |
 | `20261106120000_challenges_difficulty_english.sql` | Drops the old difficulty check (`challenges_difficulty_check`, plus any check on `challenges` that still lists `lako`), maps existing rows `lako`/`srednje`/`teško` to `easy`/`medium`/`hard`, and adds `challenges_difficulty_check` for `easy`, `medium`, `hard`. Run `npm run seed` afterwards to load the English challenge text |
+
+## User columns
+
+- A row with `auth_user_id` and `handle` is an **account**; a row with both null is a **guest**. `display_name` of an account equals its handle.
+- `email` and the password live only in Supabase Auth (`auth.users`). They are never copied into public tables, returned by the API, logged or sent to the LLM.
+- Signup with `claimUserId` turns a guest row into an account with one conditional update (`where id = :claimUserId and auth_user_id is null`), so the guest's attempts move with it. A row is claimed at most once.
+- Account deletion is out of scope. `auth_user_id` uses the default `on delete restrict`.
 
 ## Attempt columns
 
@@ -160,4 +173,17 @@ Computed by `computeProgress` in `server/src/services/attemptService.js` from th
 - **Total score**: the sum of `bestScore` over attempted challenges, so retries do not inflate it.
 - **averageDurationSec**: the mean `duration` of the best attempt of each solved challenge, rounded to whole seconds. A missing duration counts as 0. It is 0 if no challenge is solved.
 - **Weak categories**: each evaluated attempt whose challenge has a known category is a miss for that category when `score_breakdown.lineIdentification < 40` or its score is under 70. A selection of related lines only scores 20, so it counts as a miss. Categories are sorted by misses, most first, with ties in alphabetical order. The top 3 are returned as `{ category, misses }`. Categories with no misses are not listed.
+- **XP**: `perChallenge[].xp` and `totalXp`, see `docs/SCORING.md`, "XP and ranks". XP is read from the same newest 1000 attempts, so a first solve older than that is not seen.
 - A user with no attempts gets zeros and empty lists.
+
+## Derived data for the profile
+
+Computed by `computeProfile` in `server/src/services/profileService.js` for `GET /api/profiles/:handle`, from the same newest 1000 attempts and the challenge list. It reuses `computeProgress`.
+
+- `solved`, `attempted` and `totalXp` are the same numbers as in `GET /api/progress`. `challengesAvailable` is the number of rows in `challenges`.
+- **Rank**: from `totalXp` with the tiers in `docs/SCORING.md`, "XP and ranks". `{ name, xp, nextName, xpToNext }`; at the top tier `nextName` is null and `xpToNext` is 0.
+- **Solved at**: the `created_at` of the first evaluated attempt (oldest `created_at`, then smallest id) on a challenge with a score of at least 70.
+- **solvedByLanguage**: solved challenges grouped by the challenge's `language`, most solved first, ties by language name. Languages with no solved challenge are not listed.
+- **recentSolves**: at most 10 solved challenges, newest solved-at first (ties by challenge id), each `{ challengeId, title, language, difficulty, bestScore, solvedAt }`.
+- A solved challenge that no longer exists in `challenges` counts in `solved` and `totalXp` but is left out of `solvedByLanguage` and `recentSolves`.
+- Never part of the profile: explanations, feedback, weak categories, email, `auth_user_id`.

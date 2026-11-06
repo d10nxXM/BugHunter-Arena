@@ -8,6 +8,7 @@ export default defineConfig({
     env: {
       SUPABASE_URL: 'http://localhost:54321',
       SUPABASE_SERVICE_KEY: 'test-service-key',
+      SUPABASE_ANON_KEY: 'test-anon-key',
       ALLOWED_ORIGIN: 'http://localhost:5173',
       LLM_API_KEY: '',
       DEMO_MODE: 'false',

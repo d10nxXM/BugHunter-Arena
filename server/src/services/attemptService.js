@@ -10,15 +10,19 @@ import {
   insertAttempt,
   listAttemptSummaries,
 } from '../db/attempts.js';
-import { userExists } from '../db/users.js';
-import { calculateScore, countPassedTests } from './scoringService.js';
+import { findUserById } from '../db/users.js';
+import {
+  SOLVED_MIN_SCORE,
+  calculateScore,
+  computeXp,
+  countPassedTests,
+} from './scoringService.js';
 import { evaluateExplanation } from './evaluationService.js';
 import { evaluateWithKeywords } from './fallbackService.js';
 import { EvaluationResultSchema } from '../schemas/aiOutput.js';
 
 // Never log: explanation, edgeCase and fixedCode are student text.
 
-const SOLVED_MIN_SCORE = 70;
 const MAX_INT4 = 2147483647;
 // Margin on top of AI_TIMEOUT_MS for the outer guard around the evaluation.
 const AI_GUARD_MARGIN_MS = 1000;
@@ -27,6 +31,7 @@ const PROGRESS_MAX_ROWS = 1000;
 
 const NOT_FOUND_CHALLENGE = 'Challenge not found.';
 const NOT_FOUND_USER = 'User not found.';
+const NOT_FOUND_ATTEMPT = 'Attempt not found.';
 
 /**
  * Runs evaluateExplanation under a timeout. Any throw, rejection, hang or
@@ -76,22 +81,65 @@ export async function evaluateWithFallback(
 }
 
 /**
+ * The user id a request acts as (docs/API.md, Authentication). With an
+ * account (verified token), `suppliedUserId` may be null/undefined or the
+ * account's own id; anything else is 403. Without one, the supplied id is
+ * returned as is (callers then treat account ids as unknown). Pure.
+ */
+export function resolveUserId(account, suppliedUserId) {
+  if (!account) return suppliedUserId ?? null;
+  if (suppliedUserId == null || suppliedUserId === account.id) {
+    return account.id;
+  }
+  throw new AppError(
+    403,
+    'FORBIDDEN',
+    'This user id does not belong to your account.',
+  );
+}
+
+/**
+ * User id for GET /api/progress and GET /api/attempts, or null when the
+ * result must be empty (a guest request naming an account's id). Without a
+ * token, `userId` is required.
+ */
+async function resolveReadUserId(account, suppliedUserId) {
+  const userId = resolveUserId(account, suppliedUserId);
+  if (account) return userId;
+  if (!userId) {
+    throw new AppError(
+      400,
+      'VALIDATION_ERROR',
+      'Invalid value in field "userId".',
+    );
+  }
+  const user = await findUserById(userId);
+  return user?.isAccount ? null : userId;
+}
+
+/**
  * Stores and locks the attempt, then returns the response of
  * POST /api/attempts. The full challenge is loaded here and nowhere else in
  * the request path; tests and solution leave only after the insert succeeded.
+ * `account` is the verified account (optionalAuth), if any.
  */
-export async function createAttempt(input) {
+export async function createAttempt(input, { account } = {}) {
+  const userId = resolveUserId(account, input.userId);
   const challenge = await getFullChallenge(input.challengeId);
   if (!challenge) throw new AppError(404, 'NOT_FOUND', NOT_FOUND_CHALLENGE);
-  if (input.userId && !(await userExists(input.userId))) {
-    throw new AppError(404, 'NOT_FOUND', NOT_FOUND_USER);
+  if (userId && !account) {
+    // Without a token an account's id is treated like an unknown user.
+    const user = await findUserById(userId);
+    if (!user || user.isAccount) {
+      throw new AppError(404, 'NOT_FOUND', NOT_FOUND_USER);
+    }
   }
 
   let attemptId;
   try {
     attemptId = await insertAttempt({
       challenge_id: input.challengeId,
-      user_id: input.userId,
+      user_id: userId,
       selected_lines: input.selectedLines,
       explanation: input.explanation,
       edge_case: input.edgeCase,
@@ -100,7 +148,7 @@ export async function createAttempt(input) {
       duration: Math.min(Math.round(input.durationSec), MAX_INT4),
     });
   } catch (err) {
-    if (input.userId && err?.cause?.code === FK_VIOLATION) {
+    if (userId && err?.cause?.code === FK_VIOLATION) {
       throw new AppError(404, 'NOT_FOUND', NOT_FOUND_USER, { cause: err });
     }
     throw err;
@@ -124,15 +172,22 @@ export async function createAttempt(input) {
 /**
  * POST /api/attempts/:id/evaluation. `onAiCall` is passed down to the
  * evaluation chain (called right before an LLM call); the other options go
- * to evaluateWithFallback.
+ * to evaluateWithFallback. `account` is the verified account, if any: an
+ * attempt owned by an account is 404 without that account's token.
  */
 export async function evaluateAttempt(
   attemptId,
   { testResults, edgeCaseCheck },
-  { onAiCall, ...guardOptions } = {},
+  { onAiCall, account, ...guardOptions } = {},
 ) {
   const row = await getAttemptForEvaluation(attemptId);
-  if (!row) throw new AppError(404, 'NOT_FOUND', 'Attempt not found.');
+  if (!row) throw new AppError(404, 'NOT_FOUND', NOT_FOUND_ATTEMPT);
+  if (row.user_id && row.user_id !== account?.id) {
+    const owner = await findUserById(row.user_id);
+    if (owner?.isAccount) {
+      throw new AppError(404, 'NOT_FOUND', NOT_FOUND_ATTEMPT);
+    }
+  }
   if (row.status === 'evaluated') throw alreadyEvaluated();
 
   const challenge = await getFullChallenge(row.challenge_id);
@@ -223,6 +278,7 @@ export function computeProgress(rows, categories) {
     }
   }
 
+  const xp = computeXp(rows);
   let totalScore = 0;
   let solved = 0;
   let solvedDuration = 0;
@@ -234,7 +290,12 @@ export function computeProgress(rows, categories) {
       solved += 1;
       solvedDuration += best.duration ?? 0;
     }
-    perChallenge.push({ challengeId, bestScore, attempts });
+    perChallenge.push({
+      challengeId,
+      bestScore,
+      attempts,
+      xp: xp.byChallenge.get(challengeId)?.xp ?? 0,
+    });
   }
   perChallenge.sort((a, b) => a.challengeId.localeCompare(b.challengeId));
 
@@ -257,6 +318,7 @@ export function computeProgress(rows, categories) {
 
   return {
     totalScore,
+    totalXp: xp.totalXp,
     solved,
     attempted: byChallenge.size,
     averageDurationSec: solved === 0 ? 0 : Math.round(solvedDuration / solved),
@@ -265,8 +327,13 @@ export function computeProgress(rows, categories) {
   };
 }
 
-/** GET /api/progress. */
-export async function getProgress(userId) {
+/**
+ * GET /api/progress. `suppliedUserId` is the query's userId (optional with a
+ * token); `account` is the verified account, if any.
+ */
+export async function getProgress(suppliedUserId, { account } = {}) {
+  const userId = await resolveReadUserId(account, suppliedUserId);
+  if (!userId) return computeProgress([], new Map());
   const [rows, categories] = await Promise.all([
     listAttemptSummaries(userId, { limit: PROGRESS_MAX_ROWS }),
     getChallengeCategories(),
@@ -281,9 +348,11 @@ export async function getProgress(userId) {
  * through as received, never re-parsed as dates.
  */
 export async function listAttempts(
-  userId,
-  { challengeId, limit, cursor, cursorId } = {},
+  suppliedUserId,
+  { challengeId, limit, cursor, cursorId, account } = {},
 ) {
+  const userId = await resolveReadUserId(account, suppliedUserId);
+  if (!userId) return [];
   const rows = await listAttemptSummaries(userId, {
     challengeId,
     limit,

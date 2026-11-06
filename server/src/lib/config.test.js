@@ -355,4 +355,11 @@ describe('parseConfig: TRUST_PROXY', () => {
       'TRUST_PROXY',
     );
   });
+
+  it('SUPABASE_ANON_KEY is optional and defaults to empty', () => {
+    expect(parseConfig(base).supabaseAnonKey).toBe('');
+    expect(
+      parseConfig({ ...base, SUPABASE_ANON_KEY: 'anon' }).supabaseAnonKey,
+    ).toBe('anon');
+  });
 });

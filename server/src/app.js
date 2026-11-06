@@ -11,6 +11,9 @@ import hintsRouter from './routes/hints.js';
 import attemptsRouter from './routes/attempts.js';
 import progressRouter from './routes/progress.js';
 import usersRouter from './routes/users.js';
+import authRouter from './routes/auth.js';
+import meRouter from './routes/me.js';
+import profilesRouter from './routes/profiles.js';
 
 export const app = express();
 
@@ -37,6 +40,9 @@ app.use('/api/challenges/:id/hints', hintsRouter);
 app.use('/api/attempts', attemptsRouter);
 app.use('/api/progress', progressRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/me', meRouter);
+app.use('/api/profiles', profilesRouter);
 
 app.use(notFound);
 app.use(errorHandler);

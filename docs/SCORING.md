@@ -22,6 +22,24 @@ Score is 0-100. Three components (70 points) are deterministic; the explanation 
 - `hintsUsed` outside 0-3 is a programming error (validation and the DB check prevent it); scoring throws rather than scoring it.
 - Total = sum of components minus hint penalty, clamped to 0-100.
 
+## XP and ranks
+
+XP is display data for progress and profiles. It is not the attempt score and never changes it. It is computed on the server (`computeXp` and `rankForXp` in `server/src/services/scoringService.js`).
+
+- A challenge is **solved** by an evaluated attempt with a score of at least 70.
+- **XP for a challenge** is the score of the **first** attempt (oldest `created_at`, then smallest id) that solved it. Later attempts never change it, even if they score higher.
+- An unsolved challenge gives 0 XP. **Total XP** is the sum over challenges.
+- **Ranks** by total XP:
+
+| Total XP | Rank |
+| --- | --- |
+| 0 | Larva |
+| 100 | Hunter |
+| 200 | Exterminator |
+| 300 | Arena Legend |
+
+The rank object is `{ name, xp, nextName, xpToNext }`: `xpToNext` is the XP still needed for the next rank. At Arena Legend, `nextName` is null and `xpToNext` is 0.
+
 ## Explanation quality (AI rubric)
 
 | Quality | Criterion |

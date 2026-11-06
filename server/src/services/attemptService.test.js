@@ -214,6 +214,7 @@ describe('computeProgress', () => {
   it('is empty for no rows', () => {
     expect(computeProgress([], cats)).toEqual({
       totalScore: 0,
+      totalXp: 0,
       solved: 0,
       attempted: 0,
       averageDurationSec: 0,
@@ -230,7 +231,7 @@ describe('computeProgress', () => {
     expect(out.attempted).toBe(1);
     expect(out.solved).toBe(0);
     expect(out.perChallenge).toEqual([
-      { challengeId: 'a', bestScore: 0, attempts: 1 },
+      { challengeId: 'a', bestScore: 0, attempts: 1, xp: 0 },
     ]);
   });
 

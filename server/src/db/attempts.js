@@ -103,6 +103,28 @@ export async function listAttemptSummaries(
   return data ?? [];
 }
 
+/**
+ * challenge id -> { title, language, difficulty, bugCategory }, public fields
+ * only, for the profile.
+ */
+export async function getChallengeMeta() {
+  const { data, error } = await db
+    .from('challenges')
+    .select('id, title, language, difficulty, bug_category');
+  if (error) throw new Error('getChallengeMeta failed', { cause: error });
+  return new Map(
+    (data ?? []).map((row) => [
+      row.id,
+      {
+        title: row.title,
+        language: row.language,
+        difficulty: row.difficulty,
+        bugCategory: row.bug_category,
+      },
+    ]),
+  );
+}
+
 /** challenge id -> public bug category, for the dashboard. */
 export async function getChallengeCategories() {
   const { data, error } = await db
