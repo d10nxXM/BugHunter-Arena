@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8,7 +8,7 @@ import Layout from '../components/Layout.jsx';
 import AuthProvider from '../context/AuthProvider.jsx';
 import { USER_STORAGE_KEY } from '../context/UserContext.js';
 import UserProvider from '../context/UserProvider.jsx';
-import { readSession, writeSession } from '../lib/session.js';
+import { clearSession, readSession, writeSession } from '../lib/session.js';
 import Login from './Login.jsx';
 import Signup from './Signup.jsx';
 
@@ -243,5 +243,58 @@ describe('header and kill switch', () => {
     expect(within(header).queryByRole('link', { name: 'Log in' })).toBeNull();
     expect(screen.getByText(/Accounts are not available right now/)).toBeInTheDocument();
     expect(screen.queryByLabelText('Password')).toBeNull();
+  });
+});
+
+describe('review fixes', () => {
+  async function fillLogin(user) {
+    await user.type(screen.getByLabelText('Email'), 'hunter@example.com');
+    await user.type(screen.getByLabelText('Password'), 'correct-horse-battery');
+  }
+
+  it('a double submit sends one login request', async () => {
+    login.mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    const { container } = renderAt('/login');
+    await fillLogin(user);
+    const form = container.querySelector('form');
+    // Both submits land before React re-renders with pending = true.
+    act(() => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(login).toHaveBeenCalledTimes(1);
+  });
+
+  it('"Log in again" after an expired session returns to the page the user was on', async () => {
+    writeSession({ ...session, user: f.accountUser });
+    login.mockResolvedValue({ session, user: f.accountUser });
+    const user = userEvent.setup();
+    renderAt('/challenges/find-max');
+    act(() => clearSession('expired'));
+    await user.click(screen.getByRole('link', { name: 'Log in again' }));
+    await fillLogin(user);
+    await user.click(screen.getByRole('button', { name: 'Log in' }));
+    expect(await screen.findByTestId('where')).toHaveTextContent('/challenges/find-max');
+  });
+
+  it.each(['/login', '/signup'])('never returns to %s after login', async (from) => {
+    login.mockResolvedValue({ session, user: f.accountUser });
+    const user = userEvent.setup();
+    render(
+      <UserProvider>
+        <AuthProvider>
+          <MemoryRouter initialEntries={[{ pathname: '/login', state: { from } }]}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="*" element={<Where />} />
+            </Routes>
+          </MemoryRouter>
+        </AuthProvider>
+      </UserProvider>,
+    );
+    await fillLogin(user);
+    await user.click(screen.getByRole('button', { name: 'Log in' }));
+    expect(await screen.findByTestId('where')).toHaveTextContent('/problems');
   });
 });

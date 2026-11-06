@@ -37,7 +37,8 @@ export function useAuthForm({ initial, validate, submit, onSuccess }) {
 
   async function onSubmit(event) {
     event.preventDefault();
-    if (pending) return;
+    // A ref, not `pending`: two submits can land before React re-renders.
+    if (controllerRef.current !== null) return;
     setFormError(null);
     const found = validate(values);
     const invalid = Object.keys(found);
@@ -46,15 +47,16 @@ export function useAuthForm({ initial, validate, submit, onSuccess }) {
       inputs.current[invalid[0]]?.focus();
       return;
     }
-    setErrors({});
-    setPending(true);
     const controller = new AbortController();
     controllerRef.current = controller;
+    setErrors({});
+    setPending(true);
     try {
       const result = await submit(values, { signal: controller.signal });
       if (!controller.signal.aborted) onSuccess(result);
     } catch (error) {
-      if (controller.signal.aborted) return;
+      // Aborted here (left the page) or superseded by a logout or newer login: nothing to show.
+      if (controller.signal.aborted || error?.name === 'AbortError') return;
       const display = authErrorDisplay(error);
       if (display.field) {
         setErrors({ [display.field]: display.message });
@@ -63,6 +65,7 @@ export function useAuthForm({ initial, validate, submit, onSuccess }) {
         setFormError(display.message);
       }
     } finally {
+      if (controllerRef.current === controller) controllerRef.current = null;
       if (!controller.signal.aborted) setPending(false);
     }
   }

@@ -87,4 +87,20 @@ describe('session storage', () => {
       [null, 'expired'],
     ]);
   });
+
+  it('notifies listeners when another tab changes bha.session', () => {
+    const listener = vi.fn();
+    const unsubscribe = subscribeSession(listener);
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+    window.dispatchEvent(new StorageEvent('storage', { key: SESSION_STORAGE_KEY }));
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+    window.dispatchEvent(new StorageEvent('storage', { key: SESSION_STORAGE_KEY }));
+    window.dispatchEvent(new StorageEvent('storage', { key: 'bha.user' }));
+    unsubscribe();
+    window.dispatchEvent(new StorageEvent('storage', { key: SESSION_STORAGE_KEY }));
+    expect(listener.mock.calls).toEqual([
+      [session, 'storage'],
+      [null, 'storage'],
+    ]);
+  });
 });

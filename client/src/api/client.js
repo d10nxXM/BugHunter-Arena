@@ -143,11 +143,19 @@ function isDeadRefresh(error) {
 /**
  * Refreshes `session` once for all concurrent callers. Resolves with the new stored session.
  * A rejected refresh token (400/401) clears the session ('expired'); other failures keep it.
+ * If the session was replaced (login, another tab) or removed (logout) while the refresh was in
+ * flight, the refreshed tokens are dropped: it resolves with the current session, or rejects
+ * with UNAUTHORIZED after a logout.
  */
 function refreshShared(session) {
   if (!refreshInFlight) {
     refreshInFlight = refreshSession(session.refreshToken)
       .then((data) => {
+        const current = readSession();
+        if (current?.refreshToken !== session.refreshToken) {
+          if (current) return current;
+          throw new ApiError(MESSAGE_SESSION_EXPIRED, { status: 401, code: 'UNAUTHORIZED' });
+        }
         const next = writeSession({ ...data?.session, user: session.user }, 'refresh');
         if (!next) throw new ApiError(MESSAGE_GENERIC, { status: 200, code: 'BAD_RESPONSE' });
         return next;
@@ -168,8 +176,9 @@ function refreshShared(session) {
 
 /**
  * Access token to send, refreshed first when it is about to expire. Null without a session.
- * A dead refresh token rejects with UNAUTHORIZED; when the refresh fails otherwise (network,
- * timeout) a token that has not expired yet is still used.
+ * A dead refresh token rejects with UNAUTHORIZED, unless another tab stored a rotated session
+ * meanwhile (then that one is used). When the refresh fails otherwise (network, timeout) a token
+ * that has not expired yet is still used.
  */
 async function currentAccessToken() {
   const session = readSession();
@@ -180,6 +189,8 @@ async function currentAccessToken() {
     return (await refreshShared(session)).accessToken;
   } catch (error) {
     if (isDeadRefresh(error)) {
+      const latest = readSession();
+      if (latest && latest.refreshToken !== session.refreshToken) return latest.accessToken;
       throw new ApiError(MESSAGE_SESSION_EXPIRED, { status: 401, code: 'UNAUTHORIZED' });
     }
     if (session.expiresAt > nowSec) return session.accessToken;

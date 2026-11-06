@@ -157,4 +157,40 @@ describe('AuthProvider', () => {
     expect(result.current.user.user).toEqual(guest);
     expect(result.current.auth.sessionExpired).toBe(false);
   });
+
+  it('a login that resolves after logout is not stored', async () => {
+    let answer;
+    login.mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+    const { result } = renderAuth();
+    let pending;
+    act(() => {
+      pending = result.current.auth.login(f.loginRequest);
+      pending.catch(() => {});
+    });
+    act(() => result.current.auth.logout());
+    await act(async () => {
+      answer({ session, user: f.accountUser });
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    });
+    expect(readSession()).toBeNull();
+    expect(result.current.auth.account).toBeNull();
+    expect(result.current.user.user).toBeNull();
+  });
+
+  it('another tab logging out clears the account and the user here', async () => {
+    writeSession({ ...session, user: f.accountUser });
+    const { result } = renderAuth();
+    await waitFor(() => expect(result.current.user.user?.userId).toBe(f.accountUser.id));
+    act(() => {
+      localStorage.removeItem('bha.session');
+      window.dispatchEvent(new StorageEvent('storage', { key: 'bha.session' }));
+    });
+    expect(result.current.auth.account).toBeNull();
+    expect(result.current.user.user).toBeNull();
+    expect(result.current.auth.sessionExpired).toBe(false);
+  });
 });

@@ -1,68 +1,19 @@
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
-import { useAuth } from '../hooks/useAuth.js';
+import { useFocusHeadingOnNavigation } from '../hooks/useFocusHeadingOnNavigation.js';
 import { useUser } from '../hooks/useUser.js';
-import { isAuthEnabled } from '../lib/authConfig.js';
-import { initials } from '../lib/profileFormat.js';
 import { paths } from '../paths.js';
 import ErrorBoundary from './ErrorBoundary.jsx';
+import AccountActions from './layout/AccountActions.jsx';
+import { FOCUS_RING } from './layout/focusRing.js';
+import SessionExpiredNotice from './layout/SessionExpiredNotice.jsx';
 import Badge from './ui/Badge.jsx';
 import Button from './ui/Button.jsx';
-
-const FOCUS_RING =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent';
 
 function navLinkClass({ isActive }) {
   return `block rounded-lg px-3.5 py-2.5 ${FOCUS_RING} ${
     isActive ? 'bg-surface-3 text-heading' : 'text-muted hover:text-heading'
   }`;
-}
-
-/** How long to wait for a late h1 (lazy chunk) before giving up on moving focus. */
-export const HEADING_WAIT_MS = 5000;
-
-/**
- * After a navigation, moves focus to the new page's h1 (not on the first load).
- * Contract for pages: render exactly one <h1 tabIndex={-1}>, also while their data is loading,
- * so focus has a target. If the h1 is not there yet (lazy chunk still loading), wait for it, but
- * at most HEADING_WAIT_MS and only while the user has not moved focus elsewhere, so a late h1
- * never steals focus.
- */
-function useFocusHeadingOnNavigation(pathname) {
-  const lastPathname = useRef(pathname);
-
-  useEffect(() => {
-    // Same pathname: first mount, or StrictMode re-running the effect. Do not steal focus.
-    if (lastPathname.current === pathname) return undefined;
-    lastPathname.current = pathname;
-
-    const main = document.getElementById('main');
-    const focusHeading = () => {
-      const h1 = main?.querySelector('h1');
-      if (!h1) return false;
-      h1.focus({ preventScroll: true });
-      return true;
-    };
-    if (focusHeading() || !main) return undefined;
-
-    // Focus at navigation time, usually the link that was clicked.
-    const startFocus = document.activeElement;
-    const focusMovedAway = () => {
-      const active = document.activeElement;
-      return active !== null && active !== document.body && active !== startFocus;
-    };
-
-    const observer = new MutationObserver(() => {
-      if (focusMovedAway() || focusHeading()) stop();
-    });
-    const timer = setTimeout(() => stop(), HEADING_WAIT_MS);
-    function stop() {
-      observer.disconnect();
-      clearTimeout(timer);
-    }
-    observer.observe(main, { childList: true, subtree: true });
-    return stop;
-  }, [pathname]);
 }
 
 function BugLogo() {
@@ -104,91 +55,6 @@ function SoonItem({ children }) {
         Soon
       </Badge>
     </span>
-  );
-}
-
-/**
- * Right side of the header: the account's avatar and "Log out", or the guest's name and
- * "Log in" (links hidden when accounts are switched off).
- */
-function AccountActions({ user }) {
-  const { account, logout } = useAuth();
-  const authOn = isAuthEnabled();
-
-  function onLogout() {
-    logout();
-    // The button disappears; keep keyboard focus inside the page.
-    document.getElementById('main')?.focus();
-  }
-
-  if (account && authOn) {
-    return (
-      <>
-        <Link
-          to={paths.profile(account.handle)}
-          aria-label={`Your profile (@${account.handle})`}
-          className={`flex size-10 items-center justify-center rounded-[10px] border border-accent bg-accent-soft text-sm font-bold text-accent ${FOCUS_RING}`}
-        >
-          <span aria-hidden="true">{initials(account.handle)}</span>
-        </Link>
-        <button
-          type="button"
-          onClick={onLogout}
-          className={`rounded-lg px-3 py-2.5 text-[15px] font-medium text-muted hover:text-heading ${FOCUS_RING}`}
-        >
-          Log out
-        </button>
-      </>
-    );
-  }
-  return (
-    <>
-      {user && (
-        <p className="text-sm text-muted">
-          <span className="sr-only">Playing as </span>
-          {user.displayName}
-        </p>
-      )}
-      {authOn && (
-        <Link
-          to={paths.login}
-          className={`rounded-lg px-4 py-2.5 text-[15px] font-medium text-muted hover:text-heading ${FOCUS_RING}`}
-        >
-          Log in
-        </Link>
-      )}
-    </>
-  );
-}
-
-/** Notice after the server rejected the session, with a way back in. */
-function SessionExpiredNotice() {
-  const { account, sessionExpired, dismissExpired } = useAuth();
-  if (!sessionExpired || account || !isAuthEnabled()) return null;
-  return (
-    <div
-      role="status"
-      className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-amber-soft bg-amber-soft px-4 py-2 text-sm text-amber"
-    >
-      <p>
-        <span aria-hidden="true">⚠ </span>
-        Your session has expired. Log in again so new attempts count on your profile.
-      </p>
-      <Link
-        to={paths.login}
-        onClick={dismissExpired}
-        className={`rounded font-semibold underline ${FOCUS_RING}`}
-      >
-        Log in again
-      </Link>
-      <button
-        type="button"
-        onClick={dismissExpired}
-        className={`rounded px-1 font-semibold ${FOCUS_RING}`}
-      >
-        Dismiss
-      </button>
-    </div>
   );
 }
 

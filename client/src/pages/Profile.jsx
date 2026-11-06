@@ -38,7 +38,8 @@ function NotFoundState() {
  * profile, retry }. An invalid handle is 'notFound' without a request.
  */
 function useProfile(handle) {
-  const valid = HANDLE_PATTERN.test(handle);
+  // Accounts switched off: the page shows a notice, so there is nothing to load.
+  const valid = HANDLE_PATTERN.test(handle) && isAuthEnabled();
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState({ key: null, status: 'loading', profile: null });
   const key = `${handle}#${attempt}`;

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   SESSION_STORAGE_KEY,
+  clearSession,
   readSession,
   subscribeSession,
   writeSession,
@@ -269,5 +270,68 @@ describe('401 on an authenticated request', () => {
     );
     await expect(api.getProgress(f.accountUser.id)).rejects.toMatchObject({ status: 403 });
     expect(readSession()).not.toBeNull();
+  });
+});
+
+describe('refresh races', () => {
+  /** fetch whose refresh answers only after release(); other requests answer at once. */
+  function gatedRefresh(newSession) {
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    fetchMock.mockImplementation(async (url) => {
+      if (url === '/api/auth/refresh') {
+        await gate;
+        return jsonResponse(200, { session: newSession });
+      }
+      return jsonResponse(200, f.challengeList);
+    });
+    return () => release();
+  }
+
+  const rotated = () => ({
+    accessToken: 'token-b',
+    refreshToken: 'refresh-b',
+    expiresAt: nowSec() + 3600,
+  });
+
+  it('a refresh that resolves after logout does not restore the session', async () => {
+    storeSession({ expiresIn: 5 });
+    const release = gatedRefresh(rotated());
+    const pending = api.getChallenges();
+    await vi.waitFor(() => expect(callsTo('/api/auth/refresh')).toHaveLength(1));
+    clearSession('logout');
+    release();
+    await expect(pending).rejects.toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
+    expect(readSession()).toBeNull();
+    expect(callsTo('/api/challenges')).toHaveLength(0);
+  });
+
+  it('a refresh that resolves after a new login keeps the new session and uses it', async () => {
+    storeSession({ expiresIn: 5 });
+    const release = gatedRefresh(rotated());
+    const pending = api.getChallenges();
+    await vi.waitFor(() => expect(callsTo('/api/auth/refresh')).toHaveLength(1));
+    storeSession({ accessToken: 'token-new', refreshToken: 'refresh-new' });
+    release();
+    await pending;
+    expect(readSession()).toMatchObject({ accessToken: 'token-new', refreshToken: 'refresh-new' });
+    expect(authHeader(callsTo('/api/challenges')[0])).toBe('Bearer token-new');
+  });
+
+  it('a dead refresh uses the session another tab rotated meanwhile', async () => {
+    storeSession({ expiresIn: 5 });
+    fetchMock.mockImplementation(async (url) => {
+      if (url === '/api/auth/refresh') {
+        // Another tab used the same refresh token first and stored the rotated session.
+        storeSession({ accessToken: 'token-tab2', refreshToken: 'refresh-tab2' });
+        return jsonResponse(401, f.errorUnauthorized);
+      }
+      return jsonResponse(200, f.challengeList);
+    });
+    await api.getChallenges();
+    expect(authHeader(callsTo('/api/challenges')[0])).toBe('Bearer token-tab2');
+    expect(readSession()?.refreshToken).toBe('refresh-tab2');
   });
 });

@@ -109,8 +109,26 @@ export function clearSession(reason = 'logout') {
   notify(null, reason);
 }
 
-/** Calls listener(session | null, reason) after every write or clear. Returns an unsubscribe. */
+/** Another tab logged in, refreshed or logged out: tell this tab's listeners ('storage'). */
+function onStorage(event) {
+  // key null means another tab cleared all of localStorage.
+  if (event.key !== SESSION_STORAGE_KEY && event.key !== null) return;
+  notify(readSession(), 'storage');
+}
+
+/**
+ * Calls listener(session | null, reason) after every write or clear, in this tab or (reason
+ * 'storage') in another tab. Returns an unsubscribe.
+ */
 export function subscribeSession(listener) {
+  if (listeners.size === 0 && typeof window !== 'undefined') {
+    window.addEventListener('storage', onStorage);
+  }
   listeners.add(listener);
-  return () => listeners.delete(listener);
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0 && typeof window !== 'undefined') {
+      window.removeEventListener('storage', onStorage);
+    }
+  };
 }

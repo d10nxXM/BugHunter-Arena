@@ -38,7 +38,10 @@ beforeEach(() => {
   getMe.mockReset().mockResolvedValue(f.me);
 });
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
 describe('Profile', () => {
   it('shows one focusable h1 with the handle while loading', () => {
@@ -153,5 +156,12 @@ describe('Profile', () => {
     renderAt('/profile');
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('@null_pointer');
     expect(await screen.findByRole('link', { name: 'Keep hunting' })).toBeInTheDocument();
+  });
+
+  it('does not fetch when accounts are switched off', () => {
+    vi.stubEnv('VITE_AUTH_ENABLED', 'false');
+    renderAt('/u/null_pointer');
+    expect(screen.getByText(/Accounts are not available right now/)).toBeInTheDocument();
+    expect(getProfile).not.toHaveBeenCalled();
   });
 });

@@ -32,7 +32,8 @@ function endSession() {
  * - login({ email, password }, { signal }) and signup({ handle, email, password }, { signal })
  *   store the session and call setUser({ userId: user.id, displayName: user.handle }), so the
  *   existing userId call sites send the account's id. They resolve with the account and reject
- *   with ApiError.
+ *   with ApiError, or with an AbortError when a logout or a newer login came first (nothing is
+ *   stored then).
  * - logout() drops the session and the user; the server revoke is fire-and-forget.
  * - sessionExpired is true after the server rejected the session (401), until the next login or
  *   dismissExpired().
@@ -46,8 +47,11 @@ export default function AuthProvider({ children }) {
     sessionExpired: false,
   }));
   const { account } = state;
+  // Bumped by every login or signup start and every logout: a response that arrives after a
+  // newer one started, or after the session ended, is dropped.
+  const generationRef = useRef(0);
 
-  // Session changes from anywhere: login here, refresh or 401 in src/api/client.js.
+  // Session changes from anywhere: login here, refresh or 401 in src/api/client.js, another tab.
   useEffect(
     () =>
       subscribeSession((session, reason) => {
@@ -55,9 +59,11 @@ export default function AuthProvider({ children }) {
           account: session?.user ?? null,
           sessionExpired: session ? false : reason === 'expired' || prev.sessionExpired,
         }));
-        // An expired account id is useless without its token; logout() clears the user itself,
-        // and switching to a guest keeps the new guest.
-        if (!session && reason === 'expired') clearUser();
+        if (session) return;
+        generationRef.current += 1;
+        // An expired account id is useless without its token, and so is one another tab logged
+        // out. logout() clears the user itself; switching to a guest keeps the new guest.
+        if (reason === 'expired' || reason === 'storage') clearUser();
       }),
     [clearUser],
   );
@@ -104,21 +110,36 @@ export default function AuthProvider({ children }) {
     [setUser],
   );
 
-  const login = useCallback(
-    async (credentials, { signal } = {}) => applyAuth(await apiLogin(credentials, { signal })),
+  /** Runs an auth call and stores its result, unless a logout or a newer call came first. */
+  const runAuth = useCallback(
+    async (call) => {
+      generationRef.current += 1;
+      const generation = generationRef.current;
+      const data = await call();
+      if (generationRef.current !== generation) {
+        throw new DOMException('A newer login or a logout replaced this one.', 'AbortError');
+      }
+      return applyAuth(data);
+    },
     [applyAuth],
   );
 
+  const login = useCallback(
+    (credentials, { signal } = {}) => runAuth(() => apiLogin(credentials, { signal })),
+    [runAuth],
+  );
+
   const signup = useCallback(
-    async ({ handle, email, password }, { signal } = {}) => {
+    ({ handle, email, password }, { signal } = {}) => {
       // A guest's id lets the server move the guest's attempts to the new account (P1 claim).
       const claimUserId = readSession() ? null : (user?.userId ?? null);
-      return applyAuth(await apiSignup({ handle, email, password, claimUserId }, { signal }));
+      return runAuth(() => apiSignup({ handle, email, password, claimUserId }, { signal }));
     },
-    [applyAuth, user],
+    [runAuth, user],
   );
 
   const logout = useCallback(() => {
+    generationRef.current += 1;
     endSession();
     clearUser();
   }, [clearUser]);
