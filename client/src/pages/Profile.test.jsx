@@ -63,7 +63,7 @@ describe('Profile', () => {
     expect(screen.getByText('NP')).toBeInTheDocument();
 
     const stats = screen.getByRole('region', { name: 'Stats' });
-    expect(within(stats).getByText('Total XP').nextSibling).toHaveTextContent('169');
+    expect(within(stats).getByText('Total XP').nextSibling).toHaveTextContent('174');
     expect(within(stats).getByText('Solved').nextSibling).toHaveTextContent('2/ 6');
     expect(within(stats).getByText('Attempted').nextSibling).toHaveTextContent('3');
 
@@ -80,9 +80,9 @@ describe('Profile', () => {
 
     const next = screen.getByRole('region', { name: 'Next rank' });
     expect(within(next).getByText('Exterminator')).toBeInTheDocument();
-    expect(within(next).getByText('31 XP to go')).toBeInTheDocument();
-    // 169 XP is 69% of the way from Hunter (100) to Exterminator (200).
-    expect(within(next).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '69');
+    expect(within(next).getByText('26 XP to go')).toBeInTheDocument();
+    // 174 XP is 74% of the way from Hunter (100) to Exterminator (200).
+    expect(within(next).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '74');
 
     // Cut items from the mockup are not there.
     expect(screen.queryByText(/Global rank|First bloods|Duels|Streak|Badges|Edit profile/i)).toBe(

@@ -147,16 +147,18 @@ export const evaluationFallback = {
 /** GET /api/progress?userId= */
 export const progress = {
   totalScore: 245,
+  totalXp: 241,
   solved: 3,
   attempted: 4,
   averageDurationSec: 212,
-  perChallenge: [{ challengeId: 'find-max', bestScore: 89, attempts: 2 }],
+  perChallenge: [{ challengeId: 'find-max', bestScore: 89, attempts: 2, xp: 85 }],
   weakCategories: [{ category: 'Wrong initialization', misses: 2 }],
 };
 
 /** GET /api/progress for an unknown user or one with no attempts */
 export const progressEmpty = {
   totalScore: 0,
+  totalXp: 0,
   solved: 0,
   attempted: 0,
   averageDurationSec: 0,
@@ -238,11 +240,14 @@ export const accountUser = {
 export const authSession = {
   accessToken: 'mock-access-token',
   refreshToken: 'mock-refresh-token',
-  expiresAt: 1793961600,
+  expiresAt: 1793980800,
 };
 
-/** POST /api/auth/signup (201) and POST /api/auth/login (200) response */
+/** POST /api/auth/login (200) response */
 export const authResponse = { session: authSession, user: accountUser };
+
+/** POST /api/auth/signup (201) response: the login shape plus `claimed` */
+export const signupResponse = { ...authResponse, claimed: false };
 
 /** POST /api/auth/refresh request */
 export const refreshRequest = { refreshToken: 'mock-refresh-token' };
@@ -264,8 +269,8 @@ export const profile = {
   handle: 'null_pointer',
   displayName: 'null_pointer',
   memberSince: '2026-03-14T09:30:00.000Z',
-  rank: { name: 'Hunter', xp: 169, nextName: 'Exterminator', xpToNext: 31 },
-  totalXp: 169,
+  rank: { name: 'Hunter', xp: 174, nextName: 'Exterminator', xpToNext: 26 },
+  totalXp: 174,
   solved: 2,
   attempted: 3,
   challengesAvailable: 6,

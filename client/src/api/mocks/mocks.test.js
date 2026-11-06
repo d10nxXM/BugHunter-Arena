@@ -15,6 +15,8 @@ const docBlocks = [...apiDoc.matchAll(/```json\r?\n([\s\S]*?)```/g)].map((m) => 
 
 // One entry per ```json block in docs/API.md, in the same order.
 const BLOCK_FIXTURES = [
+  ['auth session', f.authSession],
+  ['account user', f.accountUser],
   ['GET /api/health', f.health],
   ['GET /healthz', f.healthz],
   ['GET /api/challenges', f.challengeList],
@@ -27,6 +29,10 @@ const BLOCK_FIXTURES = [
   ['evaluation response', f.evaluationAi],
   ['GET /api/progress', f.progress],
   ['GET /api/attempts', f.attemptsPage],
+  ['signup request', { ...f.signupRequest, claimUserId: null }],
+  ['signup response', f.signupResponse],
+  // The doc example lists one recent solve; the fixture has two.
+  ['GET /api/profiles/:handle', { ...f.profile, recentSolves: f.profile.recentSolves.slice(0, 1) }],
 ];
 
 /**

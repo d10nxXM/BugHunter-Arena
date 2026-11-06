@@ -187,7 +187,7 @@ function route(method, url, body, headers) {
       memberSince: new Date().toISOString(),
     };
     accounts.set(email, { password, user });
-    return reply(201, { session: newSession(user), user });
+    return reply(201, { session: newSession(user), user, claimed: false });
   }
 
   if (method === 'POST' && path === '/api/auth/login') {
