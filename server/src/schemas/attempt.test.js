@@ -265,21 +265,22 @@ describe('AttemptIdParamsSchema', () => {
 });
 
 describe('ProgressQuerySchema', () => {
-  it('requires a uuid userId', () => {
+  it('userId is an optional uuid (required without a token, in the service)', () => {
     expect(ok(ProgressQuerySchema, { userId: UUID })).toBe(true);
-    expect(ok(ProgressQuerySchema, {})).toBe(false);
+    expect(ok(ProgressQuerySchema, {})).toBe(true);
     expect(ok(ProgressQuerySchema, { userId: '' })).toBe(false);
     expect(ok(ProgressQuerySchema, { userId: 'x' })).toBe(false);
   });
 });
 
 describe('AttemptListQuerySchema', () => {
-  it('requires userId, challengeId optional', () => {
+  it('userId optional (service requires it without a token), challengeId optional', () => {
     expect(ok(AttemptListQuerySchema, { userId: UUID })).toBe(true);
     expect(
       ok(AttemptListQuerySchema, { userId: UUID, challengeId: 'find-max' }),
     ).toBe(true);
-    expect(ok(AttemptListQuerySchema, { challengeId: 'find-max' })).toBe(false);
+    expect(ok(AttemptListQuerySchema, { challengeId: 'find-max' })).toBe(true);
+    expect(ok(AttemptListQuerySchema, { userId: 'x' })).toBe(false);
     expect(
       ok(AttemptListQuerySchema, { userId: UUID, challengeId: 'Bad Id' }),
     ).toBe(false);

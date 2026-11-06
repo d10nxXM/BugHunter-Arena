@@ -50,8 +50,11 @@ export const EvaluationSchema = z.object({
 /** Path params of /api/attempts/:id/evaluation. */
 export const AttemptIdParamsSchema = z.object({ id: IdSchema });
 
-/** GET /api/progress?userId= */
-export const ProgressQuerySchema = z.object({ userId: IdSchema });
+/**
+ * GET /api/progress?userId=. userId is optional here; it is required only
+ * without a token, which attemptService checks (docs/API.md).
+ */
+export const ProgressQuerySchema = z.object({ userId: IdSchema.optional() });
 
 /**
  * GET /api/attempts?userId=&challengeId=&limit=&cursor=&cursorId=
@@ -63,7 +66,8 @@ export const ProgressQuerySchema = z.object({ userId: IdSchema });
  */
 export const AttemptListQuerySchema = z
   .object({
-    userId: IdSchema,
+    // Optional with a token; required without one (attemptService).
+    userId: IdSchema.optional(),
     challengeId: ChallengeIdSchema.optional(),
     limit: z.coerce.number().int().min(1).max(100).default(50),
     cursor: z.iso.datetime({ offset: true }).optional(),

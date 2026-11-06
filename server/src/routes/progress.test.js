@@ -44,12 +44,13 @@ describe('GET /api/progress', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       totalScore: 120,
+      totalXp: 80,
       solved: 1,
       attempted: 2,
       averageDurationSec: 200,
       perChallenge: [
-        { challengeId: 'a', bestScore: 80, attempts: 2 },
-        { challengeId: 'b', bestScore: 40, attempts: 2 },
+        { challengeId: 'a', bestScore: 80, attempts: 2, xp: 80 },
+        { challengeId: 'b', bestScore: 40, attempts: 2, xp: 0 },
       ],
       weakCategories: [
         { category: 'Kategorija A', misses: 1 },
@@ -65,6 +66,7 @@ describe('GET /api/progress', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       totalScore: 0,
+      totalXp: 0,
       solved: 0,
       attempted: 0,
       averageDurationSec: 0,

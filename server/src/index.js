@@ -16,6 +16,12 @@ app.listen(config.port, (error) => {
     },
     'API listening',
   );
+  if (!config.supabaseAnonKey) {
+    logger.warn(
+      { missing: ['SUPABASE_ANON_KEY'] },
+      'login and refresh return 503 until SUPABASE_ANON_KEY is set',
+    );
+  }
   const missing = missingLlmVariables(config);
   if (missing.length > 0) {
     logger.warn(

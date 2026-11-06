@@ -25,6 +25,22 @@ describe('errorHandler', () => {
     });
   });
 
+  it('renders 503 AUTH_UNAVAILABLE as is, without logging', async () => {
+    const err = new AppError(503, 'AUTH_UNAVAILABLE', 'Accounts unavailable.');
+    const res = await request(appThrowing(err)).get('/boom');
+    expect(res.status).toBe(503);
+    expect(res.body).toEqual({
+      error: { code: 'AUTH_UNAVAILABLE', message: 'Accounts unavailable.' },
+    });
+  });
+
+  it('any other 5xx AppError is still a fixed 500', async () => {
+    const err = new AppError(502, 'UPSTREAM', 'details');
+    const res = await request(appThrowing(err)).get('/boom');
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+  });
+
   it('maps entity.too.large to 413 PAYLOAD_TOO_LARGE', async () => {
     const err = Object.assign(new Error('request entity too large'), {
       type: 'entity.too.large',

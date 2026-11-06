@@ -36,6 +36,25 @@ export function createLimiter({ windowMs, limit, ...options }) {
 /** 100 requests per 10 minutes per IP, mounted on /api. */
 export const apiLimiter = createLimiter({ windowMs: TEN_MINUTES, limit: 100 });
 
+/** POST /api/auth/signup: 5 per hour per IP, on top of apiLimiter. */
+export function createSignupLimiter() {
+  return createLimiter({ windowMs: 60 * 60 * 1000, limit: 5 });
+}
+export const signupLimiter = createSignupLimiter();
+
+/**
+ * POST /api/auth/login: 10 failed logins per 15 minutes per IP (any status
+ * >= 400 counts; successful logins are refunded).
+ */
+export function createLoginLimiter() {
+  return createLimiter({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    skipSuccessfulRequests: true,
+  });
+}
+export const loginLimiter = createLoginLimiter();
+
 /**
  * AI quota: `limit` LLM calls per 10 minutes per IP, one counter shared by
  * POST /api/challenges/:id/hints and POST /api/attempts/:id/evaluation.
