@@ -79,6 +79,6 @@ Finish every task with the `verification-loop` checks for the folders you change
 
 ## Conventions
 
-- UI text is Montenegrin. Code, identifiers, comments and commit messages are English.
+- Everything is English: UI text, server messages, challenge content, AI prompts and AI output, code, identifiers, comments and commit messages (decided 2026-11-06; replaces the earlier Montenegrin UI).
 - Keep changes small and focused. Say why before adding a new dependency.
 - Prefer editing existing modules over creating parallel ones.
