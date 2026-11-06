@@ -4,6 +4,7 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
+    "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -36,5 +37,8 @@
     "prettier": "^3.9.10",
     "supertest": "^7.3.1",
     "vitest": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

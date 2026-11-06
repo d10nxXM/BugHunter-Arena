@@ -163,3 +163,22 @@ describe('app: CORS', () => {
     expect(res.headers['access-control-allow-origin']).not.toBe('*');
   });
 });
+
+describe('app: GET /healthz (platform health check)', () => {
+  it('answers 200 { status: "ok" } with the security headers', async () => {
+    const res = await request(app).get('/healthz');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'ok' });
+    for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+      expect(res.headers[name]).toBe(value);
+    }
+  });
+
+  it('is not rate limited, so frequent platform checks never get 429', async () => {
+    for (let i = 0; i < 120; i += 1) {
+      const res = await request(app).get('/healthz');
+      expect(res.status).toBe(200);
+      expect(res.headers.ratelimit).toBeUndefined();
+    }
+  });
+});

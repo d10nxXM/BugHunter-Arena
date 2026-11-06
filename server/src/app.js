@@ -19,6 +19,11 @@ app.disable('x-powered-by');
 // from X-Forwarded-For, so the per-IP rate limiters see real clients.
 if (config.trustProxy !== undefined) app.set('trust proxy', config.trustProxy);
 app.use(securityHeaders);
+// Liveness check for the hosting platform and uptime pingers. Outside /api on
+// purpose: no rate limit (frequent checks must never get 429) and no request log.
+app.get('/healthz', (_req, res) => {
+  res.json({ status: 'ok' });
+});
 app.use(cors({ origin: config.allowedOrigin }));
 app.use(requestLogger);
 app.use(express.json({ limit: '50kb' }));
