@@ -1,16 +1,16 @@
 import { AppError } from '../lib/AppError.js';
 
-const GENERIC_MESSAGE = 'Neispravan unos.';
+const GENERIC_MESSAGE = 'Invalid input.';
 
 // Used for issues that have no message set on the schema itself, so Zod's
-// English defaults never reach the user. Schema-level messages still win.
+// default texts never reach the user. Schema-level messages still win.
 const genericError = () => GENERIC_MESSAGE;
 
 function messageFor(issue) {
   if (!issue) return GENERIC_MESSAGE;
   const field = issue.path.join('.');
   if (issue.message === GENERIC_MESSAGE && field) {
-    return `Neispravan unos u polju "${field}".`;
+    return `Invalid value in field "${field}".`;
   }
   return issue.message;
 }

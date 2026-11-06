@@ -36,22 +36,22 @@ afterEach(() => {
 describe('POST /api/challenges/:id/hints with the AI', () => {
   it('returns the AI hint with source "ai" and nothing hidden', async () => {
     state.complete.mockResolvedValue(
-      '{"hint":"Šta ako su svi brojevi u listi negativni?"}',
+      '{"hint":"What if every number in the list is negative?"}',
     );
     const res = await post({
       level: 2,
-      currentAnswer: { selectedLines: [2], explanation: 'moje objašnjenje' },
+      currentAnswer: { selectedLines: [2], explanation: 'my explanation' },
     });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       level: 2,
-      hint: 'Šta ako su svi brojevi u listi negativni?',
+      hint: 'What if every number in the list is negative?',
       source: 'ai',
     });
     for (const key of HIDDEN_KEYS) expect(res.body).not.toHaveProperty(key);
     expect(res.text).not.toContain('numbers[0]');
     const sent = JSON.stringify(state.complete.mock.calls[0][0]);
-    expect(sent).toContain('moje objašnjenje');
+    expect(sent).toContain('my explanation');
     expect(sent).not.toContain('numbers[0]');
   });
 
@@ -70,7 +70,7 @@ describe('POST /api/challenges/:id/hints with the AI', () => {
 
   it('uses the written hint when the AI hint reveals the solution', async () => {
     state.complete.mockResolvedValue(
-      '{"hint":"Postavi max_value = numbers[0] na početku."}',
+      '{"hint":"Set max_value = numbers[0] at the start."}',
     );
     const res = await post({ level: 3 });
     expect(res.body.source).toBe('written');

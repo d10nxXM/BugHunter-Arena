@@ -25,8 +25,8 @@ const AI_GUARD_MARGIN_MS = 1000;
 // GET /api/progress reads at most this many attempts of one user.
 const PROGRESS_MAX_ROWS = 1000;
 
-const NOT_FOUND_CHALLENGE = 'Izazov ne postoji.';
-const NOT_FOUND_USER = 'Korisnik ne postoji.';
+const NOT_FOUND_CHALLENGE = 'Challenge not found.';
+const NOT_FOUND_USER = 'User not found.';
 
 /**
  * Runs evaluateExplanation under a timeout. Any throw, rejection, hang or
@@ -132,7 +132,7 @@ export async function evaluateAttempt(
   { onAiCall, ...guardOptions } = {},
 ) {
   const row = await getAttemptForEvaluation(attemptId);
-  if (!row) throw new AppError(404, 'NOT_FOUND', 'Pokušaj ne postoji.');
+  if (!row) throw new AppError(404, 'NOT_FOUND', 'Attempt not found.');
   if (row.status === 'evaluated') throw alreadyEvaluated();
 
   const challenge = await getFullChallenge(row.challenge_id);
@@ -199,7 +199,7 @@ export async function evaluateAttempt(
 }
 
 function alreadyEvaluated() {
-  return new AppError(409, 'ALREADY_EVALUATED', 'Pokušaj je već ocijenjen.');
+  return new AppError(409, 'ALREADY_EVALUATED', 'Attempt already evaluated.');
 }
 
 /**

@@ -41,7 +41,7 @@ function setMode(mode) {
 beforeEach(() => {
   state.complete.mockReset();
   state.complete.mockResolvedValue(
-    '{"hint":"Šta ako su svi brojevi negativni?"}',
+    '{"hint":"What if every number is negative?"}',
   );
   state.db = createFakeSupabase({
     tables: { challenges: [loadFindMaxRow()] },

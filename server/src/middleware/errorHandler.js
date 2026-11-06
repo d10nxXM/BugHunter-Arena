@@ -1,7 +1,7 @@
 import { AppError } from '../lib/AppError.js';
 import { logger } from '../lib/logger.js';
 
-const INTERNAL_MESSAGE = 'Došlo je do greške. Pokušaj ponovo.';
+const INTERNAL_MESSAGE = 'Something went wrong. Please try again.';
 
 function send(res, status, code, message) {
   return res.status(status).json({ error: { code, message } });
@@ -14,7 +14,7 @@ function routeOf(req) {
 
 /** Turns an unmatched request into 404 NOT_FOUND. */
 export function notFound(req, res, next) {
-  next(new AppError(404, 'NOT_FOUND', 'Tražena adresa ne postoji.'));
+  next(new AppError(404, 'NOT_FOUND', 'The requested address does not exist.'));
 }
 
 /**
@@ -35,7 +35,7 @@ export function errorHandler(err, req, res, next) {
       res,
       413,
       'PAYLOAD_TOO_LARGE',
-      'Zahtjev je prevelik. Najveća dozvoljena veličina je 50 KB.',
+      'Request too large. The maximum size is 50 KB.',
     );
   }
 
@@ -46,7 +46,7 @@ export function errorHandler(err, req, res, next) {
       res,
       400,
       'VALIDATION_ERROR',
-      'Tijelo zahtjeva nije ispravan JSON.',
+      'The request body is not valid JSON.',
     );
   }
 

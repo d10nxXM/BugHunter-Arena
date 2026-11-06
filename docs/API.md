@@ -1,6 +1,6 @@
 # BugHunter Arena - API contract
 
-Base path `/api`. All bodies are JSON. The server runs on `http://localhost:3000` in development.
+Base path `/api`. All bodies are JSON. All user-facing text (challenge content, hints, feedback and error messages) is English. The server runs on `http://localhost:3000` in development.
 
 Grading happens in two calls: `POST /api/attempts` locks the answer and only then returns all tests and the reference solution; the browser runs them and sends results to `POST /api/attempts/:id/evaluation`, which returns the score.
 
@@ -41,10 +41,10 @@ For the hosting platform's health check and uptime pingers. It is outside `/api`
 [
   {
     "id": "find-max",
-    "title": "Najveći element liste",
+    "title": "Largest number in a list",
     "language": "python",
-    "difficulty": "lako",
-    "bugCategory": "Pogrešna inicijalizacija"
+    "difficulty": "easy",
+    "bugCategory": "Wrong initialization"
   }
 ]
 ```
@@ -56,11 +56,11 @@ Never includes `reference_solution`, `bug_lines`, `related_lines`, `bug_descript
 ```json
 {
   "id": "find-max",
-  "title": "Najveći element liste",
-  "description": "Funkcija find_max vraća najveći broj iz liste. Za praznu listu vraća None.",
+  "title": "Largest number in a list",
+  "description": "The function find_max returns the largest number in a list. For an empty list it returns None.",
   "language": "python",
-  "difficulty": "lako",
-  "bugCategory": "Pogrešna inicijalizacija",
+  "difficulty": "easy",
+  "bugCategory": "Wrong initialization",
   "functionName": "find_max",
   "code": "def find_max(numbers):\n    max_value = 0\n    for number in numbers:\n        if number > max_value:\n            max_value = number\n    return max_value",
   "visibleTests": [
@@ -82,7 +82,7 @@ Request:
 Response:
 
 ```json
-{ "level": 1, "hint": "Da li funkcija radi za svaku listu brojeva, ili samo za uobičajene?", "source": "written" }
+{ "level": 1, "hint": "Does the function work for every list of numbers, or only for typical ones?", "source": "written" }
 ```
 
 `level` must be an integer 1-3. Any other value, including `"1"` or `1.5`, returns `400 VALIDATION_ERROR`. An unknown challenge returns `404 NOT_FOUND`.
@@ -110,7 +110,7 @@ Request:
   "challengeId": "find-max",
   "userId": null,
   "selectedLines": [2],
-  "explanation": "max_value počinje od 0. Ako su svi brojevi negativni, nijedan nije veći od 0, pa funkcija vraća 0, a 0 nije u listi.",
+  "explanation": "max_value starts at 0. If every number is negative, none of them is greater than 0, so the function returns 0, and 0 is not in the list.",
   "edgeCase": { "args": [[-8, -3, -10]], "expected": -3 },
   "fixedCode": "def find_max(numbers):\n    if not numbers:\n        return None\n    max_value = numbers[0]\n    ...",
   "hintsUsed": 1,
@@ -184,11 +184,11 @@ Response `200 OK`:
   "feedback": {
     "is_correct": true,
     "explanation_quality": 8,
-    "detected_misconception": "Pretpostavka da lista uvijek sadrži bar jedan pozitivan broj.",
+    "detected_misconception": "Assuming the list always contains at least one positive number.",
     "needs_clarification": false,
     "hint": null,
-    "feedback": "Tačno si prepoznao da početna vrijednost 0 pravi problem kada su svi brojevi negativni. Dobro je što si to potvrdio testom [-8, -3, -10]. Za punu ocjenu nedostaje ponašanje za praznu listu.",
-    "practice_tip": "Kada tražiš najveći ili najmanji element, kreni od prvog elementa liste, a ne od proizvoljne konstante."
+    "feedback": "You correctly spotted that the starting value 0 causes a problem when every number is negative. Good job confirming it with the test [-8, -3, -10]. For full marks, also describe what happens with an empty list.",
+    "practice_tip": "When you look for the largest or smallest element, start from the first element of the list, not from an arbitrary constant."
   }
 }
 ```
@@ -200,7 +200,7 @@ Response `200 OK`:
 - `detected_misconception`: `null`
 - `needs_clarification`: `false`
 - `hint`: `null`
-- `feedback`: the challenge's `fallback_feedback`, or, if it is missing or blank, the generic text `Procjena bez AI-ja: objašnjenje je ocijenjeno prema ključnim pojmovima.`
+- `feedback`: the challenge's `fallback_feedback`, or, if it is missing or blank, the generic text `Assessed without AI: the explanation was scored by key terms.`
 - `practice_tip`: `null`
 
 Known weakness: two matched keyword groups without the cause group still give quality 7 and `is_correct: true`.
@@ -214,7 +214,7 @@ Known weakness: two matched keyword groups without the cause group still give qu
   "attempted": 4,
   "averageDurationSec": 212,
   "perChallenge": [{ "challengeId": "find-max", "bestScore": 89, "attempts": 2 }],
-  "weakCategories": [{ "category": "Pogrešna inicijalizacija", "misses": 2 }]
+  "weakCategories": [{ "category": "Wrong initialization", "misses": 2 }]
 }
 ```
 
@@ -319,7 +319,7 @@ The POST endpoints are not idempotent. A client that gets no response (timeout, 
 
 ## Errors
 
-Shape: `{ "error": { "code": "VALIDATION_ERROR", "message": "Objašnjenje mora imati najmanje 20 karaktera." } }`.
+Shape: `{ "error": { "code": "VALIDATION_ERROR", "message": "Explanation must be at least 20 characters." } }`.
 
 An unavailable AI service is not an error: the evaluation returns `200` with `feedbackSource: "fallback"`.
 

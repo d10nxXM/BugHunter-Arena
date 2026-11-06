@@ -78,7 +78,7 @@ describe('GET /api/challenges/:id', () => {
     const res = await request(app).get('/api/challenges/nope');
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('NOT_FOUND');
-    expect(res.body.error.message).toBeTypeOf('string');
+    expect(res.body.error.message).toBe('Challenge not found.');
   });
 
   it.each(['Bad_ID', 'UPPER', 'a'.repeat(65), 'has.dot'])(

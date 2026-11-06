@@ -3,48 +3,48 @@
     "evaluation": {
       "is_correct": true,
       "explanation_quality": 8,
-      "detected_misconception": "Pretpostavka da lista uvijek sadrži bar jedan pozitivan broj.",
+      "detected_misconception": "Assuming the list always contains at least one positive number.",
       "needs_clarification": false,
       "hint": null,
-      "feedback": "Tačno si prepoznao da početna vrijednost 0 pravi problem kada su svi brojevi negativni. Dobro je što si objasnio da funkcija tada vraća 0, koja nije u listi. Za punu ocjenu nedostaje ponašanje za praznu listu.",
-      "practice_tip": "Kada tražiš najveći ili najmanji element, kreni od prvog elementa liste, a ne od proizvoljne konstante."
+      "feedback": "You correctly spotted that the starting value 0 causes a problem when every number is negative. Good job explaining that the function then returns 0, which is not in the list. For full marks, also describe what happens with an empty list.",
+      "practice_tip": "When you look for the largest or smallest element, start from the first element of the list, not from an arbitrary constant."
     },
     "hints": [
-      "Da li funkcija radi za svaku listu brojeva, ili samo za uobičajene?",
-      "Šta funkcija vraća ako su svi brojevi u listi negativni?",
-      "Pogledaj početnu vrijednost promjenljive max_value."
+      "Does the function work for every list of numbers, or only for typical ones?",
+      "What does the function return if every number in the list is negative?",
+      "Look at the starting value of the variable max_value."
     ]
   },
   "remove-negatives": {
     "evaluation": {
       "is_correct": true,
       "explanation_quality": 8,
-      "detected_misconception": "Pretpostavka da je bezbjedno brisati elemente iz liste kroz koju petlja upravo prolazi.",
+      "detected_misconception": "Assuming it is safe to remove elements from the list the loop is currently iterating over.",
       "needs_clarification": false,
       "hint": null,
-      "feedback": "Tačno si prepoznao da numbers.remove unutar petlje pravi problem i da se zbog toga preskače sljedeći element. Dobar je primjer sa dva negativna broja jedan do drugog. Za punu ocjenu objasni i zašto se elementi pomjeraju ulijevo.",
-      "practice_tip": "Kada iz liste izbacuješ elemente, gradi novu listu sa onima koje zadržavaš, umjesto da mijenjaš listu kroz koju petlja prolazi."
+      "feedback": "You correctly spotted that numbers.remove inside the loop causes the problem and that the next element gets skipped because of it. The example with two negative numbers next to each other is a good one. For full marks, also explain why the elements shift to the left.",
+      "practice_tip": "When you drop elements from a list, build a new list with the ones you keep instead of changing the list the loop is iterating over."
     },
     "hints": [
-      "Da li funkcija radi za svaki raspored brojeva u listi, ili samo za neke?",
-      "Šta funkcija vraća za listu [-1, -2, 3], u kojoj su dva negativna broja jedan do drugog?",
-      "Pogledaj šta se dešava sa listom kroz koju petlja prolazi kada se pozove numbers.remove."
+      "Does the function work for every order of numbers in the list, or only for some?",
+      "What does the function return for the list [-1, -2, 3], where two negative numbers are next to each other?",
+      "Look at what happens to the list the loop is iterating over when numbers.remove is called."
     ]
   },
   "binary-search": {
     "evaluation": {
       "is_correct": true,
       "explanation_quality": 8,
-      "detected_misconception": "Pretpostavka da pretraga može stati čim low i high postanu jednaki.",
+      "detected_misconception": "Assuming the search can stop as soon as low and high become equal.",
       "needs_clarification": false,
       "hint": null,
-      "feedback": "Tačno si prepoznao da uslov while petlje prekida pretragu prerano. Dobro je što si naveo primjer sa traženim brojem na kraju liste. Za punu ocjenu objasni i šta se dešava sa listom od jednog elementa.",
-      "practice_tip": "Za svaku petlju provjeri šta se dešava na granici: kada ostane tačno jedan kandidat, da li ga petlja još provjerava?"
+      "feedback": "You correctly spotted that the while loop condition ends the search too early. Good job giving an example with the target at the end of the list. For full marks, also explain what happens with a list of one element.",
+      "practice_tip": "For every loop, check what happens at the boundary: when exactly one candidate is left, does the loop still check it?"
     },
     "hints": [
-      "Da li funkcija pronalazi svaki broj iz liste, bez obzira na to gdje se nalazi?",
-      "Šta funkcija vraća kada lista ima samo jedan element, i to baš traženi broj?",
-      "Pogledaj uslov while petlje: šta se dešava kada low i high postanu jednaki?"
+      "Does the function find every number in the list, no matter where it is?",
+      "What does the function return when the list has only one element, and it is exactly the number being searched for?",
+      "Look at the while loop condition: what happens when low and high become equal?"
     ]
   }
 }

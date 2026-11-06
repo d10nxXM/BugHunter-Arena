@@ -24,7 +24,7 @@ const entry = {
     detected_misconception: null,
     needs_clarification: false,
     hint: null,
-    feedback: 'Dobro.',
+    feedback: 'Good.',
     practice_tip: null,
   },
   hints: ['a', 'b', 'c'],

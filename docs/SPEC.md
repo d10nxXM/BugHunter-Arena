@@ -35,9 +35,9 @@ Hints never contain fixed code. The base hints are written in the challenge; the
 
 | Level | What it does | Example for find_max | Penalty |
 | --- | --- | --- | --- |
-| 1 | Points at the kind of input | "Da li funkcija radi za svaku listu brojeva, ili samo za uobičajene?" | -5 |
-| 2 | Names the edge case | "Šta funkcija vraća ako su svi brojevi u listi negativni?" | -5 |
-| 3 | Points at the code | "Pogledaj početnu vrijednost promjenljive max_value." | -10 |
+| 1 | Points at the kind of input | "Does the function work for every list of numbers, or only for typical ones?" | -5 |
+| 2 | Names the edge case | "What does the function return if every number in the list is negative?" | -5 |
+| 3 | Points at the code | "Look at the starting value of the variable max_value." | -10 |
 
 ## Functional requirements
 
@@ -82,36 +82,36 @@ Priority: **Must** = the core flow does not work without it; **Should** = MVP go
 | NFR-07 | Security | Request size and AI call limits | 50 KB per request; 100 API requests and 20 AI calls per IP per 10 min |
 | NFR-08 | Integrity | Solution, bug lines and hidden tests not in the browser before submit | Verified in DevTools |
 | NFR-09 | Usability | New user finishes a first challenge without instructions | Test user, < 10 min |
-| NFR-10 | Usability | Montenegrin UI, plain error messages | All messages translated |
+| NFR-10 | Usability | English UI, plain error messages | All messages in English |
 | NFR-11 | Compatibility | Current Chrome, Firefox, Edge on laptop and desktop | Checked on all three |
 | NFR-12 | Accessibility | Contrast, keyboard use, status not by color alone | Text contrast >= 4.5:1 |
 | NFR-13 | Maintainability | New challenge is a JSON file, no app code change | < 15 min per challenge |
 
 ## Bug categories
 
-The Montenegrin names are the exact `bug_category` values used in challenge files and API responses. All names below were confirmed by the user on 2026-11-05. A new category name needs the user's confirmation before a challenge uses it.
+The English names are the exact `bug_category` values used in challenge files and API responses. All names below were confirmed by the user on 2026-11-05 and translated to English with the user's approval on 2026-11-06. A new category name needs the user's confirmation before a challenge uses it.
 
 | Category | Status | Typical example |
 | --- | --- | --- |
-| Pogrešna inicijalizacija | Official (`find-max.json`) | Maximum starts at 0 instead of the first element |
-| Granični uslov | Official, no challenge yet | `<` instead of `<=` at the edge of a range |
-| Greška za jedan | Official (`binary-search.json`) | Loop stops one step early (off-by-one) |
-| Pogrešan operator | Official, no challenge yet | `//` instead of `/` |
-| Redoslijed uslova | Official, no challenge yet | General condition checked before the specific one |
-| Izmjena kolekcije tokom iteracije | Official (`remove-negatives.json`) | Removing from the list the loop walks over |
-| Podrazumijevano ponašanje funkcije | Official, no challenge yet | JavaScript `sort()` compares numbers as text |
+| Wrong initialization | Official (`find-max.json`) | Maximum starts at 0 instead of the first element |
+| Boundary condition | Official, no challenge yet | `<` instead of `<=` at the edge of a range |
+| Off-by-one error | Official (`binary-search.json`) | Loop stops one step early (off-by-one) |
+| Wrong operator | Official, no challenge yet | `//` instead of `/` |
+| Condition order | Official, no challenge yet | General condition checked before the specific one |
+| Modifying a collection while iterating | Official (`remove-negatives.json`) | Removing from the list the loop walks over |
+| Default function behavior | Official, no challenge yet | JavaScript `sort()` compares numbers as text |
 
 ## Challenge set
 
 | # | Challenge | Language | Category | Difficulty | Priority |
 | --- | --- | --- | --- | --- | --- |
-| 1 | find_max - largest element (demo) | Python | Pogrešna inicijalizacija | lako | Must |
-| 2 | remove_negatives | Python | Izmjena kolekcije tokom iteracije | srednje | Must |
-| 3 | binary_search | Python | Greška za jedan | teško | Must |
-| 4 | count_in_range | Python | Granični uslov | lako | Should |
-| 5 | average | Python | Pogrešan operator | lako | Should |
-| 6 | fizzbuzz | Python | Redoslijed uslova | lako | Should |
-| 7 | topThree | JavaScript | Podrazumijevano ponašanje funkcije | srednje | Could |
+| 1 | find_max - largest element (demo) | Python | Wrong initialization | easy | Must |
+| 2 | remove_negatives | Python | Modifying a collection while iterating | medium | Must |
+| 3 | binary_search | Python | Off-by-one error | hard | Must |
+| 4 | count_in_range | Python | Boundary condition | easy | Should |
+| 5 | average | Python | Wrong operator | easy | Should |
+| 6 | fizzbuzz | Python | Condition order | easy | Should |
+| 7 | topThree | JavaScript | Default function behavior | medium | Could |
 
 Challenges 1-3 are in `server/data/challenges/` (`find-max`, `remove-negatives`, `binary-search`).
 

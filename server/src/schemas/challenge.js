@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 // Mirrors the check constraints on the challenges table.
 export const LanguageSchema = z.enum(['python', 'javascript']);
-export const DifficultySchema = z.enum(['lako', 'srednje', 'teško']);
+export const DifficultySchema = z.enum(['easy', 'medium', 'hard']);
 
 const ID_PATTERN = /^[a-z0-9-]{1,64}$/;
 const ChallengeIdSchema = z.string().regex(ID_PATTERN);

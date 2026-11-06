@@ -18,12 +18,12 @@ const goodOutput = {
   detected_misconception: null,
   needs_clarification: false,
   hint: null,
-  feedback: 'Dobro objašnjenje.',
+  feedback: 'Good explanation.',
   practice_tip: null,
 };
 const context = () => ({
   challenge,
-  answer: { selectedLines: [2], explanation: 'Početna vrijednost 0.' },
+  answer: { selectedLines: [2], explanation: 'The starting value 0.' },
   testSummary: { testsPassed: 2, testsTotal: 4 },
 });
 
@@ -34,7 +34,7 @@ beforeEach(() => {
 
 describe('hint request contents (B1)', () => {
   it('contains no bug_description or other hidden field', async () => {
-    mocks.complete.mockResolvedValue('{"hint":"Probaj negativne brojeve."}');
+    mocks.complete.mockResolvedValue('{"hint":"Try negative numbers."}');
     await getHint({ challenge }, 2);
     const { user, system } = mocks.complete.mock.calls[0][0];
     const sent = user + system;
@@ -80,7 +80,7 @@ describe('revealsSolution (S2)', () => {
       code: 'x = 1\nreturn x',
       reference_solution: 'x = 1\n  \n):\nreturn x',
     };
-    expect(revealsSolution('x = 1 je početak', c)).toBe(false);
+    expect(revealsSolution('x = 1 is the start', c)).toBe(false);
     expect(revealsSolution('zagrade ): i prazno', c)).toBe(false);
   });
 });
@@ -123,7 +123,7 @@ describe('is_correct derivation (S3)', () => {
 
 describe('timeouts and test counts (S7)', () => {
   it('hint timeout is the smaller of 8 s and AI_TIMEOUT_MS', async () => {
-    mocks.complete.mockResolvedValue('{"hint":"Probaj negativne brojeve."}');
+    mocks.complete.mockResolvedValue('{"hint":"Try negative numbers."}');
     mocks.config.aiTimeoutMs = 3000;
     await getHint({ challenge }, 1);
     expect(mocks.complete.mock.calls[0][0].timeoutMs).toBe(3000);

@@ -1,15 +1,15 @@
 {
   "id": "remove-negatives",
-  "title": "Uklanjanje negativnih brojeva",
-  "description": "Funkcija remove_negatives vraća listu bez negativnih brojeva. Ostali brojevi ostaju u istom redoslijedu. Nula nije negativan broj.",
+  "title": "Remove negative numbers",
+  "description": "The function remove_negatives returns the list without negative numbers. The other numbers keep their order. Zero is not a negative number.",
   "language": "python",
   "function_name": "remove_negatives",
-  "difficulty": "srednje",
+  "difficulty": "medium",
   "code": "def remove_negatives(numbers):\n    for number in numbers:\n        if number < 0:\n            numbers.remove(number)\n    return numbers",
   "bug_lines": [4],
   "related_lines": [2],
-  "bug_category": "Izmjena kolekcije tokom iteracije",
-  "bug_description": "Poziv numbers.remove(number) briše element iz iste liste kroz koju petlja for prolazi. Preostali elementi se pomjeraju ulijevo, pa petlja preskače element odmah iza obrisanog. Kada su dva negativna broja jedan do drugog, drugi ostaje u rezultatu: [-1, -2, 3] vraća [-2, 3] umjesto [3].",
+  "bug_category": "Modifying a collection while iterating",
+  "bug_description": "The call numbers.remove(number) deletes an element from the same list the for loop is iterating over. The remaining elements shift left, so the loop skips the element right after the removed one. When two negative numbers are next to each other, the second one stays in the result: [-1, -2, 3] returns [-2, 3] instead of [3].",
   "reference_solution": "def remove_negatives(numbers):\n    result = []\n    for number in numbers:\n        if number >= 0:\n            result.append(number)\n    return result",
   "tests_json": [
     { "id": "t1", "args": [[1, -2, 3]], "expected": [1, 3], "visible": true, "failsOnOriginal": false },
@@ -19,14 +19,14 @@
     { "id": "t5", "args": [[]], "expected": [], "visible": false, "failsOnOriginal": false }
   ],
   "hints_json": [
-    "Da li funkcija radi za svaki raspored brojeva u listi, ili samo za neke?",
-    "Šta funkcija vraća za listu [-1, -2, 3], u kojoj su dva negativna broja jedan do drugog?",
-    "Pogledaj šta se dešava sa listom kroz koju petlja prolazi kada se pozove numbers.remove."
+    "Does the function work for every order of numbers in the list, or only for some?",
+    "What does the function return for the list [-1, -2, 3], where two negative numbers are next to each other?",
+    "Look at what happens to the list the loop is iterating over when numbers.remove is called."
   ],
   "keywords_json": [
-    ["uklanj", "remove", "briš", "brisan", "izmjen", "mijenja"],
-    ["jedan do drug", "uzastop", "susjed", "preskač", "presk"],
-    ["nov", "kopij", "comprehension", "append", "filtrir"]
+    ["remov", "delet", "modif", "mutat", "chang"],
+    ["next to each other", "adjacent", "consecutive", "in a row", "skip"],
+    ["new list", "copy", "comprehension", "append", "filter"]
   ],
-  "fallback_feedback": "Greška je u pozivu numbers.remove(number) unutar petlje koja prolazi kroz istu listu. Kada se element obriše, ostali se pomjere ulijevo i petlja preskoči sljedeći element, pa drugi od dva uzastopna negativna broja ostaje u rezultatu. Rezultat treba graditi u novoj listi umjesto brisanja iz liste kroz koju petlja prolazi."
+  "fallback_feedback": "The bug is the call numbers.remove(number) inside a loop that iterates over the same list. When an element is removed, the others shift left and the loop skips the next element, so the second of two consecutive negative numbers stays in the result. Build the result in a new list instead of removing items from the list the loop is iterating over."
 }

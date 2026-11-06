@@ -23,22 +23,22 @@ export function loadFindMaxRow() {
 export const API_LIST_EXAMPLE = [
   {
     id: 'find-max',
-    title: 'Najveći element liste',
+    title: 'Largest number in a list',
     language: 'python',
-    difficulty: 'lako',
-    bugCategory: 'Pogrešna inicijalizacija',
+    difficulty: 'easy',
+    bugCategory: 'Wrong initialization',
   },
 ];
 
 /** Copied from docs/API.md, GET /api/challenges/:id. */
 export const API_DETAIL_EXAMPLE = {
   id: 'find-max',
-  title: 'Najveći element liste',
+  title: 'Largest number in a list',
   description:
-    'Funkcija find_max vraća najveći broj iz liste. Za praznu listu vraća None.',
+    'The function find_max returns the largest number in a list. For an empty list it returns None.',
   language: 'python',
-  difficulty: 'lako',
-  bugCategory: 'Pogrešna inicijalizacija',
+  difficulty: 'easy',
+  bugCategory: 'Wrong initialization',
   functionName: 'find_max',
   code: 'def find_max(numbers):\n    max_value = 0\n    for number in numbers:\n        if number > max_value:\n            max_value = number\n    return max_value',
   visibleTests: [
@@ -115,9 +115,9 @@ export function hiddenValues(row) {
     row.bug_description,
     row.fallback_feedback,
     ...row.hints_json,
-    // Keyword stems that never appear in public fields. 'inicijaliz' is
-    // excluded on purpose: the public bugCategory is "Pogrešna inicijalizacija".
-    'prvi element',
+    // Keyword stems that never appear in public fields. 'initiali' is
+    // excluded on purpose: the public bugCategory is "Wrong initialization".
+    'first element',
   ];
 }
 
