@@ -71,6 +71,25 @@ Everything below is merged into `main` and pushed. Lint passes and all tests pas
 4. Run `e2e-runner` (Playwright) on the user journeys plus an auth journey before the demo.
 5. Wake the API before the demo. The Render free tier sleeps, and a cold start takes about 50 s.
 
+##
+
+ Three pages are still in Montenegrin and still use the old light design:
+   - Challenge page (/challenges/:id): "Zadatak", "Tvoj odgovor", "Predaj odgovor", "Zatraži savjet". It's the core of the app.
+   - Result page: "Rezultat", "Nazad".
+   - Dashboard: "Moj napredak".
+
+   Only the landing page, problems and the new account pages were converted to English and the dark design. These three were never on the list. That breaks the "everything in English" decision and makes the site look like two different apps. I'd fix this before tomorrow, ahead of the speed work.
+2. The header takes half the phone screen. On mobile the menu wraps onto three rows: the links, then "Leaderboard", then the buttons. A menu button (☰) or a single scrolling row would fix it.
+3. The code editor is narrow on phones. It's about 250 px wide, so longer code lines get cut off on the right. It still scrolls sideways inside the editor, so it works.
+
+Fine on mobile: landing, problems, login, signup and profile. They fit the screen and their text is English.
+
+I suggest this order for tonight:
+1. Convert the challenge, result and dashboard pages to English with the new dark design.
+2. Fix the mobile header.
+3. Do the speed fixes from before (cache the Python files, load Python earlier).
+
+
 ## Known follow-ups (not blocking the deploy)
 
 From the reviews of the accounts work:
