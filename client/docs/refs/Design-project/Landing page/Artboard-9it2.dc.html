@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BugHunter Arena – Landing</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#C9D4E3;text-decoration:none}a:hover{color:#FFFFFF}
+</style>
+</helmet>
+<div style="background: #0B0F14; color: #E6EDF6; font-family: Inter, system-ui, sans-serif; min-height: 100vh; width: 100%; overflow-x: hidden">
+
+  <!-- NAV -->
+  <header style="border-bottom: 1px solid #1C2532; background: #0B0F14">
+    <nav aria-label="Main" style="max-width: 1200px; margin: 0 auto; padding: 16px 24px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px">
+      <a href="#top" style="display: flex; align-items: center; gap: 10px; color: #FFFFFF">
+        <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1.9 1.9"></path><path d="M16 2l-1.9 1.9"></path><path d="M9 7.1V6a3 3 0 0 1 6 0v1.1"></path><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"></path><path d="M12 20v-9"></path><path d="M6.5 13H3"></path><path d="M21 13h-3.5"></path><path d="M6 9.5L3.5 8"></path><path d="M18 9.5L20.5 8"></path><path d="M6.5 17.5L4 19"></path><path d="M17.5 17.5L20 19"></path></svg>
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 19px; letter-spacing: -0.01em">BugHunter<span style="color: {{accent}}"> Arena</span></span>
+      </a>
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 28px; font-size: 15px; font-weight: 500">
+        <a href="#challenges">Challenges</a>
+        <a href="#arena">Arena</a>
+        <a href="#leaderboard">Leaderboard</a>
+        <a href="#ranks">Ranks</a>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px">
+        <a href="#login" style="font-size: 15px; font-weight: 500; padding: 12px 16px">Log in</a>
+        <a href="#signup" style="font-size: 15px; font-weight: 600; padding: 12px 20px; border-radius: 8px; background: {{accent}}; color: #06110A">Start hunting</a>
+      </div>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section id="top" style="background-image: radial-gradient(#1A2330 1px, transparent 1px); background-size: 28px 28px; border-bottom: 1px solid #1C2532">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 96px 24px 104px; display: flex; flex-wrap: wrap; align-items: center; gap: 64px">
+      <div style="flex: 1 1 460px; min-width: 0; display: flex; flex-direction: column; gap: 28px">
+        <div style="align-self: flex-start; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid #263243; border-radius: 999px; background: #10161F; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #A9B6C8">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: {{accent}}"></span>
+          new_season --hunt=ai_code
+        </div>
+        <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: clamp(42px, 6vw, 68px); line-height: 1.02; letter-spacing: -0.03em; color: #FFFFFF">AI writes the code.<br><span style="color: {{accent}}">You find the bugs.</span></h1>
+        <p style="margin: 0; font-size: 19px; line-height: 1.6; color: #A9B6C8; max-width: 520px">Hunt real flaws in AI-generated code: logic slips, security holes, race conditions, hallucinated APIs. Spot the bug, explain the fix, earn XP and climb the global ranks.</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 14px">
+          <a href="#signup" style="display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; padding: 15px 26px; border-radius: 10px; background: {{accent}}; color: #06110A">
+            Enter the Arena
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+          </a>
+          <a href="#challenges" style="font-size: 16px; font-weight: 600; padding: 15px 26px; border-radius: 10px; border: 1px solid #2E3B4E; background: #10161F; color: #E6EDF6">Browse challenges</a>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #8696AB">
+          <span style="padding: 6px 10px; border-radius: 6px; background: #121924; border: 1px solid #1F2937">Python</span>
+          <span style="padding: 6px 10px; border-radius: 6px; background: #121924; border: 1px solid #1F2937">JavaScript</span>
+          <span style="padding: 6px 10px; border-radius: 6px; background: #121924; border: 1px solid #1F2937">TypeScript</span>
+          <span style="padding: 6px 10px; border-radius: 6px; background: #121924; border: 1px solid #1F2937">Go</span>
+          <span style="padding: 6px 10px; border-radius: 6px; background: #121924; border: 1px solid #1F2937">Java</span>
+          <span style="padding: 6px 10px; border-radius: 6px; background: #121924; border: 1px solid #1F2937">Rust</span>
+          <span style="padding: 6px 10px; border-radius: 6px; background: #121924; border: 1px solid #1F2937">SQL</span>
+        </div>
+      </div>
+
+      <!-- Code panel -->
+      <div style="flex: 1 1 480px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+        <div style="border: 1px solid #243042; border-radius: 14px; background: #0F141C; overflow: hidden; box-shadow: 0 30px 80px rgba(0,0,0,0.5)">
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #1E2836; background: #121924">
+            <div style="display: flex; gap: 8px">
+              <span style="width: 11px; height: 11px; border-radius: 50%; background: #2A3546"></span>
+              <span style="width: 11px; height: 11px; border-radius: 50%; background: #2A3546"></span>
+              <span style="width: 11px; height: 11px; border-radius: 50%; background: #2A3546"></span>
+            </div>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #8696AB">paginate.py · AI-generated</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: #FFB547; padding: 3px 8px; border: 1px solid #5A4220; border-radius: 4px">EASY</span>
+          </div>
+          <div style="padding: 18px 0; font-family: 'JetBrains Mono', monospace; font-size: 14.5px; line-height: 1.85; overflow-x: auto">
+            <div style="display: flex; padding: 0 18px"><span style="width: 32px; color: #4A586B; flex: none">1</span><span><span style="color: #C792EA">def</span> <span style="color: #82AAFF">paginate</span>(items, page, size):</span></div>
+            <div style="display: flex; padding: 0 18px"><span style="width: 32px; color: #4A586B; flex: none">2</span><span style="color: #6F7F95">    # return one page of results</span></div>
+            <div style="display: flex; padding: 0 18px"><span style="width: 32px; color: #4A586B; flex: none">3</span><span>    start = page * size</span></div>
+            <div style="display: flex; align-items: center; padding: 0 18px 0 15px; background: #2A1E0C; border-left: 3px solid #FFB547"><span style="width: 32px; color: #FFB547; flex: none">4</span><span style="flex: 1">    end = start + size <span style="color: #FFB547; text-decoration: underline wavy #FFB547; text-underline-offset: 4px">+ 1</span></span><span style="font-size: 11px; font-weight: 700; color: #0B0F14; background: #FFB547; padding: 1px 7px; border-radius: 4px">BUG</span></div>
+            <div style="display: flex; padding: 0 18px"><span style="width: 32px; color: #4A586B; flex: none">5</span><span>    <span style="color: #C792EA">return</span> items[start:end]</span></div>
+            <div style="display: flex; padding: 0 18px"><span style="width: 32px; color: #4A586B; flex: none">6</span><span></span></div>
+            <div style="display: flex; padding: 0 18px"><span style="width: 32px; color: #4A586B; flex: none">7</span><span><span style="color: #82AAFF">print</span>(paginate(<span style="color: #F78C6C">list</span>(<span style="color: #82AAFF">range</span>(<span style="color: #F78C6C">10</span>)), <span style="color: #F78C6C">0</span>, <span style="color: #F78C6C">3</span>))</span></div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px; padding: 16px 18px; border: 1px solid #243042; border-radius: 12px; background: #10161F">
+          <div style="flex: none; width: 40px; height: 40px; border-radius: 10px; background: #13261A; display: flex; align-items: center; justify-content: center">
+            <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+          </div>
+          <div style="flex: 1; min-width: 0">
+            <div style="font-weight: 600; font-size: 15px; color: #FFFFFF">Bug confirmed: off-by-one on line 4</div>
+            <div style="font-size: 14px; color: #8D9BB0; margin-top: 2px">Slice returns size + 1 items. Fix: end = start + size</div>
+          </div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 18px; color: {{accent}}">+120 XP</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section style="max-width: 1200px; margin: 0 auto; padding: 104px 24px">
+    <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 56px">
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: {{accent}}">// how_it_works</span>
+      <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: clamp(32px, 4vw, 46px); letter-spacing: -0.02em; color: #FFFFFF">Read. Hunt. Patch. Climb.</h2>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px">
+      <div style="padding: 28px; border: 1px solid #1F2937; border-radius: 14px; background: #0F141C; display: flex; flex-direction: column; gap: 14px">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #6F7F95">01</span>
+        <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 18l6-6-6-6"></path><path d="M8 6l-6 6 6 6"></path></svg>
+        <h3 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 21px; color: #FFFFFF">Pick a snippet</h3>
+        <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #93A2B6">Every challenge is code written by an AI model, with one or more real bugs hiding inside.</p>
+      </div>
+      <div style="padding: 28px; border: 1px solid #1F2937; border-radius: 14px; background: #0F141C; display: flex; flex-direction: column; gap: 14px">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #6F7F95">02</span>
+        <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path><path d="M11 8v6"></path><path d="M8 11h6"></path></svg>
+        <h3 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 21px; color: #FFFFFF">Flag the bug</h3>
+        <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #93A2B6">Mark the faulty line, pick the bug class and explain what breaks. Vague guesses don’t score.</p>
+      </div>
+      <div style="padding: 28px; border: 1px solid #1F2937; border-radius: 14px; background: #0F141C; display: flex; flex-direction: column; gap: 14px">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #6F7F95">03</span>
+        <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"></path></svg>
+        <h3 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 21px; color: #FFFFFF">Submit the patch</h3>
+        <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #93A2B6">Write the fix. Hidden test cases run against it, so your patch has to actually work.</p>
+      </div>
+      <div style="padding: 28px; border: 1px solid #1F2937; border-radius: 14px; background: #0F141C; display: flex; flex-direction: column; gap: 14px">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #6F7F95">04</span>
+        <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"></path><path d="M14 7h7v7"></path></svg>
+        <h3 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 21px; color: #FFFFFF">Earn XP &amp; rank up</h3>
+        <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #93A2B6">Harder bugs pay more. First bloods earn bonuses. Your rank shows on your public hunter profile.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHALLENGES TABLE -->
+  <section id="challenges" style="background: #0D1218; border-top: 1px solid #1C2532; border-bottom: 1px solid #1C2532">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 104px 24px">
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 36px">
+        <div style="display: flex; flex-direction: column; gap: 14px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: {{accent}}">// challenges</span>
+          <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: clamp(32px, 4vw, 46px); letter-spacing: -0.02em; color: #FFFFFF">A growing library of broken code</h2>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <button type="button" style="font: 500 14px Inter, sans-serif; padding: 10px 16px; min-height: 44px; border-radius: 8px; border: 1px solid {{accent}}; background: #13261A; color: #FFFFFF; cursor: pointer">All</button>
+          <button type="button" style="font: 500 14px Inter, sans-serif; padding: 10px 16px; min-height: 44px; border-radius: 8px; border: 1px solid #263243; background: #10161F; color: #A9B6C8; cursor: pointer">Security</button>
+          <button type="button" style="font: 500 14px Inter, sans-serif; padding: 10px 16px; min-height: 44px; border-radius: 8px; border: 1px solid #263243; background: #10161F; color: #A9B6C8; cursor: pointer">Logic</button>
+          <button type="button" style="font: 500 14px Inter, sans-serif; padding: 10px 16px; min-height: 44px; border-radius: 8px; border: 1px solid #263243; background: #10161F; color: #A9B6C8; cursor: pointer">Concurrency</button>
+          <button type="button" style="font: 500 14px Inter, sans-serif; padding: 10px 16px; min-height: 44px; border-radius: 8px; border: 1px solid #263243; background: #10161F; color: #A9B6C8; cursor: pointer">Hallucinated APIs</button>
+        </div>
+      </div>
+      <div style="border: 1px solid #1F2937; border-radius: 14px; background: #0F141C; overflow-x: auto">
+        <table style="width: 100%; min-width: 720px; border-collapse: collapse; font-size: 15px">
+          <thead>
+            <tr style="text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: #7D8CA1">
+              <th style="padding: 16px 20px; font-weight: 500; border-bottom: 1px solid #1F2937; width: 56px">Status</th>
+              <th style="padding: 16px 20px; font-weight: 500; border-bottom: 1px solid #1F2937">Challenge</th>
+              <th style="padding: 16px 20px; font-weight: 500; border-bottom: 1px solid #1F2937">Language</th>
+              <th style="padding: 16px 20px; font-weight: 500; border-bottom: 1px solid #1F2937">Bug class</th>
+              <th style="padding: 16px 20px; font-weight: 500; border-bottom: 1px solid #1F2937">Difficulty</th>
+              <th style="padding: 16px 20px; font-weight: 500; border-bottom: 1px solid #1F2937; text-align: right">Reward</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C"><svg role="img" aria-label="Solved" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C"><a href="#c1" style="font-weight: 600; color: #FFFFFF">Leaky Pagination</a></td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #A9B6C8">Python</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; color: #A9B6C8">Logic</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; font-weight: 600; color: #6EE7A0">Easy</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; text-align: right; font-family: 'JetBrains Mono', monospace; color: #E6EDF6">120 XP</td>
+            </tr>
+            <tr>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C"><span style="display: block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #3A475A"></span></td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C"><a href="#c2" style="font-weight: 600; color: #FFFFFF">Trust Me, I Sanitized It</a></td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #A9B6C8">JavaScript</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; color: #A9B6C8">Security · XSS</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; font-weight: 600; color: #FFB547">Medium</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; text-align: right; font-family: 'JetBrains Mono', monospace; color: #E6EDF6">300 XP</td>
+            </tr>
+            <tr>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C"><span style="display: block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #3A475A"></span></td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C"><a href="#c3" style="font-weight: 600; color: #FFFFFF">Race to the Wallet</a></td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #A9B6C8">Go</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; color: #A9B6C8">Concurrency</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; font-weight: 600; color: #FF7A7A">Hard</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; text-align: right; font-family: 'JetBrains Mono', monospace; color: #E6EDF6">650 XP</td>
+            </tr>
+            <tr>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C"><svg role="img" aria-label="Solved" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C"><a href="#c4" style="font-weight: 600; color: #FFFFFF">The Phantom Import</a></td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #A9B6C8">TypeScript</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; color: #A9B6C8">Hallucinated API</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; font-weight: 600; color: #6EE7A0">Easy</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; text-align: right; font-family: 'JetBrains Mono', monospace; color: #E6EDF6">100 XP</td>
+            </tr>
+            <tr>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C"><span style="display: block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #3A475A"></span></td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C"><a href="#c5" style="font-weight: 600; color: #FFFFFF">Quadratic Surprise</a></td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #A9B6C8">Java</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; color: #A9B6C8">Performance</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; font-weight: 600; color: #FFB547">Medium</td>
+              <td style="padding: 16px 20px; border-bottom: 1px solid #18202C; text-align: right; font-family: 'JetBrains Mono', monospace; color: #E6EDF6">280 XP</td>
+            </tr>
+            <tr>
+              <td style="padding: 16px 20px"><span style="display: block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #3A475A"></span></td>
+              <td style="padding: 16px 20px"><a href="#c6" style="font-weight: 600; color: #FFFFFF">DROP TABLE Feelings</a></td>
+              <td style="padding: 16px 20px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #A9B6C8">SQL</td>
+              <td style="padding: 16px 20px; color: #A9B6C8">Security · Injection</td>
+              <td style="padding: 16px 20px; font-weight: 600; color: #FF7A7A">Hard</td>
+              <td style="padding: 16px 20px; text-align: right; font-family: 'JetBrains Mono', monospace; color: #E6EDF6">700 XP</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top: 24px; display: flex; justify-content: center">
+        <a href="#all" style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; padding: 12px 18px; color: {{accent}}">View all challenges <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARENA + LEADERBOARD -->
+  <section id="arena" style="max-width: 1200px; margin: 0 auto; padding: 104px 24px">
+    <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 56px">
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: {{accent}}">// arena</span>
+      <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: clamp(32px, 4vw, 46px); letter-spacing: -0.02em; color: #FFFFFF">Hunt solo, or go head to head</h2>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 20px">
+      <div style="flex: 1 1 520px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px">
+        <div style="padding: 28px; border: 1px solid #1F2937; border-radius: 14px; background: #0F141C; display: flex; flex-direction: column; gap: 12px">
+          <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFB547" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"></path><path d="M13 19l6-6"></path><path d="M16 16l4 4"></path><path d="M19 21l2-2"></path><path d="M9.5 6.5L21 18v3h-3"></path></svg>
+          <h3 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 21px; color: #FFFFFF">1v1 Duels</h3>
+          <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #93A2B6">Same snippet, same clock. The first valid bug report with a working patch takes the round.</p>
+        </div>
+        <div style="padding: 28px; border: 1px solid #1F2937; border-radius: 14px; background: #0F141C; display: flex; flex-direction: column; gap: 12px">
+          <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFB547" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M9 2h6"></path></svg>
+          <h3 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 21px; color: #FFFFFF">Weekly Hunts</h3>
+          <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #93A2B6">Timed tournaments with a fresh set of AI-written services every week. Top hunters earn season badges.</p>
+        </div>
+        <div style="padding: 28px; border: 1px solid #1F2937; border-radius: 14px; background: #0F141C; display: flex; flex-direction: column; gap: 12px">
+          <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFB547" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.9"></path><path d="M16 3.1a4 4 0 0 1 0 7.8"></path></svg>
+          <h3 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 21px; color: #FFFFFF">Team Raids</h3>
+          <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #93A2B6">Squad up with friends or classmates and clear a whole AI-built codebase together.</p>
+        </div>
+        <div style="padding: 28px; border: 1px solid #1F2937; border-radius: 14px; background: #0F141C; display: flex; flex-direction: column; gap: 12px">
+          <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFB547" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          <h3 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 21px; color: #FFFFFF">Learning Paths</h3>
+          <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #93A2B6">Guided tracks that teach the bug patterns AI models get wrong most, from basics to exploits.</p>
+        </div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div id="leaderboard" style="flex: 1 1 360px; min-width: 0; border: 1px solid #243042; border-radius: 14px; background: #0F141C; overflow: hidden">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 20px 22px; border-bottom: 1px solid #1F2937">
+          <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 18px; color: #FFFFFF">Top hunters</span>
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #8696AB">this_season</span>
+        </div>
+        <ol style="list-style: none; margin: 0; padding: 8px 0">
+          <li style="display: flex; align-items: center; gap: 14px; padding: 12px 22px">
+            <span style="width: 22px; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #FFB547">1</span>
+            <span style="width: 34px; height: 34px; border-radius: 8px; background: #2A1E0C; color: #FFB547; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">NP</span>
+            <span style="flex: 1; font-weight: 600; color: #FFFFFF">null_pointer</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #E6EDF6">[XP]</span>
+          </li>
+          <li style="display: flex; align-items: center; gap: 14px; padding: 12px 22px">
+            <span style="width: 22px; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #C9D4E3">2</span>
+            <span style="width: 34px; height: 34px; border-radius: 8px; background: #1C2532; color: #C9D4E3; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">SS</span>
+            <span style="flex: 1; font-weight: 600; color: #FFFFFF">segfault_sam</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #E6EDF6">[XP]</span>
+          </li>
+          <li style="display: flex; align-items: center; gap: 14px; padding: 12px 22px">
+            <span style="width: 22px; font-family: 'JetBrains Mono', monospace; font-weight: 700; color: #E0A57A">3</span>
+            <span style="width: 34px; height: 34px; border-radius: 8px; background: #2A1C14; color: #E0A57A; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">OB</span>
+            <span style="flex: 1; font-weight: 600; color: #FFFFFF">off_by_one</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #E6EDF6">[XP]</span>
+          </li>
+          <li style="display: flex; align-items: center; gap: 14px; padding: 12px 22px">
+            <span style="width: 22px; font-family: 'JetBrains Mono', monospace; color: #7D8CA1">4</span>
+            <span style="width: 34px; height: 34px; border-radius: 8px; background: #161E29; color: #A9B6C8; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">RC</span>
+            <span style="flex: 1; font-weight: 500; color: #C9D4E3">race_condition</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #A9B6C8">[XP]</span>
+          </li>
+          <li style="display: flex; align-items: center; gap: 14px; padding: 12px 22px">
+            <span style="width: 22px; font-family: 'JetBrains Mono', monospace; color: #7D8CA1">5</span>
+            <span style="width: 34px; height: 34px; border-radius: 8px; background: #161E29; color: #A9B6C8; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">HX</span>
+            <span style="flex: 1; font-weight: 500; color: #C9D4E3">heap_hex</span>
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #A9B6C8">[XP]</span>
+          </li>
+        </ol>
+        <div style="padding: 14px 22px 20px; border-top: 1px solid #1F2937">
+          <a href="#leaderboard-full" style="font-weight: 600; font-size: 14px; color: {{accent}}">Full leaderboard →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RANKS -->
+  <section id="ranks" style="background: #0D1218; border-top: 1px solid #1C2532; border-bottom: 1px solid #1C2532">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 104px 24px">
+      <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 48px">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: {{accent}}">// ranks</span>
+        <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: clamp(32px, 4vw, 46px); letter-spacing: -0.02em; color: #FFFFFF">From larva to legend</h2>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px">
+        <div style="padding: 24px; border: 1px solid #1F2937; border-radius: 12px; background: #0F141C; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7D8CA1">TIER 1</span>
+          <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; color: #C9D4E3">Larva</span>
+          <div style="height: 6px; border-radius: 3px; background: #1C2532"><div style="width: 25%; height: 6px; border-radius: 3px; background: #5B6B80"></div></div>
+          <span style="font-size: 14px; color: #8D9BB0">Your first squashed bugs.</span>
+        </div>
+        <div style="padding: 24px; border: 1px solid #1F2937; border-radius: 12px; background: #0F141C; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7D8CA1">TIER 2</span>
+          <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; color: #6EE7A0">Hunter</span>
+          <div style="height: 6px; border-radius: 3px; background: #1C2532"><div style="width: 50%; height: 6px; border-radius: 3px; background: #6EE7A0"></div></div>
+          <span style="font-size: 14px; color: #8D9BB0">Reliable on logic and edge cases.</span>
+        </div>
+        <div style="padding: 24px; border: 1px solid #1F2937; border-radius: 12px; background: #0F141C; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7D8CA1">TIER 3</span>
+          <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; color: #FFB547">Exterminator</span>
+          <div style="height: 6px; border-radius: 3px; background: #1C2532"><div style="width: 75%; height: 6px; border-radius: 3px; background: #FFB547"></div></div>
+          <span style="font-size: 14px; color: #8D9BB0">Security and concurrency specialist.</span>
+        </div>
+        <div style="padding: 24px; border: 1px solid #5A4220; border-radius: 12px; background: #17130C; display: flex; flex-direction: column; gap: 10px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #C9A46A">TIER 4</span>
+          <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 22px; color: #FFFFFF">Arena Legend</span>
+          <div style="height: 6px; border-radius: 3px; background: #2A2215"><div style="width: 100%; height: 6px; border-radius: 3px; background: #FF7A7A"></div></div>
+          <span style="font-size: 14px; color: #B5A58C">No AI bug survives you.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section style="max-width: 1200px; margin: 0 auto; padding: 112px 24px">
+    <div style="border: 1px solid #243042; border-radius: 20px; background-color: #0F141C; background-image: radial-gradient(#1A2330 1px, transparent 1px); background-size: 24px 24px; padding: 72px 32px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 24px">
+      <span style="font-family: 'JetBrains Mono', monospace; font-size: 15px; color: {{accent}}">$ ./start_hunt.sh</span>
+      <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: clamp(34px, 5vw, 56px); letter-spacing: -0.03em; line-height: 1.05; color: #FFFFFF; max-width: 760px">The AI shipped it. Can you break it?</h2>
+      <p style="margin: 0; font-size: 18px; line-height: 1.6; color: #A9B6C8; max-width: 560px">Create a free account and solve your first challenge in under five minutes.</p>
+      <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 14px">
+        <a href="#signup" style="font-size: 16px; font-weight: 600; padding: 15px 28px; border-radius: 10px; background: {{accent}}; color: #06110A">Create free account</a>
+        <a href="#github" style="display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; padding: 15px 26px; border-radius: 10px; border: 1px solid #2E3B4E; background: #10161F; color: #E6EDF6">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.9a3.4 3.4 0 0 0-.9-2.6c3.1-.4 6.4-1.5 6.4-7a5.4 5.4 0 0 0-1.5-3.8 5 5 0 0 0-.1-3.8s-1.2-.4-3.9 1.5a13.4 13.4 0 0 0-7 0C6.3 1.5 5.1 1.9 5.1 1.9a5 5 0 0 0-.1 3.8A5.4 5.4 0 0 0 3.5 9.5c0 5.4 3.3 6.6 6.4 7a3.4 3.4 0 0 0-.9 2.6V22"></path></svg>
+          Sign up with GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer style="border-top: 1px solid #1C2532">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 48px 24px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 32px">
+      <div style="display: flex; flex-direction: column; gap: 12px; max-width: 300px">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px; color: #FFFFFF">BugHunter<span style="color: {{accent}}"> Arena</span></span>
+        <span style="font-size: 14px; line-height: 1.6; color: #8D9BB0">Train your eye on the bugs AI leaves behind.</span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 56px; font-size: 14px">
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7D8CA1">PLATFORM</span>
+          <a href="#challenges">Challenges</a>
+          <a href="#arena">Arena</a>
+          <a href="#leaderboard">Leaderboard</a>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7D8CA1">COMMUNITY</span>
+          <a href="#discord">Discord</a>
+          <a href="#github">GitHub</a>
+          <a href="#blog">Blog</a>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7D8CA1">COMPANY</span>
+          <a href="#about">About</a>
+          <a href="#terms">Terms</a>
+          <a href="#privacy">Privacy</a>
+        </div>
+      </div>
+    </div>
+    <div style="max-width: 1200px; margin: 0 auto; padding: 20px 24px 32px; border-top: 1px solid #161E29; font-size: 13px; color: #7D8CA1">© 2026 BugHunter Arena</div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#5EEA8C","options":["#5EEA8C","#38BDF8","#FFB547","#C084FC"]},"$preview":{"width":1440,"height":4400}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { accent: this.props.accent ?? '#5EEA8C' };
+  }
+}
+</script>
+</body>
+</html>

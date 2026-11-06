@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BugHunter Arena – Create account</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#C9D4E3;text-decoration:none}a:hover{color:#FFFFFF}
+</style>
+</helmet>
+<div style="background: #0B0F14; color: #E6EDF6; font-family: Inter, system-ui, sans-serif; min-height: 100vh; display: flex; flex-wrap: wrap">
+
+  <!-- Form side -->
+  <main style="flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; padding: 40px 24px 56px; gap: 40px">
+    <a href="Artboard-9it2.dc.html" style="align-self: flex-start; margin-left: max(0px, calc(50% - 220px)); display: flex; align-items: center; gap: 10px; color: #FFFFFF">
+      <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1.9 1.9"></path><path d="M16 2l-1.9 1.9"></path><path d="M9 7.1V6a3 3 0 0 1 6 0v1.1"></path><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"></path><path d="M12 20v-9"></path><path d="M6.5 13H3"></path><path d="M21 13h-3.5"></path><path d="M6 9.5L3.5 8"></path><path d="M18 9.5L20.5 8"></path><path d="M6.5 17.5L4 19"></path><path d="M17.5 17.5L20 19"></path></svg>
+      <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 19px">BugHunter<span style="color: {{accent}}"> Arena</span></span>
+    </a>
+    <form style="width: 100%; max-width: 440px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 32px; letter-spacing: -0.02em; color: #FFFFFF">Create your hunter account</h1>
+        <p style="margin: 0; font-size: 15px; color: #93A2B6">Already hunting? <a href="Login.dc.html" style="color: {{accent}}; font-weight: 600">Log in</a></p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+        <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; border-radius: 10px; border: 1px solid #2E3B4E; background: #10161F; color: #E6EDF6; font: 600 15px Inter, sans-serif; cursor: pointer">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.9a3.4 3.4 0 0 0-.9-2.6c3.1-.4 6.4-1.5 6.4-7a5.4 5.4 0 0 0-1.5-3.8 5 5 0 0 0-.1-3.8s-1.2-.4-3.9 1.5a13.4 13.4 0 0 0-7 0C6.3 1.5 5.1 1.9 5.1 1.9a5 5 0 0 0-.1 3.8A5.4 5.4 0 0 0 3.5 9.5c0 5.4 3.3 6.6 6.4 7a3.4 3.4 0 0 0-.9 2.6V22"></path></svg>
+          GitHub
+        </button>
+        <button type="button" style="display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; border-radius: 10px; border: 1px solid #2E3B4E; background: #10161F; color: #E6EDF6; font: 600 15px Inter, sans-serif; cursor: pointer">
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M21 12h-9"></path></svg>
+          Google
+        </button>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #7D8CA1">
+        <span style="flex: 1; height: 1px; background: #1F2937"></span>or with email<span style="flex: 1; height: 1px; background: #1F2937"></span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="su-handle" style="font-size: 14px; font-weight: 500; color: #C9D4E3">Hunter handle</label>
+        <div style="display: flex; align-items: center; min-height: 48px; border-radius: 10px; border: 1px solid #2E3B4E; background: #0F141C; padding-left: 14px">
+          <span style="font-family: 'JetBrains Mono', monospace; color: #7D8CA1; font-size: 15px">@</span>
+          <input id="su-handle" type="text" placeholder="null_pointer" style="flex: 1; min-width: 0; min-height: 46px; padding: 0 14px 0 4px; border: 0; background: transparent; color: #FFFFFF; font: 400 15px 'JetBrains Mono', monospace; outline-color: {{accent}}">
+        </div>
+        <span style="font-size: 13px; color: #8696AB">Shown on leaderboards. Letters, numbers and underscores.</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="su-email" style="font-size: 14px; font-weight: 500; color: #C9D4E3">Email</label>
+        <input id="su-email" type="email" placeholder="you@example.com" style="min-height: 48px; box-sizing: border-box; padding: 0 14px; border-radius: 10px; border: 1px solid #2E3B4E; background: #0F141C; color: #FFFFFF; font: 400 15px Inter, sans-serif; outline-color: {{accent}}">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <label for="su-pass" style="font-size: 14px; font-weight: 500; color: #C9D4E3">Password</label>
+        <input id="su-pass" type="password" placeholder="At least 10 characters" style="min-height: 48px; box-sizing: border-box; padding: 0 14px; border-radius: 10px; border: 1px solid #2E3B4E; background: #0F141C; color: #FFFFFF; font: 400 15px Inter, sans-serif; outline-color: {{accent}}">
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+          <span style="height: 4px; border-radius: 2px; background: {{accent}}"></span>
+          <span style="height: 4px; border-radius: 2px; background: {{accent}}"></span>
+          <span style="height: 4px; border-radius: 2px; background: #243042"></span>
+          <span style="height: 4px; border-radius: 2px; background: #243042"></span>
+        </div>
+      </div>
+
+      <fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 10px">
+        <legend style="font-size: 14px; font-weight: 500; color: #C9D4E3; margin-bottom: 10px">Your main language (you can change it later)</legend>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <sc-for list="{{langs}}" as="l" hint-placeholder-count="6">
+            <sc-if value="{{l.on}}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{l.pick}}" style="min-height: 44px; padding: 0 14px; border-radius: 8px; cursor: pointer; font: 500 14px 'JetBrains Mono', monospace; border: 1px solid {{accent}}; background: #13261A; color: #FFFFFF">{{l.name}}</button>
+            </sc-if>
+            <sc-if value="{{l.off}}" hint-placeholder-val="{{ true }}">
+              <button type="button" onClick="{{l.pick}}" style="min-height: 44px; padding: 0 14px; border-radius: 8px; cursor: pointer; font: 500 14px 'JetBrains Mono', monospace; border: 1px solid #263243; background: #10161F; color: #A9B6C8">{{l.name}}</button>
+            </sc-if>
+          </sc-for>
+        </div>
+      </fieldset>
+
+      <label style="display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.5; color: #A9B6C8">
+        <input type="checkbox" style="width: 18px; height: 18px; margin-top: 2px; accent-color: {{accent}}">
+        <span>I agree to the <a href="#terms" style="color: #E6EDF6; text-decoration: underline">Terms</a> and the <a href="#rules" style="color: #E6EDF6; text-decoration: underline">Fair Hunt rules</a> (no sharing solutions).</span>
+      </label>
+      <a href="Dashboard.dc.html" style="display: flex; align-items: center; justify-content: center; min-height: 50px; border-radius: 10px; background: {{accent}}; color: #06110A; font-weight: 600; font-size: 16px">Create account</a>
+    </form>
+  </main>
+
+  <!-- Perks side -->
+  <aside style="flex: 1 1 440px; min-width: 0; background-color: #0D1218; background-image: radial-gradient(#1A2330 1px, transparent 1px); background-size: 28px 28px; border-left: 1px solid #1C2532; padding: 56px 48px; display: flex; flex-direction: column; justify-content: center; gap: 28px">
+    <span style="font-family: 'JetBrains Mono', monospace; font-size: 14px; color: {{accent}}">// what_you_get</span>
+    <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 36px; line-height: 1.1; letter-spacing: -0.02em; color: #FFFFFF; max-width: 420px">Free to start. Hard to master.</h2>
+    <div style="display: flex; flex-direction: column; gap: 14px; max-width: 440px">
+      <div style="display: flex; gap: 14px; padding: 18px; border: 1px solid #1F2937; border-radius: 12px; background: #0F141C">
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 2px"><path d="M16 18l6-6-6-6"></path><path d="M8 6l-6 6 6 6"></path></svg>
+        <div><div style="font-weight: 600; color: #FFFFFF">Free challenges</div><div style="font-size: 14px; line-height: 1.5; color: #93A2B6; margin-top: 4px">Easy to hard snippets across seven languages.</div></div>
+      </div>
+      <div style="display: flex; gap: 14px; padding: 18px; border: 1px solid #1F2937; border-radius: 12px; background: #0F141C">
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 2px"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"></path><path d="M13 19l6-6"></path><path d="M16 16l4 4"></path><path d="M9.5 6.5L21 18v3h-3"></path></svg>
+        <div><div style="font-weight: 600; color: #FFFFFF">Duels &amp; weekly hunts</div><div style="font-size: 14px; line-height: 1.5; color: #93A2B6; margin-top: 4px">Compete live and earn season badges.</div></div>
+      </div>
+      <div style="display: flex; gap: 14px; padding: 18px; border: 1px solid #1F2937; border-radius: 12px; background: #0F141C">
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 2px"><circle cx="12" cy="8" r="5"></circle><path d="M8.5 12.5L7 22l5-3 5 3-1.5-9.5"></path></svg>
+        <div><div style="font-weight: 600; color: #FFFFFF">Public hunter profile</div><div style="font-size: 14px; line-height: 1.5; color: #93A2B6; margin-top: 4px">Show your rank and solved bugs to recruiters.</div></div>
+      </div>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#5EEA8C","options":["#5EEA8C","#38BDF8","#FFB547","#C084FC"]},"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { lang: 'Python' }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#5EEA8C';
+    const names = ['Python', 'JavaScript', 'TypeScript', 'Go', 'Java', 'Rust', 'SQL'];
+    const langs = names.map((n) => {
+      const on = this.state.lang === n;
+      return { name: n, on, off: !on, pick: () => this.setState({ lang: n }) };
+    });
+    return { accent, langs };
+  }
+}
+</script>
+</body>
+</html>

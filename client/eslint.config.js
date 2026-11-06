@@ -8,7 +8,7 @@ import prettier from 'eslint-config-prettier';
 // eslint-plugin-jsx-a11y is deferred: its peerDependencies (eslint ^3 - ^9) do not accept ESLint 10.
 
 export default defineConfig([
-  globalIgnores(['dist', 'public/pyodide']),
+  globalIgnores(['dist', 'public/pyodide', 'docs/refs']),
   {
     files: ['**/*.{js,jsx,mjs}'],
     extends: [

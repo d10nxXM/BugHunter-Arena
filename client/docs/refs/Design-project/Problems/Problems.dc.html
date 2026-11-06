@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>BugHunter Arena – Problems</title>
+<script src="./vendor/react.js"></script>
+<script src="./vendor/react-dom.js"></script>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0B0F14}
+a{color:#A9B6C8;text-decoration:none}a:hover{color:#FFFFFF}
+</style>
+</helmet>
+<div style="background: #0B0F14; color: #E6EDF6; font-family: Inter, system-ui, sans-serif; min-height: 100vh">
+
+  <!-- App nav -->
+  <header style="border-bottom: 1px solid #1C2532; background: #0D1218">
+    <nav aria-label="App" style="max-width: 1320px; margin: 0 auto; padding: 12px 24px; display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px">
+      <a href="Artboard-9it2.dc.html" style="display: flex; align-items: center; gap: 10px; color: #FFFFFF">
+        <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2l1.9 1.9"></path><path d="M16 2l-1.9 1.9"></path><path d="M9 7.1V6a3 3 0 0 1 6 0v1.1"></path><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"></path><path d="M12 20v-9"></path><path d="M6.5 13H3"></path><path d="M21 13h-3.5"></path><path d="M6 9.5L3.5 8"></path><path d="M18 9.5L20.5 8"></path><path d="M6.5 17.5L4 19"></path><path d="M17.5 17.5L20 19"></path></svg>
+        <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 18px">BugHunter<span style="color: {{accent}}"> Arena</span></span>
+      </a>
+      <div style="display: flex; flex-wrap: wrap; gap: 4px; font-size: 15px; font-weight: 500">
+        <a href="Dashboard.dc.html" style="padding: 10px 14px">Dashboard</a>
+        <a href="Problems.dc.html" aria-current="page" style="padding: 10px 14px; border-radius: 8px; background: #161E29; color: #FFFFFF">Problems</a>
+        <a href="#arena" style="padding: 10px 14px">Arena</a>
+        <a href="#leaderboard" style="padding: 10px 14px">Leaderboard</a>
+      </div>
+      <div style="flex: 1 1 200px; display: flex; justify-content: flex-end; align-items: center; gap: 14px">
+        <span style="display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; background: #2A1E0C; color: #FFB547; font: 700 13px 'JetBrains Mono', monospace">
+          <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3-1-5.5 1-8.5z"></path></svg>
+          12
+        </span>
+        <a href="Profile.dc.html" aria-label="Your profile" style="width: 40px; height: 40px; border-radius: 10px; background: #13261A; border: 1px solid {{accent}}; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: {{accent}}">NP</a>
+      </div>
+    </nav>
+  </header>
+
+  <main style="max-width: 1320px; margin: 0 auto; padding: 40px 24px 72px; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+    <!-- Main list -->
+    <div style="flex: 999 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+      <div style="display: flex; flex-direction: column; gap: 6px">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #7D8CA1">$ ls ./problems</span>
+        <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 34px; letter-spacing: -0.02em; color: #FFFFFF">Problems</h1>
+      </div>
+
+      <!-- Category chips -->
+      <div style="display: flex; flex-wrap: wrap; gap: 8px">
+        <sc-for list="{{cats}}" as="c" hint-placeholder-count="7">
+          <sc-if value="{{c.on}}" hint-placeholder-val="{{ false }}">
+            <button type="button" onClick="{{c.pick}}" style="min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid {{accent}}; background: #13261A; color: #FFFFFF; font: 500 14px Inter, sans-serif; cursor: pointer">{{c.name}}</button>
+          </sc-if>
+          <sc-if value="{{c.off}}" hint-placeholder-val="{{ true }}">
+            <button type="button" onClick="{{c.pick}}" style="min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid #263243; background: #10161F; color: #A9B6C8; font: 500 14px Inter, sans-serif; cursor: pointer">{{c.name}}</button>
+          </sc-if>
+        </sc-for>
+      </div>
+
+      <!-- Toolbar -->
+      <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+        <div style="flex: 1 1 260px; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid #263243; background: #0F141C">
+          <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7D8CA1" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.3-4.3"></path></svg>
+          <label for="prob-search" style="position: absolute; left: -9999px">Search problems</label>
+          <input id="prob-search" type="search" placeholder="Search by title or tag" style="flex: 1; min-width: 0; min-height: 42px; border: 0; background: transparent; color: #FFFFFF; font: 400 14px Inter, sans-serif">
+        </div>
+        <div role="group" aria-label="Difficulty" style="display: flex; border: 1px solid #263243; border-radius: 10px; overflow: hidden">
+          <sc-for list="{{diffs}}" as="d" hint-placeholder-count="4">
+            <sc-if value="{{d.on}}" hint-placeholder-val="{{ false }}">
+              <button type="button" onClick="{{d.pick}}" style="min-height: 44px; padding: 0 16px; border: 0; background: #1C2532; color: {{d.col}}; font: 600 14px Inter, sans-serif; cursor: pointer">{{d.name}}</button>
+            </sc-if>
+            <sc-if value="{{d.off}}" hint-placeholder-val="{{ true }}">
+              <button type="button" onClick="{{d.pick}}" style="min-height: 44px; padding: 0 16px; border: 0; background: #0F141C; color: #8D9BB0; font: 500 14px Inter, sans-serif; cursor: pointer">{{d.name}}</button>
+            </sc-if>
+          </sc-for>
+        </div>
+        <label for="prob-lang" style="position: absolute; left: -9999px">Language</label>
+        <select id="prob-lang" style="min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid #263243; background: #0F141C; color: #C9D4E3; font: 500 14px Inter, sans-serif">
+          <option>All languages</option><option>Python</option><option>JavaScript</option><option>TypeScript</option><option>Go</option><option>Java</option><option>Rust</option><option>SQL</option>
+        </select>
+      </div>
+
+      <!-- Table -->
+      <div style="border: 1px solid #1F2937; border-radius: 14px; background: #0F141C; overflow-x: auto">
+        <table style="width: 100%; min-width: 700px; border-collapse: collapse; font-size: 15px">
+          <thead>
+            <tr style="text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: #7D8CA1">
+              <th style="padding: 14px 18px; font-weight: 500; border-bottom: 1px solid #1F2937; width: 48px">Status</th>
+              <th style="padding: 14px 18px; font-weight: 500; border-bottom: 1px solid #1F2937; width: 40px">#</th>
+              <th style="padding: 14px 18px; font-weight: 500; border-bottom: 1px solid #1F2937">Title</th>
+              <th style="padding: 14px 18px; font-weight: 500; border-bottom: 1px solid #1F2937">Language</th>
+              <th style="padding: 14px 18px; font-weight: 500; border-bottom: 1px solid #1F2937">Bug class</th>
+              <th style="padding: 14px 18px; font-weight: 500; border-bottom: 1px solid #1F2937">Difficulty</th>
+              <th style="padding: 14px 18px; font-weight: 500; border-bottom: 1px solid #1F2937; text-align: right">XP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{rows}}" as="p" hint-placeholder-count="10">
+              <tr style="background: {{p.bg}}">
+                <td style="padding: 14px 18px; border-bottom: 1px solid #18202C">
+                  <sc-if value="{{p.solved}}" hint-placeholder-val="{{ false }}">
+                    <svg role="img" aria-label="Solved" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+                  </sc-if>
+                  <sc-if value="{{p.tried}}" hint-placeholder-val="{{ false }}">
+                    <svg role="img" aria-label="Attempted" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFB547" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4l2 2"></path></svg>
+                  </sc-if>
+                </td>
+                <td style="padding: 14px 18px; border-bottom: 1px solid #18202C; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #7D8CA1">{{p.id}}</td>
+                <td style="padding: 14px 18px; border-bottom: 1px solid #18202C"><a href="#problem" style="font-weight: 600; color: #FFFFFF">{{p.title}}</a></td>
+                <td style="padding: 14px 18px; border-bottom: 1px solid #18202C; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #A9B6C8">{{p.lang}}</td>
+                <td style="padding: 14px 18px; border-bottom: 1px solid #18202C; color: #A9B6C8">{{p.cat}}</td>
+                <td style="padding: 14px 18px; border-bottom: 1px solid #18202C; font-weight: 600; color: {{p.dcol}}">{{p.diff}}</td>
+                <td style="padding: 14px 18px; border-bottom: 1px solid #18202C; text-align: right; font-family: 'JetBrains Mono', monospace; color: #E6EDF6">{{p.xp}}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+        <sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 48px 24px; text-align: center; color: #8D9BB0; font-size: 15px">No problems match these filters. Try another bug class or difficulty.</div>
+        </sc-if>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 14px; color: #8D9BB0">
+        <span>Showing {{count}} problems</span>
+        <div style="display: flex; gap: 6px">
+          <button type="button" style="min-width: 44px; min-height: 40px; border-radius: 8px; border: 1px solid {{accent}}; background: #13261A; color: #FFFFFF; font: 600 14px Inter, sans-serif">1</button>
+          <button type="button" style="min-width: 44px; min-height: 40px; border-radius: 8px; border: 1px solid #263243; background: #0F141C; color: #A9B6C8; font: 500 14px Inter, sans-serif">2</button>
+          <button type="button" style="min-width: 44px; min-height: 40px; border-radius: 8px; border: 1px solid #263243; background: #0F141C; color: #A9B6C8; font: 500 14px Inter, sans-serif">3</button>
+          <button type="button" aria-label="Next page" style="min-width: 44px; min-height: 40px; border-radius: 8px; border: 1px solid #263243; background: #0F141C; color: #A9B6C8; font: 500 14px Inter, sans-serif">→</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+      <section style="padding: 22px; border: 1px solid #1F2937; border-radius: 14px; background: #0F141C; display: flex; flex-direction: column; gap: 16px">
+        <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; color: #FFFFFF">Your progress</h2>
+        <div style="display: flex; align-items: baseline; gap: 8px"><span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 36px; color: #FFFFFF">137</span><span style="font-size: 14px; color: #8D9BB0">/ 412 solved</span></div>
+        <div style="display: flex; flex-direction: column; gap: 12px">
+          <div><div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px"><span style="color: #6EE7A0">Easy</span><span style="font-family: 'JetBrains Mono', monospace; color: #A9B6C8">58 / 140</span></div><div style="height: 6px; border-radius: 3px; background: #1C2532"><div style="width: 41%; height: 6px; border-radius: 3px; background: #6EE7A0"></div></div></div>
+          <div><div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px"><span style="color: #FFB547">Medium</span><span style="font-family: 'JetBrains Mono', monospace; color: #A9B6C8">61 / 186</span></div><div style="height: 6px; border-radius: 3px; background: #1C2532"><div style="width: 33%; height: 6px; border-radius: 3px; background: #FFB547"></div></div></div>
+          <div><div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px"><span style="color: #FF7A7A">Hard</span><span style="font-family: 'JetBrains Mono', monospace; color: #A9B6C8">18 / 86</span></div><div style="height: 6px; border-radius: 3px; background: #1C2532"><div style="width: 21%; height: 6px; border-radius: 3px; background: #FF7A7A"></div></div></div>
+        </div>
+      </section>
+
+      <section style="padding: 22px; border: 1px solid #243042; border-radius: 14px; background: #0F141C; display: flex; flex-direction: column; gap: 12px">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {{accent}}">BUG OF THE DAY</span>
+        <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 20px; color: #FFFFFF">Timezone Time Bomb</h2>
+        <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #93A2B6">An AI wrote a scheduler that works perfectly… except twice a year.</p>
+        <div style="display: flex; gap: 8px; font-size: 13px"><span style="padding: 4px 10px; border-radius: 6px; background: #161E29; color: #A9B6C8; font-family: 'JetBrains Mono', monospace">Python</span><span style="padding: 4px 10px; border-radius: 6px; background: #2A1E0C; color: #FFB547; font-weight: 600">Medium</span><span style="padding: 4px 10px; border-radius: 6px; background: #13261A; color: {{accent}}; font-weight: 600">2× XP</span></div>
+        <a href="#daily" style="display: flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 4px; border-radius: 10px; background: {{accent}}; color: #06110A; font-weight: 600; font-size: 15px">Start hunting</a>
+      </section>
+
+      <section style="padding: 22px; border: 1px solid #1F2937; border-radius: 14px; background: #0F141C; display: flex; flex-direction: column; gap: 12px">
+        <h2 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 18px; color: #FFFFFF">Popular tags</h2>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; font-family: 'JetBrains Mono', monospace; font-size: 12px">
+          <span style="padding: 6px 10px; border-radius: 6px; background: #161E29; color: #A9B6C8">#off-by-one</span>
+          <span style="padding: 6px 10px; border-radius: 6px; background: #161E29; color: #A9B6C8">#sql-injection</span>
+          <span style="padding: 6px 10px; border-radius: 6px; background: #161E29; color: #A9B6C8">#null-check</span>
+          <span style="padding: 6px 10px; border-radius: 6px; background: #161E29; color: #A9B6C8">#deadlock</span>
+          <span style="padding: 6px 10px; border-radius: 6px; background: #161E29; color: #A9B6C8">#fake-library</span>
+          <span style="padding: 6px 10px; border-radius: 6px; background: #161E29; color: #A9B6C8">#n-plus-one</span>
+          <span style="padding: 6px 10px; border-radius: 6px; background: #161E29; color: #A9B6C8">#xss</span>
+          <span style="padding: 6px 10px; border-radius: 6px; background: #161E29; color: #A9B6C8">#timezones</span>
+        </div>
+      </section>
+    </aside>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#5EEA8C","options":["#5EEA8C","#38BDF8","#FFB547","#C084FC"]},"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { cat: 'All', diff: 'All' }; }
+  renderVals() {
+    const accent = this.props.accent ?? '#5EEA8C';
+    const dc = { Easy: '#6EE7A0', Medium: '#FFB547', Hard: '#FF7A7A' };
+    const all = [
+      ['s', 1, 'Leaky Pagination', 'Python', 'Logic', 'Easy', 120],
+      ['', 2, 'Trust Me, I Sanitized It', 'JavaScript', 'Security', 'Medium', 300],
+      ['t', 3, 'Race to the Wallet', 'Go', 'Concurrency', 'Hard', 650],
+      ['s', 4, 'The Phantom Import', 'TypeScript', 'Hallucinated API', 'Easy', 100],
+      ['', 5, 'Quadratic Surprise', 'Java', 'Performance', 'Medium', 280],
+      ['', 6, 'DROP TABLE Feelings', 'SQL', 'Security', 'Hard', 700],
+      ['s', 7, 'Floating Point Refund', 'Python', 'Logic', 'Easy', 140],
+      ['', 8, 'Async Await-ing Forever', 'TypeScript', 'Concurrency', 'Medium', 320],
+      ['t', 9, 'pandas.magic_merge()', 'Python', 'Hallucinated API', 'Medium', 260],
+      ['', 10, 'Null Island', 'Rust', 'Edge cases', 'Hard', 600],
+      ['s', 11, 'Empty Cart Crash', 'JavaScript', 'Edge cases', 'Easy', 110],
+      ['', 12, 'N+1 Ways to Fail', 'Java', 'Performance', 'Hard', 560],
+      ['', 13, 'JWT, Never Expires', 'Go', 'Security', 'Medium', 340],
+      ['s', 14, 'Leap Year Logic', 'Rust', 'Logic', 'Easy', 120]
+    ];
+    const rows = all
+      .filter((r) => (this.state.cat === 'All' || r[4] === this.state.cat) && (this.state.diff === 'All' || r[5] === this.state.diff))
+      .map((r, i) => ({
+        solved: r[0] === 's', tried: r[0] === 't', id: r[1], title: r[2], lang: r[3], cat: r[4],
+        diff: r[5], dcol: dc[r[5]], xp: r[6] + ' XP', bg: i % 2 ? '#0D1218' : 'transparent'
+      }));
+    const cats = ['All', 'Logic', 'Security', 'Concurrency', 'Hallucinated API', 'Performance', 'Edge cases'].map((n) => {
+      const on = this.state.cat === n;
+      return { name: n, on, off: !on, pick: () => this.setState({ cat: n }) };
+    });
+    const diffs = ['All', 'Easy', 'Medium', 'Hard'].map((n) => {
+      const on = this.state.diff === n;
+      return { name: n, on, off: !on, col: dc[n] || '#FFFFFF', pick: () => this.setState({ diff: n }) };
+    });
+    return { accent, rows, cats, diffs, count: rows.length, empty: rows.length === 0 };
+  }
+}
+</script>
+</body>
+</html>
