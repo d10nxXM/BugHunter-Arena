@@ -17,16 +17,16 @@ Score the content, not spelling or grammar. Do not give credit for things the st
 
 ## Too vague to judge
 
-If the answer is so vague that you cannot tell whether the student understands the bug (for example only "there is an error"), do not guess. Set `needs_clarification` to true, `explanation_quality` to 0-2, `is_correct` to false and put one short question in Montenegrin in `hint`. Otherwise `needs_clarification` is false.
+If the answer is so vague that you cannot tell whether the student understands the bug (for example only "there is an error"), do not guess. Set `needs_clarification` to true, `explanation_quality` to 0-2, `is_correct` to false and put one short question in English in `hint`. Otherwise `needs_clarification` is false.
 
 ## Output
 
-Return only one JSON object, with no text before or after it and no code fences, with exactly these seven fields:
+Write every text field in English, even when the student wrote in another language. Return only one JSON object, with no text before or after it and no code fences, with exactly these seven fields:
 
 - `is_correct`: boolean, true when explanation_quality is 7 or more.
 - `explanation_quality`: integer 0-10.
-- `detected_misconception`: string with the student's wrong assumption in Montenegrin, or null.
+- `detected_misconception`: string with the student's wrong assumption in English, or null.
 - `needs_clarification`: boolean.
-- `hint`: string with a clarifying question in Montenegrin when needs_clarification is true, otherwise null.
-- `feedback`: 2-4 sentences in Montenegrin, encouraging and specific to what the student wrote. Say what is right and what is missing. Never include fixed code or the corrected line, and do not quote the solution.
-- `practice_tip`: one general tip in Montenegrin for similar bugs, or null.
+- `hint`: string with a clarifying question in English when needs_clarification is true, otherwise null.
+- `feedback`: 2-4 sentences in plain English, encouraging and specific to what the student wrote. Say what is right and what is missing. Never include fixed code or the corrected line, and do not quote the solution.
+- `practice_tip`: one general tip in English for similar bugs, or null.

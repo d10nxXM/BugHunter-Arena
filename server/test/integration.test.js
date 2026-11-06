@@ -81,6 +81,18 @@ describe('contract: built endpoints', () => {
     }
   });
 
+  it('error messages are English', async () => {
+    const missing = await request(app).get('/api/challenges/nope');
+    expect(missing.body.error).toEqual({
+      code: 'NOT_FOUND',
+      message: 'Challenge not found.',
+    });
+    const unknownRoute = await request(app).get('/api/nothing');
+    expect(unknownRoute.body.error.message).toBe(
+      'The requested address does not exist.',
+    );
+  });
+
   it('error envelopes: 404, 400, 413, 429', async () => {
     envelope(await request(app).get('/api/challenges/nope'), 404, 'NOT_FOUND');
     envelope(await request(app).get('/api/nothing'), 404, 'NOT_FOUND');
@@ -119,7 +131,7 @@ describe('contract: attempts, evaluation, progress, users', () => {
     challengeId: 'find-max',
     userId: null,
     selectedLines: [2],
-    explanation: 'max_value počinje od 0 pa negativne liste vraćaju 0.',
+    explanation: 'max_value starts at 0 so negative lists return 0.',
     edgeCase: { args: [[-8, -3, -10]], expected: -3 },
     fixedCode: 'def find_max(numbers): return None',
     hintsUsed: 0,

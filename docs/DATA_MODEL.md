@@ -29,7 +29,8 @@ create table challenges (
   bug_category text not null,
   bug_description text not null,
   reference_solution text not null,
-  difficulty text not null check (difficulty in ('lako', 'srednje', 'teško')),
+  -- 20261106120000_challenges_difficulty_english.sql
+  difficulty text not null constraint challenges_difficulty_check check (difficulty in ('easy', 'medium', 'hard')),
   tests_json jsonb not null,
   hints_json jsonb not null,
   keywords_json jsonb not null,
@@ -75,6 +76,7 @@ Migrations:
 | `20261103002608_init_schema.sql` | Initial schema |
 | `20261103120000_attempts_user_created_at_idx.sql` | Index `attempts_user_id_created_at_idx` on `attempts (user_id, created_at desc)` for history and progress reads. Applied to production; not changed since |
 | `20261104090000_attempts_user_created_at_id_idx.sql` | Drops and recreates `attempts_user_id_created_at_idx` on `attempts (user_id, created_at desc, id desc)`, so the index follows the composite `(created_at, id)` cursor of `GET /api/attempts` |
+| `20261106120000_challenges_difficulty_english.sql` | Drops the old difficulty check (`challenges_difficulty_check`, plus any check on `challenges` that still lists `lako`), maps existing rows `lako`/`srednje`/`teško` to `easy`/`medium`/`hard`, and adds `challenges_difficulty_check` for `easy`, `medium`, `hard`. Run `npm run seed` afterwards to load the English challenge text |
 
 ## Attempt columns
 
@@ -92,20 +94,20 @@ One file per challenge, `server/data/challenges/<id>.json`. Field names match th
 | Field | Type | Meaning |
 | --- | --- | --- |
 | id | string | Readable id, e.g. `find-max` |
-| title, description | string | Shown to the student (Montenegrin) |
+| title, description | string | Shown to the student (English) |
 | language | `python` \| `javascript` | |
 | function_name | string | Function the tests call |
 | code | string | Buggy code |
 | bug_lines | int[] | 1-based lines that contain the bug |
 | related_lines | int[] | Lines that earn partial credit |
-| bug_category | string | Exact Montenegrin category name from the Bug categories table in `docs/SPEC.md`, e.g. `Pogrešna inicijalizacija` |
+| bug_category | string | Exact English category name from the Bug categories table in `docs/SPEC.md`, e.g. `Wrong initialization` |
 | bug_description | string | Cause and consequence; ground truth for the AI |
 | reference_solution | string | Correct code, same signature |
-| difficulty | `lako` \| `srednje` \| `teško` | |
+| difficulty | `easy` \| `medium` \| `hard` | |
 | tests_json | array | `{ id, args, expected, visible, failsOnOriginal }`. `failsOnOriginal` is `true` when the test fails on the buggy `code` and passes on `reference_solution` |
-| hints_json | string[3] | Written hints for levels 1-3 |
-| keywords_json | string[][] | Three groups of word stems for the fallback evaluation |
-| fallback_feedback | string | Feedback text shown when the AI is unavailable |
+| hints_json | string[3] | Written hints for levels 1-3, in English |
+| keywords_json | string[][] | Three groups of lowercase English word stems for the fallback evaluation (cause, triggering condition, fix) |
+| fallback_feedback | string | English feedback text shown when the AI is unavailable |
 
 `args` is the JSON array of arguments the function is called with. Python `None` is JSON `null`.
 
@@ -126,7 +128,7 @@ Fields (schema):
 - `id`: 1-64 characters, lowercase letters, digits and hyphens only (`^[a-z0-9-]{1,64}$`).
 - `title`, `description`, `function_name`, `code`, `bug_category`, `bug_description`, `reference_solution`, `fallback_feedback`: non-empty strings.
 - `fallback_feedback`: at most 2000 characters.
-- `language`: `python` or `javascript`. `difficulty`: `lako`, `srednje` or `teško`.
+- `language`: `python` or `javascript`. `difficulty`: `easy`, `medium` or `hard`.
 - `bug_lines`: at least one entry. `related_lines`: required but may be empty. Both hold positive integers.
 - `tests_json`: each test is `{ id, args, expected, visible, failsOnOriginal? }`. `id` is a non-empty string, `args` is an array of JSON values, `expected` is any JSON value, `visible` is a boolean, and `failsOnOriginal` is an optional boolean in the schema. At least 2 visible tests and at least 1 hidden test. Test ids are unique within the challenge.
 - `hints_json`: exactly 3 non-empty strings, for levels 1-3.

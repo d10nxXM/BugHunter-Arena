@@ -27,6 +27,7 @@ describe('getWrittenHint', () => {
     await expect(getWrittenHint('x', 1)).rejects.toMatchObject({
       status: 404,
       code: 'NOT_FOUND',
+      message: 'Challenge not found.',
     });
   });
 

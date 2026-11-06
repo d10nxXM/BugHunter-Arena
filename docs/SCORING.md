@@ -53,7 +53,7 @@ The result is marked `feedbackSource: "fallback"` (`evaluateExplanation()` retur
 | detected_misconception | `null` |
 | needs_clarification | `false` |
 | hint | `null` |
-| feedback | The challenge's `fallback_feedback`; if it is missing or blank, the generic text `Procjena bez AI-ja: objašnjenje je ocijenjeno prema ključnim pojmovima.` |
+| feedback | The challenge's `fallback_feedback`; if it is missing or blank, the generic text `Assessed without AI: the explanation was scored by key terms.` |
 | practice_tip | `null` |
 
 Known weakness: two matched groups without the cause group (for example condition and fix) still give quality 7 and `is_correct: true`.

@@ -10,12 +10,12 @@ const { config } = await import('../lib/config.js');
 const { logger } = await import('../lib/logger.js');
 
 const challenge = {
-  keywords_json: [['inicijaliz'], ['negativ'], ['prazn']],
-  fallback_feedback: 'Pogledaj početnu vrijednost.',
+  keywords_json: [['initiali'], ['negative'], ['empty']],
+  fallback_feedback: 'Look at the starting value.',
 };
 const context = {
   challenge,
-  answer: { explanation: 'početna inicijalizacija i negativni brojevi' },
+  answer: { explanation: 'wrong initialization and negative numbers' },
 };
 const good = {
   source: 'ai',
@@ -24,7 +24,7 @@ const good = {
   detected_misconception: null,
   needs_clarification: false,
   hint: null,
-  feedback: 'Dobro.',
+  feedback: 'Good.',
   practice_tip: null,
 };
 
@@ -33,10 +33,10 @@ describe('fallback after a failed evaluation (fallbackService.evaluateWithKeywor
   const fallbackOf = (ctx) => evaluateWithFallback(ctx, { evaluate: failing });
 
   it.each([
-    ['0 groups', 'ništa', 0],
-    ['1 group', 'inicijalizacija', 3],
-    ['2 groups', 'inicijalizacija negativ', 7],
-    ['3 groups', 'inicijalizacija negativ prazna', 10],
+    ['0 groups', 'nothing', 0],
+    ['1 group', 'initialization', 3],
+    ['2 groups', 'initialization negative', 7],
+    ['3 groups', 'initialization negative empty', 10],
   ])('%s: deep-equals the keyword evaluation', async (_n, explanation, q) => {
     const ctx = { challenge, answer: { explanation } };
     const out = await fallbackOf(ctx);
@@ -51,7 +51,7 @@ describe('fallback after a failed evaluation (fallbackService.evaluateWithKeywor
     const out = await fallbackOf(ctx);
     expect(out).toEqual({ source: 'fallback', ...evaluateWithKeywords(ctx) });
     expect(out.explanation_quality).toBe(0);
-    expect(out.feedback).toMatch(/Procjena bez AI-ja/);
+    expect(out.feedback).toMatch(/Assessed without AI/);
   });
 
   it('tolerates a context without answer or challenge', async () => {

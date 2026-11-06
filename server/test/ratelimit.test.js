@@ -19,13 +19,13 @@ const original = { ...config };
 const AI_LIMIT = 20;
 const UNKNOWN_ATTEMPT = '33333333-3333-4333-8333-333333333333';
 
-const HINT_REPLY = '{"hint":"Šta ako su svi brojevi negativni?"}';
+const HINT_REPLY = '{"hint":"What if every number is negative?"}';
 const EVAL_REPLY = JSON.stringify({
   explanation_quality: 8,
   detected_misconception: null,
   needs_clarification: false,
   hint: null,
-  feedback: 'Dobro objašnjenje.',
+  feedback: 'Good explanation.',
   practice_tip: null,
 });
 
@@ -56,7 +56,7 @@ const attemptBody = {
   challengeId: 'find-max',
   userId: null,
   selectedLines: [2],
-  explanation: 'max_value počinje od 0 pa negativne liste vraćaju 0.',
+  explanation: 'max_value starts at 0 so negative lists return 0.',
   edgeCase: { args: [[-8, -3, -10]], expected: -3 },
   fixedCode: 'def find_max(numbers):\n    return max(numbers, default=None)',
   hintsUsed: 0,

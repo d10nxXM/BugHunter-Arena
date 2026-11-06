@@ -16,7 +16,11 @@ export const CreateAttemptSchema = z.object({
     .min(1)
     .max(10)
     .transform((lines) => [...new Set(lines)]),
-  explanation: z.string().trim().min(20).max(1000),
+  explanation: z
+    .string()
+    .trim()
+    .min(20, { message: 'Explanation must be at least 20 characters.' })
+    .max(1000),
   edgeCase: z.object({
     args: z.array(z.json()),
     expected: z.json(),

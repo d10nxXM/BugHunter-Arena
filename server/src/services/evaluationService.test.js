@@ -36,7 +36,7 @@ afterEach(() => {
 
 describe('evaluateExplanation (M1 fallback stub): shape', () => {
   it('returns exactly the eight documented fields, marked as fallback', async () => {
-    const result = await evaluateExplanation(contextWith('nešto'));
+    const result = await evaluateExplanation(contextWith('something'));
     expect(Object.keys(result).sort()).toEqual(FIELDS);
     expect(result.source).toBe('fallback');
     expect(result.detected_misconception).toBeNull();
@@ -47,7 +47,7 @@ describe('evaluateExplanation (M1 fallback stub): shape', () => {
   });
 
   it("uses the challenge's fallback_feedback as the feedback text", async () => {
-    const result = await evaluateExplanation(contextWith('nešto'));
+    const result = await evaluateExplanation(contextWith('something'));
     expect(result.feedback).toBe(challenge.fallback_feedback);
   });
 
@@ -58,17 +58,22 @@ describe('evaluateExplanation (M1 fallback stub): shape', () => {
 
 describe('evaluateExplanation: keyword groups (docs/SCORING.md)', () => {
   it.each([
-    ['0 groups -> 0', 'Funkcija ima grešku negdje u petlji.', 0, false],
-    ['1 group -> 3', 'Ne radi za negativne brojeve.', 3, false],
+    [
+      '0 groups -> 0',
+      'The function has a bug somewhere in the loop.',
+      0,
+      false,
+    ],
+    ['1 group -> 3', 'It does not work for negative numbers.', 3, false],
     [
       '2 groups -> 7',
-      'Početna vrijednost je loša za negativne brojeve.',
+      'The starting value is bad for negative numbers.',
       7,
       true,
     ],
     [
       '3 groups -> 10',
-      'Početna vrijednost 0 ne radi za negativne brojeve; treba krenuti od numbers[0].',
+      'The starting value 0 fails for negative numbers; it should begin with numbers[0].',
       10,
       true,
     ],
@@ -78,16 +83,16 @@ describe('evaluateExplanation: keyword groups (docs/SCORING.md)', () => {
     expect(result.is_correct).toBe(correct);
   });
 
-  it('matches case-insensitively, including Montenegrin letters', async () => {
+  it('matches case-insensitively', async () => {
     const result = await evaluateExplanation(
-      contextWith('POČETNA vrijednost, NEGATIVNI brojevi, PRAZNA lista'),
+      contextWith('STARTING value, NEGATIVE numbers, EMPTY list'),
     );
     expect(result.explanation_quality).toBe(10);
   });
 
   it('counts a group once even when several of its stems match', async () => {
     const result = await evaluateExplanation(
-      contextWith('inicijalizacija, početna vrijednost, nula'),
+      contextWith('initialization, starting value, zero'),
     );
     expect(result.explanation_quality).toBe(3);
   });
@@ -106,7 +111,7 @@ describe('evaluateExplanation: keyword groups (docs/SCORING.md)', () => {
 
   it('ignores empty stems instead of matching everything', async () => {
     const result = await evaluateExplanation(
-      contextWith('bilo šta', {
+      contextWith('anything', {
         challenge: { ...challenge, keywords_json: [[''], ['  '], []] },
       }),
     );
@@ -124,9 +129,9 @@ describe('evaluateExplanation: keyword groups (docs/SCORING.md)', () => {
 describe('evaluateExplanation: never throws on ordinary input', () => {
   it.each([
     ['empty explanation', contextWith('')],
-    ['too long explanation', contextWith('negativ '.repeat(5000))],
+    ['too long explanation', contextWith('negative '.repeat(5000))],
     ['missing answer', { challenge }],
-    ['missing challenge', { answer: { explanation: 'negativni brojevi' } }],
+    ['missing challenge', { answer: { explanation: 'negative numbers' } }],
     ['null context', null],
     ['no context', undefined],
     ['non-string explanation', contextWith(12345)],
@@ -148,15 +153,15 @@ describe('evaluateExplanation: never throws on ordinary input', () => {
     expect(result.feedback.length).toBeGreaterThan(0);
   });
 
-  it('uses a generic Montenegrin text when fallback_feedback is missing', async () => {
+  it('uses a generic English text when fallback_feedback is missing', async () => {
     const result = await evaluateExplanation(
       contextWith('x', { challenge: { keywords_json: [] } }),
     );
-    expect(result.feedback).toMatch(/Procjena bez AI-ja/);
+    expect(result.feedback).toMatch(/Assessed without AI/);
   });
 
   it('does not mutate its input', async () => {
-    const context = contextWith('Početna vrijednost, negativni');
+    const context = contextWith('Starting value, negative');
     const copy = structuredClone(context);
     await evaluateExplanation(context);
     expect(context).toEqual(copy);
@@ -166,7 +171,7 @@ describe('evaluateExplanation: never throws on ordinary input', () => {
 describe('evaluateExplanation: no network, no logging of student text', () => {
   it('never calls fetch', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
-    await evaluateExplanation(contextWith('Početna vrijednost, negativni'));
+    await evaluateExplanation(contextWith('Starting value, negative'));
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
@@ -174,14 +179,14 @@ describe('evaluateExplanation: no network, no logging of student text', () => {
     const spies = ['log', 'info', 'warn', 'error', 'debug'].map((m) =>
       vi.spyOn(console, m).mockImplementation(() => {}),
     );
-    await evaluateExplanation(contextWith('TAJNI-TEKST-STUDENTA negativni'));
+    await evaluateExplanation(contextWith('SECRET-STUDENT-TEXT negative'));
     for (const spy of spies) expect(spy).not.toHaveBeenCalled();
   });
 
   it('does not echo the student text in the result', async () => {
     const result = await evaluateExplanation(
-      contextWith('TAJNI-TEKST-STUDENTA negativni'),
+      contextWith('SECRET-STUDENT-TEXT negative'),
     );
-    expect(JSON.stringify(result)).not.toContain('TAJNI-TEKST-STUDENTA');
+    expect(JSON.stringify(result)).not.toContain('SECRET-STUDENT-TEXT');
   });
 });

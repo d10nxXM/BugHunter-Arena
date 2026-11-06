@@ -26,7 +26,7 @@ export function createLimiter({ windowMs, limit, ...options }) {
         new AppError(
           429,
           'RATE_LIMITED',
-          'Previše zahtjeva. Sačekaj malo pa pokušaj ponovo.',
+          'Too many requests. Wait a moment and try again.',
         ),
       );
     },

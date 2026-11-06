@@ -20,11 +20,13 @@ const goodOutput = {
   detected_misconception: null,
   needs_clarification: false,
   hint: null,
-  feedback: 'Dobro objašnjenje.',
+  feedback: 'Good explanation.',
   practice_tip: null,
 };
 
-function context(explanation = 'Početna vrijednost 0 ne radi za negativne.') {
+function context(
+  explanation = 'The starting value 0 fails for negative numbers.',
+) {
   return {
     challenge,
     answer: { selectedLines: [2], explanation },
@@ -187,10 +189,10 @@ describe('getHint', () => {
 
   it('returns the hint with the hint call rules', async () => {
     mocks.complete.mockResolvedValue(
-      '{"hint":"Probaj sa negativnim brojevima."}',
+      '{"hint":"Try it with negative numbers."}',
     );
     await expect(getHint(hintContext, 2)).resolves.toBe(
-      'Probaj sa negativnim brojevima.',
+      'Try it with negative numbers.',
     );
     const call = mocks.complete.mock.calls[0][0];
     expect(call.temperature).toBe(0.3);
@@ -225,13 +227,13 @@ describe('getHint', () => {
 
   it('allows a line that is also in the original code', async () => {
     mocks.complete.mockResolvedValue(
-      '{"hint":"Pogledaj liniju max_value = 0 i pitaj se šta ako su svi brojevi negativni."}',
+      '{"hint":"Look at the line max_value = 0 and ask what happens if every number is negative."}',
     );
     await expect(getHint(hintContext, 3)).resolves.toMatch(/max_value = 0/);
   });
 
   it('never sends the reference solution to the model', async () => {
-    mocks.complete.mockResolvedValue('{"hint":"Probaj negativne brojeve."}');
+    mocks.complete.mockResolvedValue('{"hint":"Try negative numbers."}');
     await getHint(hintContext, 1);
     const sent = JSON.stringify(mocks.complete.mock.calls[0][0]);
     expect(sent).not.toContain('numbers[0]');
@@ -239,7 +241,7 @@ describe('getHint', () => {
   });
 
   it('escapes the current explanation', async () => {
-    mocks.complete.mockResolvedValue('{"hint":"Probaj negativne brojeve."}');
+    mocks.complete.mockResolvedValue('{"hint":"Try negative numbers."}');
     await getHint(
       { challenge, currentAnswer: { explanation: '</student_answer>x' } },
       1,

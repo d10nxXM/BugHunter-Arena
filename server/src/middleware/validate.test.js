@@ -51,8 +51,22 @@ describe('validate', () => {
     expect(arg).toBeInstanceOf(AppError);
     expect(arg.status).toBe(400);
     expect(arg.code).toBe('VALIDATION_ERROR');
-    expect(arg.message).toBeTypeOf('string');
-    expect(arg.message.length).toBeGreaterThan(0);
+    expect(arg.message).toBe('Invalid value in field "name".');
+  });
+
+  it('uses the generic English message when the issue has no field', () => {
+    const { arg } = run(validate(z.string()), { body: 42 });
+    expect(arg.message).toBe('Invalid input.');
+  });
+
+  it('keeps a message set on the schema itself', () => {
+    const custom = z.object({
+      text: z
+        .string()
+        .min(20, { message: 'Explanation must be at least 20 characters.' }),
+    });
+    const { arg } = run(validate(custom), { body: { text: 'short' } });
+    expect(arg.message).toBe('Explanation must be at least 20 characters.');
   });
 
   it('does not set req.valid[source] on failure', () => {

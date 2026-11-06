@@ -17,11 +17,11 @@ function appThrowing(error) {
 
 describe('errorHandler', () => {
   it('renders an AppError with its status, code and message', async () => {
-    const err = new AppError(404, 'NOT_FOUND', 'Izazov ne postoji.');
+    const err = new AppError(404, 'NOT_FOUND', 'Challenge not found.');
     const res = await request(appThrowing(err)).get('/boom');
     expect(res.status).toBe(404);
     expect(res.body).toEqual({
-      error: { code: 'NOT_FOUND', message: 'Izazov ne postoji.' },
+      error: { code: 'NOT_FOUND', message: 'Challenge not found.' },
     });
   });
 
@@ -33,7 +33,9 @@ describe('errorHandler', () => {
     const res = await request(appThrowing(err)).get('/boom');
     expect(res.status).toBe(413);
     expect(res.body.error.code).toBe('PAYLOAD_TOO_LARGE');
-    expect(res.body.error.message).toBeTypeOf('string');
+    expect(res.body.error.message).toBe(
+      'Request too large. The maximum size is 50 KB.',
+    );
   });
 
   it('maps entity.parse.failed to 400 VALIDATION_ERROR', async () => {
@@ -45,6 +47,7 @@ describe('errorHandler', () => {
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
     expect(res.body.error.message).not.toContain('Unexpected token');
+    expect(res.body.error.message).toBe('The request body is not valid JSON.');
   });
 
   it('maps an unknown error to 500 INTERNAL_ERROR without leaking details', async () => {
@@ -54,6 +57,9 @@ describe('errorHandler', () => {
     const res = await request(appThrowing(err)).get('/boom');
     expect(res.status).toBe(500);
     expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.body.error.message).toBe(
+      'Something went wrong. Please try again.',
+    );
     expect(res.text).not.toContain('ECONNREFUSED');
     expect(res.text).not.toContain('secret-host');
     expect(res.text).not.toContain('abc123');
@@ -62,7 +68,7 @@ describe('errorHandler', () => {
   });
 
   it('does not leak the cause of an AppError with status 500', async () => {
-    const err = new AppError(500, 'INTERNAL_ERROR', 'Greska na serveru.', {
+    const err = new AppError(500, 'INTERNAL_ERROR', 'Server error.', {
       cause: new Error('db password is hunter2'),
     });
     const res = await request(appThrowing(err)).get('/boom');
@@ -95,7 +101,11 @@ describe('errorHandler', () => {
   it('handles a rejected promise from an async handler', async () => {
     const app = express();
     app.get('/async', async () => {
-      throw new AppError(409, 'ALREADY_EVALUATED', 'Vec ocijenjeno.');
+      throw new AppError(
+        409,
+        'ALREADY_EVALUATED',
+        'Attempt already evaluated.',
+      );
     });
     app.use(errorHandler);
     const res = await request(app).get('/async');
@@ -119,7 +129,9 @@ describe('notFound', () => {
     const res = await request(appThrowing(new Error('x'))).get('/nope');
     expect(res.status).toBe(404);
     expect(res.body.error.code).toBe('NOT_FOUND');
-    expect(res.body.error.message).toBeTypeOf('string');
+    expect(res.body.error.message).toBe(
+      'The requested address does not exist.',
+    );
   });
 });
 
@@ -140,7 +152,9 @@ describe('rate limiting', () => {
     const second = await request(app).get('/ping');
     expect(second.status).toBe(429);
     expect(second.body.error.code).toBe('RATE_LIMITED');
-    expect(second.body.error.message).toBeTypeOf('string');
+    expect(second.body.error.message).toBe(
+      'Too many requests. Wait a moment and try again.',
+    );
   });
 
   it('sends draft-8 standard headers, not legacy X-RateLimit headers', async () => {

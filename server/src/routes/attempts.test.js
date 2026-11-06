@@ -27,7 +27,7 @@ const attemptBody = (overrides = {}) => ({
   userId: null,
   selectedLines: [2],
   explanation:
-    'max_value počinje od 0 pa negativne liste vraćaju 0, a to nije u listi.',
+    'max_value starts at 0 so negative lists return 0, which is not in the list.',
   edgeCase: { args: [[-8, -3, -10]], expected: -3 },
   fixedCode: 'def find_max(numbers):\n    return max(numbers, default=None)',
   hintsUsed: 1,
@@ -110,7 +110,10 @@ describe('POST /api/attempts', () => {
     const before = fake.tables.attempts.length;
     const res = await create(attemptBody({ challengeId: 'nope' }));
     expect(res.status).toBe(404);
-    expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.body.error).toEqual({
+      code: 'NOT_FOUND',
+      message: 'Challenge not found.',
+    });
     expect(res.body.tests).toBeUndefined();
     expect(fake.tables.attempts).toHaveLength(before);
   });
@@ -121,7 +124,10 @@ describe('POST /api/attempts', () => {
       attemptBody({ userId: '22222222-2222-4222-8222-222222222222' }),
     );
     expect(res.status).toBe(404);
-    expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.body.error).toEqual({
+      code: 'NOT_FOUND',
+      message: 'User not found.',
+    });
     expect(res.text).not.toContain(challenge.reference_solution);
     expect(fake.tables.attempts).toHaveLength(before);
   });
@@ -190,6 +196,19 @@ describe('POST /api/attempts', () => {
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
     expect(res.body.tests).toBeUndefined();
   });
+
+  it('400 with an English message for a short explanation', async () => {
+    const res = await create(attemptBody({ explanation: 'too short' }));
+    expect(res.status).toBe(400);
+    expect(res.body.error.message).toBe(
+      'Explanation must be at least 20 characters.',
+    );
+  });
+
+  it('400 with a field message for a bad userId', async () => {
+    const res = await create(attemptBody({ userId: 'abc' }));
+    expect(res.body.error.message).toBe('Invalid value in field "userId".');
+  });
 });
 
 describe('POST /api/attempts/:id/evaluation', () => {
@@ -207,7 +226,7 @@ describe('POST /api/attempts/:id/evaluation', () => {
       'testsPassed',
       'testsTotal',
     ]);
-    // lines 40 + explanation (groups: inicijaliz? "počinje od 0" -> 'negativ' + ... )
+    // lines 40 + explanation (keyword groups: 'start' and 'negative')
     expect(first.body.breakdown.lineIdentification).toBe(40);
     expect(first.body.breakdown.edgeCase).toBe(20);
     expect(first.body.breakdown.fix).toBe(10);
@@ -238,7 +257,10 @@ describe('POST /api/attempts/:id/evaluation', () => {
       .post(`/api/attempts/${made.attemptId}/evaluation`)
       .send(evalBody());
     expect(second.status).toBe(409);
-    expect(second.body.error.code).toBe('ALREADY_EVALUATED');
+    expect(second.body.error).toEqual({
+      code: 'ALREADY_EVALUATED',
+      message: 'Attempt already evaluated.',
+    });
     expect(
       fake.tables.attempts.find((a) => a.id === made.attemptId).score,
     ).toBe(first.body.score);
@@ -289,7 +311,10 @@ describe('POST /api/attempts/:id/evaluation', () => {
       .post('/api/attempts/33333333-3333-4333-8333-333333333333/evaluation')
       .send(evalBody());
     expect(res.status).toBe(404);
-    expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.body.error).toEqual({
+      code: 'NOT_FOUND',
+      message: 'Attempt not found.',
+    });
   });
 
   it('400 for a bad id, missing edgeCaseCheck and too many results', async () => {
@@ -367,7 +392,7 @@ describe('GET /api/attempts', () => {
       ]);
     }
     expect(res.text).not.toContain(challenge.reference_solution);
-    expect(res.text).not.toContain('počinje od 0');
+    expect(res.text).not.toContain('starts at 0');
   });
 
   it('500 when the database fails', async () => {

@@ -12,9 +12,9 @@ const run = (explanation, ch = challenge) =>
 describe('evaluateWithKeywords (docs/SCORING.md)', () => {
   it.each([
     ['nothing relevant', 0, false],
-    ['ne radi za negativne brojeve', 3, false],
-    ['početna vrijednost, negativni', 7, true],
-    ['početna vrijednost, negativni, prazna lista', 10, true],
+    ['does not work for negative numbers', 3, false],
+    ['starting value, negative', 7, true],
+    ['starting value, negative, empty list', 10, true],
   ])('%s -> %i', (text, quality, correct) => {
     const result = run(text);
     expect(result.explanation_quality).toBe(quality);

@@ -12,7 +12,7 @@ import {
 export async function getWrittenHint(id, level) {
   const found = await getChallengeHints(id);
   if (!found) {
-    throw new AppError(404, 'NOT_FOUND', 'Izazov ne postoji.');
+    throw new AppError(404, 'NOT_FOUND', 'Challenge not found.');
   }
   const hint = found.hints?.[level - 1];
   if (typeof hint !== 'string' || hint.length === 0) {
@@ -30,7 +30,7 @@ export async function listPublic() {
 export async function getPublic(id) {
   const challenge = await getPublicChallenge(id);
   if (!challenge) {
-    throw new AppError(404, 'NOT_FOUND', 'Izazov ne postoji.');
+    throw new AppError(404, 'NOT_FOUND', 'Challenge not found.');
   }
   return challenge;
 }

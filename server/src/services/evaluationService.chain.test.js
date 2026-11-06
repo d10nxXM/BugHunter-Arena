@@ -44,11 +44,11 @@ const aiFeedback = {
   detected_misconception: null,
   needs_clarification: false,
   hint: null,
-  feedback: 'Odlično.',
+  feedback: 'Excellent.',
   practice_tip: null,
 };
 
-function context(explanation = 'Početna vrijednost, negativni brojevi.') {
+function context(explanation = 'Starting value, negative numbers.') {
   return {
     attemptId: 'attempt-1',
     challenge,

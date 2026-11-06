@@ -38,7 +38,7 @@ const aiEval = {
   detected_misconception: 'Pretpostavka o pozitivnim brojevima.',
   needs_clarification: false,
   hint: null,
-  feedback: 'Dobro objašnjenje početne vrijednosti.',
+  feedback: 'Good explanation of the starting value.',
   practice_tip: 'Kreni od prvog elementa liste.',
 };
 
@@ -93,7 +93,7 @@ const attemptBody = (extra = {}) => ({
   userId: null,
   selectedLines: [2],
   explanation:
-    'Početna vrijednost max_value je 0, pa negativne liste vraćaju 0, a prazna lista ne vraća None.',
+    'The starting value of max_value is 0, so negative lists return 0, and an empty list does not return None.',
   edgeCase: { args: [[-8, -3, -10]], expected: -3 },
   fixedCode: FIXED,
   hintsUsed: 1,
@@ -333,7 +333,7 @@ describe('leak: hints in AI, demo and written modes', () => {
       setMode(mode);
       if (mode === 'ai') {
         fetchMock.mockResolvedValue(
-          llmReply('{"hint":"Šta ako su svi brojevi negativni?"}'),
+          llmReply('{"hint":"What if every number is negative?"}'),
         );
       }
       expectNoLeak(expect, await request(app).get('/api/challenges'), row);
@@ -362,14 +362,14 @@ describe('leak: hints in AI, demo and written modes', () => {
 
   it('the hint prompt sent to the LLM has no bug_description, reference solution or keywords', async () => {
     setMode('ai');
-    fetchMock.mockResolvedValue(llmReply('{"hint":"Pogledaj početak."}'));
+    fetchMock.mockResolvedValue(llmReply('{"hint":"Look at the start."}'));
     const res = await hint(2, {
-      currentAnswer: { selectedLines: [2], explanation: 'moje objašnjenje' },
+      currentAnswer: { selectedLines: [2], explanation: 'my explanation' },
     });
     expect(res.body.source).toBe('ai');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const sent = fetchMock.mock.calls[0][1].body;
-    expect(sent).toContain('moje objašnjenje');
+    expect(sent).toContain('my explanation');
     expect(sent).not.toContain('bug_description');
     expect(sent).not.toContain('reference_solution');
     expect(sent).not.toContain('expected_bug');

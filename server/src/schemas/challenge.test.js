@@ -6,6 +6,7 @@ import {
   VisibleTestSchema,
   ChallengeIdParamsSchema,
   ChallengeFileSchema,
+  DifficultySchema,
   FALLBACK_FEEDBACK_MAX,
 } from './challenge.js';
 import { EvaluationResultSchema } from './aiOutput.js';
@@ -48,7 +49,7 @@ describe('ChallengeSummarySchema', () => {
       ChallengeSummarySchema.parse({ ...summary, language: 'ruby' }),
     ).toThrow();
     expect(() =>
-      ChallengeSummarySchema.parse({ ...summary, difficulty: 'easy' }),
+      ChallengeSummarySchema.parse({ ...summary, difficulty: 'lako' }),
     ).toThrow();
   });
 });
@@ -199,12 +200,21 @@ describe('ChallengeFileSchema', () => {
       ChallengeFileSchema.parse({ ...file(), language: 'ruby' }),
     ).toThrow();
     expect(() =>
-      ChallengeFileSchema.parse({ ...file(), difficulty: 'easy' }),
+      ChallengeFileSchema.parse({ ...file(), difficulty: 'expert' }),
     ).toThrow();
   });
 
-  it('accepts javascript and every Montenegrin difficulty', () => {
+  it('rejects the old Montenegrin difficulty values', () => {
     for (const difficulty of ['lako', 'srednje', 'teško']) {
+      expect(DifficultySchema.safeParse(difficulty).success).toBe(false);
+      expect(() =>
+        ChallengeFileSchema.parse({ ...file(), difficulty }),
+      ).toThrow();
+    }
+  });
+
+  it('accepts javascript and every English difficulty', () => {
+    for (const difficulty of ['easy', 'medium', 'hard']) {
       expect(() =>
         ChallengeFileSchema.parse({ ...file(), difficulty }),
       ).not.toThrow();

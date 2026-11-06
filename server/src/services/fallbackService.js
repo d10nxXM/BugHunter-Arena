@@ -7,7 +7,7 @@
 const QUALITY_BY_GROUPS = [0, 3, 7, 10];
 
 export const DEFAULT_FALLBACK_FEEDBACK =
-  'Procjena bez AI-ja: objašnjenje je ocijenjeno prema ključnim pojmovima.';
+  'Assessed without AI: the explanation was scored by key terms.';
 
 /** A group matches if the lowercased text contains any non-empty stem. */
 function groupMatches(text, group) {
