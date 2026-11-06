@@ -53,6 +53,14 @@ Everything below is merged into `main` and pushed. Lint passes and all tests pas
    - `smoke_152646` (`smoke_152646@example.com`)
 3. **Browser end-to-end on the live site:** sign up, solve `find-max`, and check that the profile shows 1 solved and the XP. Then log out and back in, check that guest play still works, and check claim at signup.
 
+4. **Montenegrin leftovers (in progress).** The challenge page, the result page and `/dashboard` were still Montenegrin and in the old light design. A frontend branch is converting them to English and the dark design, including a full-width editor on phones.
+5. **Mobile header.** At 375 px the header wraps onto three rows, about half the first screen. It needs a menu button or a single scrolling row.
+6. **Speed.**
+   - The free Render API sleeps after about 15 minutes, so the first request takes 30 to 60 s, and it is slow even when awake. Keep it awake with a paid instance or an external `/healthz` ping every 10 min.
+   - Cache `/pyodide/*` for a day in `render.yaml`. It is `max-age=0` now.
+   - Preload Pyodide on `/problems`.
+   - Cache the challenge list and verified tokens on the server for about 60 s.
+
 ## Next steps, in order
 
 1. Finish "Open right now" above.
