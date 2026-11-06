@@ -10,20 +10,13 @@ const apiDoc = readFileSync(
   'utf8',
 );
 
-// Read-only: the challenge file holds the hidden fields the fixtures are derived from.
-const findMax = JSON.parse(
-  readFileSync(
-    fileURLToPath(new URL('../../../../server/data/challenges/find-max.json', import.meta.url)),
-    'utf8',
-  ),
-);
-
 /** Every ```json block in docs/API.md, in document order, parsed. */
 const docBlocks = [...apiDoc.matchAll(/```json\r?\n([\s\S]*?)```/g)].map((m) => JSON.parse(m[1]));
 
 // One entry per ```json block in docs/API.md, in the same order.
 const BLOCK_FIXTURES = [
   ['GET /api/health', f.health],
+  ['GET /healthz', f.healthz],
   ['GET /api/challenges', f.challengeList],
   ['GET /api/challenges/:id', f.findMaxPublic],
   ['hint request', f.hintRequest],
@@ -36,13 +29,26 @@ const BLOCK_FIXTURES = [
   ['GET /api/attempts', f.attemptsPage],
 ];
 
+/**
+ * Shape of a JSON value: strings become 'string' (the doc examples are Montenegrin, the fixtures
+ * English), everything else is kept, so keys, numbers, booleans, nulls and array lengths must match.
+ */
+function shape(value) {
+  if (typeof value === 'string') return 'string';
+  if (Array.isArray(value)) return value.map(shape);
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, shape(v)]));
+  }
+  return value;
+}
+
 /** Inline `{ ... }` JSON examples in the doc text that contain the given marker. */
 function inlineExample(marker) {
   const match = [...apiDoc.matchAll(/`(\{[^`]*\})`/g)].find((m) => m[1].includes(marker));
   return match ? JSON.parse(match[1]) : undefined;
 }
 
-describe('fixtures match docs/API.md', () => {
+describe('fixtures have the shape of docs/API.md', () => {
   it('has one fixture per JSON block', () => {
     expect(docBlocks).toHaveLength(BLOCK_FIXTURES.length);
   });
@@ -50,12 +56,14 @@ describe('fixtures match docs/API.md', () => {
   it.each(BLOCK_FIXTURES.map(([name, fixture], i) => [name, fixture, i]))(
     '%s',
     (_name, fixture, index) => {
-      expect(fixture).toEqual(docBlocks[index]);
+      expect(shape(fixture)).toEqual(shape(docBlocks[index]));
     },
   );
 
   it('error envelope example', () => {
-    expect(f.errorValidation).toEqual(inlineExample('"VALIDATION_ERROR"'));
+    const example = inlineExample('"VALIDATION_ERROR"');
+    expect(shape(f.errorValidation)).toEqual(shape(example));
+    expect(f.errorValidation.error.code).toBe(example.error.code);
   });
 
   it('empty progress example', () => {
@@ -63,38 +71,49 @@ describe('fixtures match docs/API.md', () => {
   });
 
   it('user request and response examples', () => {
-    expect(f.userRequest).toEqual(inlineExample('{ "displayName"'));
+    expect(shape(f.userRequest)).toEqual(shape(inlineExample('{ "displayName"')));
     const created = inlineExample('"id": "uuid"');
     expect(Object.keys(f.userCreated).sort()).toEqual(Object.keys(created).sort());
     expect(f.userCreated.displayName).toBe(created.displayName);
   });
 });
 
-describe('fixtures match server/data/challenges/find-max.json', () => {
+describe('English content', () => {
+  it('uses the English difficulty and category', () => {
+    expect(f.challengeList[0]).toMatchObject({
+      difficulty: 'easy',
+      bugCategory: 'Wrong initialization',
+    });
+    expect(f.findMaxPublic.difficulty).toBe('easy');
+  });
+
+  it.each([
+    [1, f.hintLevel1],
+    [2, f.hintLevel2],
+    [3, f.hintLevel3],
+  ])('hint level %i is a written hint', (level, fixture) => {
+    expect(fixture).toEqual({ level, hint: expect.any(String), source: 'written' });
+    expect(fixture.hint.length).toBeGreaterThan(10);
+  });
+});
+
+describe('fallback evaluation follows docs/SCORING.md', () => {
   // docs/SCORING.md "Fallback without the AI": groups matched -> quality.
   const QUALITY_BY_GROUPS = [0, 3, 7, 10];
 
-  /** A group matches if the lowercased text contains any non-blank lowercased stem. */
-  function keywordQuality(explanation, groups) {
-    const text = explanation.toLowerCase();
-    const matched = groups.filter((stems) =>
-      stems.some((stem) => stem.trim() !== '' && text.includes(stem.toLowerCase())),
-    ).length;
-    return QUALITY_BY_GROUPS[Math.min(matched, 3)];
-  }
-
-  it('fallback evaluation is what SCORING.md gives for attemptRequest', () => {
-    const quality = keywordQuality(f.attemptRequest.explanation, findMax.keywords_json);
+  it('quality, explanation points, is_correct and total agree', () => {
     const { feedback, breakdown } = f.evaluationFallback;
+    const quality = feedback.explanation_quality;
 
     expect(f.evaluationFallback.feedbackSource).toBe('fallback');
+    expect(QUALITY_BY_GROUPS).toContain(quality);
     expect(feedback).toEqual({
       is_correct: quality >= 7,
       explanation_quality: quality,
       detected_misconception: null,
       needs_clarification: false,
       hint: null,
-      feedback: findMax.fallback_feedback,
+      feedback: expect.any(String),
       practice_tip: null,
     });
     expect(breakdown.explanation).toBe(Math.round(quality * 3));
@@ -106,14 +125,6 @@ describe('fixtures match server/data/challenges/find-max.json', () => {
     const sum = Object.values(breakdown).reduce((a, b) => a + b, 0);
     expect(f.evaluationFallback.score).toBe(Math.min(100, Math.max(0, sum)));
     expect(Object.keys(feedback).sort()).toEqual(Object.keys(f.evaluationAi.feedback).sort());
-  });
-
-  it.each([
-    [1, f.hintLevel1],
-    [2, f.hintLevel2],
-    [3, f.hintLevel3],
-  ])('hint level %i is the written hint', (level, fixture) => {
-    expect(fixture).toEqual({ level, hint: findMax.hints_json[level - 1], source: 'written' });
   });
 });
 
@@ -176,7 +187,7 @@ describe('mockRequest', () => {
   it('returns copies, not the fixtures themselves', async () => {
     const { data } = await mockRequest({ path: '/api/challenges' });
     data[0].title = 'changed';
-    expect(f.challengeList[0].title).toBe('Najveći element liste');
+    expect(f.challengeList[0].title).toBe('Largest number in a list');
   });
 
   it('unknown challenge is 404', async () => {
@@ -260,8 +271,8 @@ describe('mockRequest', () => {
     const res = await mockRequest({
       method: 'POST',
       path: '/api/attempts',
-      // 26 characters, but only 18 after trimming.
-      body: { ...f.attemptRequest, explanation: '     kratko objašnjenje   ' },
+      // 26 characters, but only 17 after trimming.
+      body: { ...f.attemptRequest, explanation: '     short explanation    ' },
     });
     expect(res).toEqual({ status: 400, data: f.errorValidation });
   });

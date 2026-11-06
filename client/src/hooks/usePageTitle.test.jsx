@@ -5,11 +5,11 @@ import { usePageTitle } from './usePageTitle.js';
 describe('usePageTitle', () => {
   it('sets and updates the document title', () => {
     const { rerender, unmount } = renderHook(({ title }) => usePageTitle(title), {
-      initialProps: { title: 'Izazovi' },
+      initialProps: { title: 'Problems' },
     });
-    expect(document.title).toBe('Izazovi · BugHunter Arena');
-    rerender({ title: 'Rezultat' });
-    expect(document.title).toBe('Rezultat · BugHunter Arena');
+    expect(document.title).toBe('Problems · BugHunter Arena');
+    rerender({ title: 'Result' });
+    expect(document.title).toBe('Result · BugHunter Arena');
     unmount();
     expect(document.title).toBe('BugHunter Arena');
   });

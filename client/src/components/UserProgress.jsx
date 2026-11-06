@@ -65,7 +65,7 @@ export default function UserProgress({ userId }) {
           ) : (
             <p className="text-slate-800">
               Još nemaš nijedan pokušaj.{' '}
-              <Link to={paths.home} className={LINK}>
+              <Link to={paths.problems} className={LINK}>
                 Izaberi izazov
               </Link>
             </p>

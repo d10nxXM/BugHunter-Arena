@@ -20,10 +20,10 @@ describe('ErrorBoundary', () => {
   it('renders children when nothing throws', () => {
     render(
       <ErrorBoundary>
-        <p>Sadržaj</p>
+        <p>Content</p>
       </ErrorBoundary>,
     );
-    expect(screen.getByText('Sadržaj')).toBeInTheDocument();
+    expect(screen.getByText('Content')).toBeInTheDocument();
   });
 
   it('shows the fixed message without error details', () => {
@@ -32,11 +32,11 @@ describe('ErrorBoundary', () => {
         <Boom />
       </ErrorBoundary>,
     );
-    expect(screen.getByRole('alert')).toHaveTextContent('Došlo je do greške.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong.');
     expect(screen.queryByText(/secret/)).not.toBeInTheDocument();
   });
 
-  it('"Učitaj ponovo" reloads the page', async () => {
+  it('"Reload page" reloads the page', async () => {
     const reload = vi.fn();
     vi.stubGlobal('location', { ...window.location, reload });
     const user = userEvent.setup();
@@ -45,7 +45,7 @@ describe('ErrorBoundary', () => {
         <Boom />
       </ErrorBoundary>,
     );
-    await user.click(screen.getByRole('button', { name: 'Učitaj ponovo' }));
+    await user.click(screen.getByRole('button', { name: 'Reload page' }));
     expect(reload).toHaveBeenCalledTimes(1);
   });
 });

@@ -47,7 +47,7 @@ describe('ChallengePage loading', () => {
     expect(alert).toHaveTextContent('Izazov ne postoji.');
     expect(within(alert).getByRole('link', { name: 'Nazad na izazove' })).toHaveAttribute(
       'href',
-      '/',
+      '/problems',
     );
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });

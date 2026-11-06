@@ -17,16 +17,16 @@ const HINT_TIMEOUT_MS = 12000;
 // The server's own AI fallback can take about 16 s, so evaluation must wait longer than that.
 const EVALUATION_TIMEOUT_MS = 20000;
 
-const MESSAGE_GENERIC = 'Greška u komunikaciji sa serverom.';
-const MESSAGE_UNAVAILABLE = 'Server trenutno nije dostupan.';
-const MESSAGE_TIMEOUT = 'Server ne odgovara. Pokušaj ponovo.';
-const MESSAGE_CLIENT = 'Došlo je do greške u aplikaciji. Pokušaj ponovo.';
+const MESSAGE_GENERIC = 'Something went wrong talking to the server.';
+const MESSAGE_UNAVAILABLE = 'The server is not available right now.';
+const MESSAGE_TIMEOUT = 'The server is not responding. Please try again.';
+const MESSAGE_CLIENT = 'Something went wrong in the app. Please try again.';
 
 const GATEWAY_STATUSES = new Set([502, 503, 504]);
 
 export class ApiError extends Error {
   /**
-   * @param {string} message - Montenegrin text that is safe to show; never contains the URL or body.
+   * @param {string} message - English text that is safe to show; never contains the URL or body.
    * @param {{ status?: number | null, code: string, cause?: unknown }} details
    */
   constructor(message, { status = null, code, cause } = {}) {
