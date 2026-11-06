@@ -149,7 +149,7 @@ export default function ResultView() {
         <Link to={paths.challenge(id)} className={PRIMARY}>
           Pokušaj ponovo
         </Link>
-        <Link to={paths.progress} className={LINK}>
+        <Link to={paths.dashboard} className={LINK}>
           Moj napredak
         </Link>
         {challenge.nextId && (
@@ -157,7 +157,7 @@ export default function ResultView() {
             Sljedeći izazov: {challenge.nextTitle ?? challenge.nextId}
           </Link>
         )}
-        <Link to={paths.home} className={LINK}>
+        <Link to={paths.problems} className={LINK}>
           Svi izazovi
         </Link>
       </nav>

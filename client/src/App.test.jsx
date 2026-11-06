@@ -46,11 +46,13 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('App routes', () => {
   it.each([
-    ['/', 'Izazovi'],
+    ['/problems', 'Izazovi'],
     ['/challenges/find-max', 'Izazov find-max'],
     ['/challenges/find-max/result', 'Rezultat'],
-    ['/progress', 'Moj napredak'],
-    ['/nema-ovoga', 'Stranica ne postoji'],
+    ['/dashboard', 'Moj napredak'],
+    ['/login', 'Log in'],
+    ['/signup', 'Create account'],
+    ['/no-such-page', 'Page not found'],
   ])('%s shows its h1 and title', async (path, heading) => {
     renderAt(path);
     const h1 = await screen.findByRole('heading', { level: 1 });
@@ -59,61 +61,104 @@ describe('App routes', () => {
     expect(document.title).toBe(`${heading} · BugHunter Arena`);
   });
 
+  it('/ is the landing page with a link to the problems', async () => {
+    renderAt('/');
+    const h1 = await screen.findByRole('heading', { level: 1 });
+    expect(h1).toHaveTextContent('AI writes the code. You find the bugs.');
+    expect(h1).toHaveAttribute('tabindex', '-1');
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(document.title).toBe('BugHunter Arena');
+    const main = screen.getByRole('main');
+    expect(within(main).getByRole('link', { name: 'Start hunting' })).toHaveAttribute(
+      'href',
+      '/problems',
+    );
+  });
+
+  it('/progress redirects to the dashboard', async () => {
+    renderAt('/progress');
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Moj napredak');
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+  });
+
+  it('login and signup say accounts are coming soon', async () => {
+    renderAt('/signup');
+    await screen.findByRole('heading', { level: 1 });
+    expect(screen.getByText(/Accounts are coming soon/)).toBeInTheDocument();
+  });
+
   it('shows the challenge id from the URL', async () => {
     renderAt('/challenges/find-max');
     expect(await screen.findByText('find-max')).toBeInTheDocument();
   });
 
-  it('unknown path links back to the challenges', async () => {
+  it('unknown path links back to the problems', async () => {
     renderAt('/a/b/c');
-    const link = await screen.findByRole('link', { name: 'Nazad na izazove' });
-    expect(link).toHaveAttribute('href', '/');
+    const link = await screen.findByRole('link', { name: 'Back to problems' });
+    expect(link).toHaveAttribute('href', '/problems');
   });
 
-  it('has a skip link, named navigation links and a main landmark', async () => {
-    renderAt('/');
+  it('has a skip link, named navigation links, account actions and a main landmark', async () => {
+    renderAt('/problems');
     await screen.findByRole('heading', { level: 1 });
-    expect(screen.getByRole('link', { name: 'Preskoči na sadržaj' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', '#main');
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+    expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
       'href',
-      '#main',
+      '/dashboard',
     );
-    const nav = screen.getByRole('navigation', { name: 'Glavna navigacija' });
-    expect(within(nav).getByRole('link', { name: 'Izazovi' })).toHaveAttribute('href', '/');
-    expect(within(nav).getByRole('link', { name: 'Moj napredak' })).toHaveAttribute(
+    expect(within(nav).getByRole('link', { name: 'Problems' })).toHaveAttribute(
       'href',
-      '/progress',
+      '/problems',
     );
+    expect(within(nav).getByRole('link', { name: 'Problems' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    // Planned sections are visible but not links yet.
+    expect(within(nav).queryByRole('link', { name: /Arena|Leaderboard/ })).not.toBeInTheDocument();
+    expect(within(nav).getByText('Arena')).toBeInTheDocument();
+    expect(within(nav).getByText('Leaderboard')).toBeInTheDocument();
+    expect(within(nav).getAllByText('Soon')).toHaveLength(2);
     expect(screen.getByRole('link', { name: 'BugHunter Arena' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Log in' })).toHaveAttribute('href', '/login');
+    expect(screen.getByRole('link', { name: 'Start hunting' })).toHaveAttribute(
+      'href',
+      '/problems',
+    );
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main');
   });
 
   it('does not steal focus on the first load', async () => {
-    renderAt('/progress');
+    renderAt('/dashboard');
     await screen.findByRole('heading', { level: 1 });
     expect(document.activeElement).toBe(document.body);
   });
 
   it('navigating moves focus to the new h1', async () => {
     const user = userEvent.setup();
-    renderAt('/');
+    renderAt('/problems');
     await screen.findByRole('heading', { level: 1, name: 'Izazovi' });
-    await user.click(screen.getByRole('link', { name: 'Moj napredak' }));
+    await user.click(screen.getByRole('link', { name: 'Dashboard' }));
     const h1 = await screen.findByRole('heading', { level: 1, name: 'Moj napredak' });
     await expect.poll(() => document.activeElement).toBe(h1);
   });
 
-  it('Tab goes skip link, logo, then the nav links', async () => {
+  it('Tab goes skip link, logo, nav links, then the account actions', async () => {
     const user = userEvent.setup();
-    renderAt('/progress');
+    renderAt('/dashboard');
     await screen.findByRole('heading', { level: 1 });
+    const order = ['Skip to content', 'BugHunter Arena', 'Dashboard', 'Problems', 'Log in'];
+    for (const name of order) {
+      await user.tab();
+      expect(screen.getByRole('link', { name })).toHaveFocus();
+    }
     await user.tab();
-    expect(screen.getByRole('link', { name: 'Preskoči na sadržaj' })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole('link', { name: 'BugHunter Arena' })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole('link', { name: 'Izazovi' })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole('link', { name: 'Moj napredak' })).toHaveFocus();
+    expect(screen.getByRole('link', { name: 'Start hunting' })).toHaveFocus();
   });
 
   it('shows the stored display name in the header', async () => {
@@ -131,14 +176,14 @@ describe('App routes', () => {
     });
     renderAt('/');
     expect(await screen.findByRole('status')).toHaveTextContent(
-      'Podaci se neće sačuvati nakon zatvaranja stranice.',
+      'Your data will not be saved after you close this page.',
     );
   });
 
   it('shows no storage warning normally', async () => {
     renderAt('/');
     await screen.findByRole('heading', { level: 1 });
-    expect(screen.queryByText(/neće sačuvati/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/will not be saved/)).not.toBeInTheDocument();
   });
 });
 
@@ -146,8 +191,8 @@ describe('Layout', () => {
   it('keeps the header and nav while a lazy page is loading', async () => {
     const Pending = lazy(() => new Promise(() => {}));
     renderLayout('/', <Route path="/" element={<Pending />} />);
-    expect(await screen.findByRole('status')).toHaveTextContent('Učitavanje…');
-    expect(screen.getByRole('navigation', { name: 'Glavna navigacija' })).toBeInTheDocument();
+    expect(await screen.findByRole('status')).toHaveTextContent('Loading…');
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'BugHunter Arena' })).toBeInTheDocument();
   });
 
@@ -162,18 +207,18 @@ describe('Layout', () => {
       '/',
       <>
         <Route path="/" element={<Boom />} />
-        <Route path="/progress" element={<Page title="Moj napredak" />} />
+        <Route path="/dashboard" element={<Page title="Dashboard page" />} />
       </>,
     );
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Došlo je do greške.');
-    expect(within(alert).getByRole('button', { name: 'Učitaj ponovo' })).toBeInTheDocument();
+    expect(alert).toHaveTextContent('Something went wrong.');
+    expect(within(alert).getByRole('button', { name: 'Reload page' })).toBeInTheDocument();
     expect(screen.queryByText(/secret stack detail/)).not.toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: 'Glavna navigacija' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Main navigation' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('link', { name: 'Moj napredak' }));
-    expect(await screen.findByRole('heading', { name: 'Moj napredak' })).toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'Dashboard' }));
+    expect(await screen.findByRole('heading', { name: 'Dashboard page' })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
@@ -189,15 +234,15 @@ describe('Layout', () => {
     renderLayout(
       '/',
       <>
-        <Route path="/" element={<Page title="Izazovi" />} />
-        <Route path="/progress" element={<Later />} />
+        <Route path="/" element={<Page title="Home page" />} />
+        <Route path="/dashboard" element={<Later />} />
       </>,
     );
-    await screen.findByRole('heading', { name: 'Izazovi' });
-    await user.click(screen.getByRole('link', { name: 'Moj napredak' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('Učitavanje…');
-    resolvePage({ default: () => <Page title="Moj napredak" /> });
-    const h1 = await screen.findByRole('heading', { name: 'Moj napredak' });
+    await screen.findByRole('heading', { name: 'Home page' });
+    await user.click(screen.getByRole('link', { name: 'Dashboard' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Loading…');
+    resolvePage({ default: () => <Page title="Dashboard page" /> });
+    const h1 = await screen.findByRole('heading', { name: 'Dashboard page' });
     await expect.poll(() => document.activeElement).toBe(h1);
   });
 });
@@ -211,7 +256,10 @@ describe('Layout late h1', () => {
           resolvePage = resolve;
         }),
     );
-    return { Later, resolve: () => resolvePage({ default: () => <Page title="Moj napredak" /> }) };
+    return {
+      Later,
+      resolve: () => resolvePage({ default: () => <Page title="Dashboard page" /> }),
+    };
   }
 
   afterEach(() => vi.useRealTimers());
@@ -223,12 +271,12 @@ describe('Layout late h1', () => {
     renderLayout(
       '/',
       <>
-        <Route path="/" element={<Page title="Izazovi" />} />
-        <Route path="/progress" element={<page.Later />} />
+        <Route path="/" element={<Page title="Home page" />} />
+        <Route path="/dashboard" element={<page.Later />} />
       </>,
     );
-    await screen.findByRole('heading', { name: 'Izazovi' });
-    const link = screen.getByRole('link', { name: 'Moj napredak' });
+    await screen.findByRole('heading', { name: 'Home page' });
+    const link = screen.getByRole('link', { name: 'Dashboard' });
     await user.click(link);
     await screen.findByRole('status');
 
@@ -236,7 +284,7 @@ describe('Layout late h1', () => {
       vi.advanceTimersByTime(HEADING_WAIT_MS + 100);
     });
     page.resolve();
-    const h1 = await screen.findByRole('heading', { name: 'Moj napredak' });
+    const h1 = await screen.findByRole('heading', { name: 'Dashboard page' });
     expect(document.activeElement).not.toBe(h1);
     expect(link).toHaveFocus();
   });
@@ -247,18 +295,18 @@ describe('Layout late h1', () => {
     renderLayout(
       '/',
       <>
-        <Route path="/" element={<Page title="Izazovi" />} />
-        <Route path="/progress" element={<page.Later />} />
+        <Route path="/" element={<Page title="Home page" />} />
+        <Route path="/dashboard" element={<page.Later />} />
       </>,
     );
-    await screen.findByRole('heading', { name: 'Izazovi' });
-    await user.click(screen.getByRole('link', { name: 'Moj napredak' }));
+    await screen.findByRole('heading', { name: 'Home page' });
+    await user.click(screen.getByRole('link', { name: 'Dashboard' }));
     await screen.findByRole('status');
     const logo = screen.getByRole('link', { name: 'BugHunter Arena' });
     act(() => logo.focus());
 
     page.resolve();
-    const h1 = await screen.findByRole('heading', { name: 'Moj napredak' });
+    const h1 = await screen.findByRole('heading', { name: 'Dashboard page' });
     expect(document.activeElement).not.toBe(h1);
     expect(logo).toHaveFocus();
   });

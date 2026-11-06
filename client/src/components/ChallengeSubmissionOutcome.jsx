@@ -42,7 +42,7 @@ function Recovered({ item, testsPassed, testsTotal }) {
       )}
       <p className="mt-1 text-sm">Tekst povratne informacije nije moguće ponovo učitati.</p>
       <p className="mt-2">
-        <Link to={paths.progress} className={LINK}>
+        <Link to={paths.dashboard} className={LINK}>
           Pogledaj svoj napredak
         </Link>
       </p>
@@ -75,14 +75,14 @@ export default function ChallengeSubmissionOutcome({ submission, onAction }) {
       </p>
       {actions.includes('progressLink') && (
         <p className="mt-1">
-          <Link to={paths.progress} className={LINK}>
+          <Link to={paths.dashboard} className={LINK}>
             Pogledaj svoj napredak
           </Link>
         </p>
       )}
       {actions.includes('listLink') && (
         <p className="mt-1">
-          <Link to={paths.home} className={LINK}>
+          <Link to={paths.problems} className={LINK}>
             Nazad na izazove
           </Link>
         </p>

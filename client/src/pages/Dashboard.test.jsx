@@ -34,7 +34,7 @@ function storeUser(user = USER) {
 function renderDashboard() {
   return render(
     <UserProvider>
-      <MemoryRouter initialEntries={['/progress']}>
+      <MemoryRouter initialEntries={['/dashboard']}>
         <Dashboard />
       </MemoryRouter>
     </UserProvider>,
@@ -172,7 +172,7 @@ describe('Dashboard with a user', () => {
     const perChallenge = screen.getByRole('table', {
       name: 'Najbolji rezultat i broj pokušaja po izazovu',
     });
-    const row = within(perChallenge).getByRole('row', { name: /Najveći element liste/ });
+    const row = within(perChallenge).getByRole('row', { name: /Largest number in a list/ });
     expect(row).toHaveTextContent('89 / 100');
     expect(row).toHaveTextContent('2');
     // No client-side "solved" label until the server sends perChallenge[].solved.
@@ -180,7 +180,7 @@ describe('Dashboard with a user', () => {
     expect(perChallenge).not.toHaveTextContent('Riješen');
     expect(screen.getByText('Napredak učitan.')).toHaveAttribute('role', 'status');
 
-    expect(screen.getByText('Pogrešna inicijalizacija: 2 promašaja')).toBeInTheDocument();
+    expect(screen.getByText('Wrong initialization: 2 promašaja')).toBeInTheDocument();
     expect(getProgress).toHaveBeenCalledWith(USER.userId, expect.anything());
   });
 
@@ -190,7 +190,10 @@ describe('Dashboard with a user', () => {
     renderDashboard();
 
     expect(await screen.findByText(/Još nemaš nijedan pokušaj/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Izaberi izazov' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Izaberi izazov' })).toHaveAttribute(
+      'href',
+      '/problems',
+    );
     expect(await screen.findByText('Još nema pokušaja.')).toBeInTheDocument();
     expect(screen.queryByText('Ukupni bodovi')).not.toBeInTheDocument();
   });
@@ -498,7 +501,7 @@ describe('Dashboard with a user', () => {
     const table = await screen.findByRole('table', { name: 'Pokušaji, od najnovijeg' });
     expect(within(table).getAllByRole('columnheader')[0]).toHaveTextContent('Izazov');
     const rows = within(table).getAllByRole('row').slice(1);
-    expect(within(rows[0]).getByRole('rowheader')).toHaveTextContent('Najveći element liste');
+    expect(within(rows[0]).getByRole('rowheader')).toHaveTextContent('Largest number in a list');
     expect(rows[0]).toHaveTextContent('Pomoćna AI procjena');
     expect(rows[1]).toHaveTextContent('Procjena bez AI-ja');
     expect(rows[2]).toHaveTextContent('Pomoćna AI procjena (demo)');

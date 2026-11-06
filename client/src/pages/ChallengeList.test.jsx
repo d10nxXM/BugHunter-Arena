@@ -37,11 +37,11 @@ describe('ChallengeList', () => {
   it('lists challenges with difficulty and category, linked to the challenge', async () => {
     getChallenges.mockResolvedValue(challengeList);
     renderList();
-    const link = await screen.findByRole('link', { name: 'Najveći element liste' });
+    const link = await screen.findByRole('link', { name: 'Largest number in a list' });
     expect(link).toHaveAttribute('href', '/challenges/find-max');
     const item = screen.getByRole('listitem');
-    expect(within(item).getByText('lako')).toBeInTheDocument();
-    expect(within(item).getByText('Pogrešna inicijalizacija')).toBeInTheDocument();
+    expect(within(item).getByText('easy')).toBeInTheDocument();
+    expect(within(item).getByText('Wrong initialization')).toBeInTheDocument();
     expect(within(item).getByText('Python')).toBeInTheDocument();
   });
 
@@ -62,7 +62,9 @@ describe('ChallengeList', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Server trenutno nije dostupan.');
     await user.click(within(alert).getByRole('button', { name: 'Pokušaj ponovo' }));
-    expect(await screen.findByRole('link', { name: 'Najveći element liste' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('link', { name: 'Largest number in a list' }),
+    ).toBeInTheDocument();
     expect(getChallenges).toHaveBeenCalledTimes(2);
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });

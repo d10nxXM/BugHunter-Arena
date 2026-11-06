@@ -58,7 +58,7 @@ function readStoredState() {
 }
 
 /** Message when the user was cleared while POST /api/users was in flight. */
-export const USER_CHANGED_MESSAGE = 'Korisnik je u međuvremenu promijenjen. Pokušaj ponovo.';
+export const USER_CHANGED_MESSAGE = 'The user changed in the meantime. Please try again.';
 
 function abortReason(signal) {
   return signal.reason ?? new DOMException('The operation was aborted.', 'AbortError');

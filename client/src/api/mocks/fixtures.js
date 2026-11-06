@@ -1,5 +1,7 @@
-// Fixtures copied from the JSON examples in docs/API.md. mocks.test.js compares each one with the
-// doc, so edit the doc first (api-contract skill) and then mirror the change here.
+// Fixtures shaped like the JSON examples in docs/API.md, with English content (the site is English;
+// docs/API.md and the server's challenge data still show Montenegrin examples until they are
+// translated). mocks.test.js checks each fixture has the same shape as its doc example, so change a
+// shape in the doc first (api-contract skill) and then mirror it here.
 //
 // Integrity: only attemptCreated (the POST /api/attempts response) and the evaluation fixtures may
 // hold the reference solution or hidden tests (t3, t4). GET and hint fixtures never do.
@@ -7,25 +9,29 @@
 /** GET /api/health */
 export const health = { status: 'ok', ai: 'available', demoMode: false };
 
+/** GET /healthz (liveness for the hosting platform; the client never calls it) */
+export const healthz = { status: 'ok' };
+
 /** GET /api/challenges */
 export const challengeList = [
   {
     id: 'find-max',
-    title: 'Najveći element liste',
+    title: 'Largest number in a list',
     language: 'python',
-    difficulty: 'lako',
-    bugCategory: 'Pogrešna inicijalizacija',
+    difficulty: 'easy',
+    bugCategory: 'Wrong initialization',
   },
 ];
 
 /** GET /api/challenges/find-max */
 export const findMaxPublic = {
   id: 'find-max',
-  title: 'Najveći element liste',
-  description: 'Funkcija find_max vraća najveći broj iz liste. Za praznu listu vraća None.',
+  title: 'Largest number in a list',
+  description:
+    'The function find_max returns the largest number in a list. For an empty list it returns None.',
   language: 'python',
-  difficulty: 'lako',
-  bugCategory: 'Pogrešna inicijalizacija',
+  difficulty: 'easy',
+  bugCategory: 'Wrong initialization',
   functionName: 'find_max',
   code: 'def find_max(numbers):\n    max_value = 0\n    for number in numbers:\n        if number > max_value:\n            max_value = number\n    return max_value',
   visibleTests: [
@@ -41,21 +47,21 @@ export const hintRequest = { level: 1, currentAnswer: { selectedLines: [], expla
 /** POST /api/challenges/:id/hints response, level 1 (docs/API.md) */
 export const hintLevel1 = {
   level: 1,
-  hint: 'Da li funkcija radi za svaku listu brojeva, ili samo za uobičajene?',
+  hint: 'Does the function work for every list of numbers, or only for the usual ones?',
   source: 'written',
 };
 
-// Levels 2 and 3 are not in docs/API.md. Texts are from the hints table in docs/SPEC.md
-// (the same as hints_json in server/data/challenges/find-max.json); source 'written'.
+// Levels 2 and 3 are not in docs/API.md. English versions of the hints table in docs/SPEC.md
+// (hints_json in server/data/challenges/find-max.json); source 'written'.
 export const hintLevel2 = {
   level: 2,
-  hint: 'Šta funkcija vraća ako su svi brojevi u listi negativni?',
+  hint: 'What does the function return if every number in the list is negative?',
   source: 'written',
 };
 
 export const hintLevel3 = {
   level: 3,
-  hint: 'Pogledaj početnu vrijednost promjenljive max_value.',
+  hint: 'Look at the starting value of the variable max_value.',
   source: 'written',
 };
 
@@ -65,7 +71,7 @@ export const attemptRequest = {
   userId: null,
   selectedLines: [2],
   explanation:
-    'max_value počinje od 0. Ako su svi brojevi negativni, nijedan nije veći od 0, pa funkcija vraća 0, a 0 nije u listi.',
+    'max_value starts at 0. If all the numbers are negative, none is greater than 0, so the function returns 0, which is not in the list.',
   edgeCase: { args: [[-8, -3, -10]], expected: -3 },
   fixedCode:
     'def find_max(numbers):\n    if not numbers:\n        return None\n    max_value = numbers[0]\n    ...',
@@ -106,22 +112,20 @@ export const evaluationAi = {
   feedback: {
     is_correct: true,
     explanation_quality: 8,
-    detected_misconception: 'Pretpostavka da lista uvijek sadrži bar jedan pozitivan broj.',
+    detected_misconception: 'Assuming the list always contains at least one positive number.',
     needs_clarification: false,
     hint: null,
     feedback:
-      'Tačno si prepoznao da početna vrijednost 0 pravi problem kada su svi brojevi negativni. Dobro je što si to potvrdio testom [-8, -3, -10]. Za punu ocjenu nedostaje ponašanje za praznu listu.',
+      'You correctly spotted that the starting value 0 breaks when every number is negative. Good that you confirmed it with the test [-8, -3, -10]. For full marks, also cover the empty list.',
     practice_tip:
-      'Kada tražiš najveći ili najmanji element, kreni od prvog elementa liste, a ne od proizvoljne konstante.',
+      'When you look for the largest or smallest element, start from the first element of the list, not from an arbitrary constant.',
   },
 };
 
-// Not an API.md example. Derived from docs/SCORING.md "Fallback without the AI" for the same
-// answer as attemptRequest. Against find-max's keywords_json its explanation matches only the
-// condition group ("negativ"); "počinje" is not the stem "početn", and no fix stem appears.
-// 1 group -> quality 3 -> explanation round(3 * 3) = 9, is_correct false;
-// total 40 + 9 + 20 + 10 - 5 = 74. feedback is find-max's fallback_feedback.
-// mocks.test.js recomputes all of this from server/data/challenges/find-max.json.
+// Not an API.md example. Follows docs/SCORING.md "Fallback without the AI" for an explanation
+// that matches one keyword group: quality 3 -> explanation round(3 * 3) = 9, is_correct false;
+// total 40 + 9 + 20 + 10 - 5 = 74. feedback is an English version of find-max's fallback_feedback.
+// mocks.test.js checks this arithmetic.
 export const evaluationFallback = {
   score: 74,
   breakdown: { lineIdentification: 40, explanation: 9, edgeCase: 20, fix: 10, hintPenalty: -5 },
@@ -135,7 +139,7 @@ export const evaluationFallback = {
     needs_clarification: false,
     hint: null,
     feedback:
-      'Greška je u početnoj vrijednosti max_value = 0. Ako su svi brojevi negativni, nijedan nije veći od 0, pa funkcija vraća 0, koja nije u listi. Maksimum treba početi od prvog elementa, a praznu listu obraditi posebno.',
+      'The bug is the starting value max_value = 0. If all the numbers are negative, none is greater than 0, so the function returns 0, which is not in the list. Start the maximum from the first element and handle the empty list separately.',
     practice_tip: null,
   },
 };
@@ -147,7 +151,7 @@ export const progress = {
   attempted: 4,
   averageDurationSec: 212,
   perChallenge: [{ challengeId: 'find-max', bestScore: 89, attempts: 2 }],
-  weakCategories: [{ category: 'Pogrešna inicijalizacija', misses: 2 }],
+  weakCategories: [{ category: 'Wrong initialization', misses: 2 }],
 };
 
 /** GET /api/progress for an unknown user or one with no attempts */
@@ -182,26 +186,29 @@ export const userRequest = { displayName: 'dion' };
 /** POST /api/users response (201) */
 export const userCreated = { id: '6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b', displayName: 'dion' };
 
-// Error envelopes. VALIDATION_ERROR is the docs/API.md example; the other messages mirror the
-// server's texts (server/src/services, server/src/middleware).
+// Error envelopes. VALIDATION_ERROR has the shape of the docs/API.md example; the codes mirror the
+// server (server/src/services, server/src/middleware), the messages are English.
 export const errorValidation = {
-  error: { code: 'VALIDATION_ERROR', message: 'Objašnjenje mora imati najmanje 20 karaktera.' },
+  error: {
+    code: 'VALIDATION_ERROR',
+    message: 'The explanation must be at least 20 characters long.',
+  },
 };
 export const errorValidationGeneric = {
-  error: { code: 'VALIDATION_ERROR', message: 'Neispravan unos.' },
+  error: { code: 'VALIDATION_ERROR', message: 'Invalid input.' },
 };
 export const errorChallengeNotFound = {
-  error: { code: 'NOT_FOUND', message: 'Izazov ne postoji.' },
+  error: { code: 'NOT_FOUND', message: 'Challenge not found.' },
 };
 export const errorRouteNotFound = {
-  error: { code: 'NOT_FOUND', message: 'Tražena adresa ne postoji.' },
+  error: { code: 'NOT_FOUND', message: 'The requested address does not exist.' },
 };
 export const errorAlreadyEvaluated = {
-  error: { code: 'ALREADY_EVALUATED', message: 'Pokušaj je već ocijenjen.' },
+  error: { code: 'ALREADY_EVALUATED', message: 'This attempt has already been evaluated.' },
 };
 export const errorRateLimited = {
-  error: { code: 'RATE_LIMITED', message: 'Previše zahtjeva. Sačekaj malo pa pokušaj ponovo.' },
+  error: { code: 'RATE_LIMITED', message: 'Too many requests. Wait a moment and try again.' },
 };
 export const errorInternal = {
-  error: { code: 'INTERNAL_ERROR', message: 'Došlo je do greške. Pokušaj ponovo.' },
+  error: { code: 'INTERNAL_ERROR', message: 'Something went wrong. Please try again.' },
 };

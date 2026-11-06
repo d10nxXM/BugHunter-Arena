@@ -92,7 +92,7 @@ describe('ChallengePage timeouts and recovery', () => {
     expect(section).toHaveTextContent('Pomoćna AI procjena');
     expect(within(section).getByRole('link', { name: 'Pogledaj svoj napredak' })).toHaveAttribute(
       'href',
-      '/progress',
+      '/dashboard',
     );
     expect(submitEvaluation).toHaveBeenCalledTimes(1);
     expect(getAttempts).toHaveBeenCalledWith(
@@ -230,7 +230,7 @@ describe('ChallengePage timeouts and recovery', () => {
     expect(alert).toHaveTextContent('Rezultat je možda sačuvan, ali ga nismo mogli učitati.');
     expect(within(alert).getByRole('link', { name: 'Pogledaj svoj napredak' })).toHaveAttribute(
       'href',
-      '/progress',
+      '/dashboard',
     );
     expect(getAttempts).toHaveBeenCalledTimes(1);
     expect(submitEvaluation).toHaveBeenCalledTimes(1);

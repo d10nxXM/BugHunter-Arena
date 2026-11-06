@@ -161,7 +161,7 @@ describe('errors', () => {
     expect(error).toMatchObject({
       status: 400,
       code: 'VALIDATION_ERROR',
-      message: 'Objašnjenje mora imati najmanje 20 karaktera.',
+      message: f.errorValidation.error.message,
     });
   });
 
@@ -184,7 +184,7 @@ describe('errors', () => {
     await expect(api.getHealth()).rejects.toMatchObject({
       status: 500,
       code: 'HTTP_ERROR',
-      message: 'Greška u komunikaciji sa serverom.',
+      message: 'Something went wrong talking to the server.',
     });
   });
 
@@ -194,7 +194,7 @@ describe('errors', () => {
     );
     await expect(api.getHealth()).rejects.toMatchObject({
       code: 'VALIDATION_ERROR',
-      message: 'Greška u komunikaciji sa serverom.',
+      message: 'Something went wrong talking to the server.',
     });
   });
 
@@ -204,7 +204,7 @@ describe('errors', () => {
     expect(error).toMatchObject({
       status,
       code: 'NETWORK_ERROR',
-      message: 'Server trenutno nije dostupan.',
+      message: 'The server is not available right now.',
     });
     expect(error.message).not.toContain('/api');
   });
@@ -214,7 +214,7 @@ describe('errors', () => {
     await expect(api.getHealth()).rejects.toMatchObject({
       status,
       code: 'HTTP_ERROR',
-      message: 'Greška u komunikaciji sa serverom.',
+      message: 'Something went wrong talking to the server.',
     });
   });
 
@@ -223,7 +223,7 @@ describe('errors', () => {
     await expect(api.getChallenges()).rejects.toMatchObject({
       status: 200,
       code: 'BAD_RESPONSE',
-      message: 'Greška u komunikaciji sa serverom.',
+      message: 'Something went wrong talking to the server.',
     });
   });
 
@@ -234,7 +234,7 @@ describe('errors', () => {
     expect(error).toMatchObject({
       name: 'ApiError',
       code: 'NETWORK_ERROR',
-      message: 'Server trenutno nije dostupan.',
+      message: 'The server is not available right now.',
     });
     expect(error.cause).toBe(cause);
   });
@@ -257,7 +257,7 @@ describe('errors', () => {
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({
       code: 'TIMEOUT',
-      message: 'Server ne odgovara. Pokušaj ponovo.',
+      message: 'The server is not responding. Please try again.',
     });
   });
 

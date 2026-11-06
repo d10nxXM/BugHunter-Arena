@@ -84,7 +84,7 @@ export default function ChallengePage() {
             Izazov ne postoji.
           </p>
           <p className="mt-1">
-            <Link to={paths.home} className={LINK}>
+            <Link to={paths.problems} className={LINK}>
               Nazad na izazove
             </Link>
           </p>

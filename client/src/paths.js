@@ -1,9 +1,12 @@
 /** Route paths. Build links with these instead of writing URLs by hand. */
 export const paths = {
   home: '/',
+  problems: '/problems',
   challenge: (id) => `/challenges/${encodeURIComponent(id)}`,
   result: (id) => `/challenges/${encodeURIComponent(id)}/result`,
-  progress: '/progress',
+  dashboard: '/dashboard',
+  login: '/login',
+  signup: '/signup',
 };
 
 /**

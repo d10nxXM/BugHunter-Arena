@@ -208,7 +208,10 @@ describe('ResultView', () => {
       'href',
       '/challenges/find-max',
     );
-    expect(screen.getByRole('link', { name: 'Moj napredak' })).toHaveAttribute('href', '/progress');
+    expect(screen.getByRole('link', { name: 'Moj napredak' })).toHaveAttribute(
+      'href',
+      '/dashboard',
+    );
   });
 
   it('omits the solution section when the state has no referenceSolution', () => {
@@ -219,19 +222,19 @@ describe('ResultView', () => {
   it('shows the challenge title and links the next challenge in list order', async () => {
     renderResult({ state: makeState() });
 
-    expect(await screen.findByText('Izazov: Najveći element liste')).toBeInTheDocument();
+    expect(await screen.findByText('Izazov: Largest number in a list')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sljedeći izazov: Zbir liste' })).toHaveAttribute(
       'href',
       '/challenges/sum-list',
     );
-    expect(screen.getByRole('link', { name: 'Svi izazovi' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: 'Svi izazovi' })).toHaveAttribute('href', '/problems');
   });
 
   it('offers only "Svi izazovi" for the last challenge', async () => {
     getChallenges.mockResolvedValue([...TWO_CHALLENGES].reverse());
     renderResult({ state: makeState() });
 
-    expect(await screen.findByText('Izazov: Najveći element liste')).toBeInTheDocument();
+    expect(await screen.findByText('Izazov: Largest number in a list')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Sljedeći izazov/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Svi izazovi' })).toBeInTheDocument();
   });
