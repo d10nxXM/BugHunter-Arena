@@ -1,7 +1,7 @@
 import { Link } from 'react-router';
 import { challengeStatus } from '../../hooks/useChallengeStatuses.js';
 import { languageLabel } from '../../lib/labels.js';
-import { challengeXp, MAX_CHALLENGE_XP } from '../../lib/xp.js';
+import { entryXp, MAX_CHALLENGE_XP } from '../../lib/xp.js';
 import { paths } from '../../paths.js';
 import DifficultyBadge from '../ui/DifficultyBadge.jsx';
 import StatusIcon from '../ui/StatusIcon.jsx';
@@ -72,9 +72,7 @@ export default function ProblemsTable({ rows, progressById }) {
                 <DifficultyBadge difficulty={challenge.difficulty} plain />
               </td>
               <td className={`${TD} text-right font-mono whitespace-nowrap text-text`}>
-                {entry
-                  ? `${challengeXp(entry.bestScore)} / ${MAX_CHALLENGE_XP}`
-                  : `${MAX_CHALLENGE_XP} XP`}
+                {entry ? `${entryXp(entry)} / ${MAX_CHALLENGE_XP}` : `${MAX_CHALLENGE_XP} XP`}
               </td>
             </tr>
           );

@@ -340,3 +340,103 @@ describe('mockRequest', () => {
     await expect(pending).rejects.toMatchObject({ name: 'AbortError' });
   });
 });
+
+describe('account mocks', () => {
+  beforeEach(() => resetMocks());
+
+  const post = (path, body, headers) => mockRequest({ method: 'POST', path, body, headers });
+  const bearer = (token) => ({ Authorization: `Bearer ${token}` });
+
+  it('fixtures follow the auth contract and never carry an email or password back', () => {
+    expect(Object.keys(f.authResponse).sort()).toEqual(['session', 'user']);
+    expect(Object.keys(f.authSession).sort()).toEqual(['accessToken', 'expiresAt', 'refreshToken']);
+    expect(Object.keys(f.accountUser).sort()).toEqual([
+      'displayName',
+      'handle',
+      'id',
+      'memberSince',
+    ]);
+    expect(Object.keys(f.refreshResponse)).toEqual(['session']);
+    expect(Object.keys(f.profile.rank).sort()).toEqual(['name', 'nextName', 'xp', 'xpToNext']);
+    for (const fixture of [f.authResponse, f.refreshResponse, f.me, f.profile, f.profileEmpty]) {
+      expect(JSON.stringify(fixture)).not.toMatch(/email|password/i);
+    }
+  });
+
+  it('signup creates an account, logs it in and serves its profile', async () => {
+    const res = await post('/api/auth/signup', {
+      handle: 'New_Hunter',
+      email: 'new@example.com',
+      password: 'long-enough-pw',
+    });
+    expect(res.status).toBe(201);
+    expect(res.data.user).toMatchObject({ handle: 'new_hunter', displayName: 'new_hunter' });
+    expect(res.data.session.expiresAt).toBeGreaterThan(Date.now() / 1000);
+
+    const me = await mockRequest({
+      path: '/api/me',
+      headers: bearer(res.data.session.accessToken),
+    });
+    expect(me).toEqual({ status: 200, data: res.data.user });
+
+    const profile = await mockRequest({ path: '/api/profiles/new_hunter' });
+    expect(profile.status).toBe(200);
+    expect(profile.data).toMatchObject({ handle: 'new_hunter', solved: 0, totalXp: 0 });
+  });
+
+  it.each([
+    ['handle too short', { ...f.signupRequest, handle: 'ab' }],
+    ['reserved handle', { ...f.signupRequest, handle: 'admin' }],
+    ['bad email', { ...f.signupRequest, email: 'nope' }],
+    ['short password', { ...f.signupRequest, password: 'short' }],
+  ])('signup rejects %s with 400', async (_name, body) => {
+    expect((await post('/api/auth/signup', body)).status).toBe(400);
+  });
+
+  it('signup returns 409 HANDLE_TAKEN and EMAIL_TAKEN', async () => {
+    const handle = await post('/api/auth/signup', { ...f.signupRequest, email: 'x@example.com' });
+    expect(handle).toEqual({ status: 409, data: f.errorHandleTaken });
+    const email = await post('/api/auth/signup', { ...f.signupRequest, handle: 'other_one' });
+    expect(email).toEqual({ status: 409, data: f.errorEmailTaken });
+  });
+
+  it('login succeeds with the fixture account and fails generically otherwise', async () => {
+    const ok = await post('/api/auth/login', f.loginRequest);
+    expect(ok.status).toBe(200);
+    expect(ok.data.user).toEqual(f.accountUser);
+    const wrong = await post('/api/auth/login', { ...f.loginRequest, password: 'wrong-password' });
+    expect(wrong).toEqual({ status: 401, data: f.errorInvalidCredentials });
+    const unknown = await post('/api/auth/login', { ...f.loginRequest, email: 'who@example.com' });
+    expect(unknown).toEqual({ status: 401, data: f.errorInvalidCredentials });
+  });
+
+  it('refresh returns a new session; a revoked token is 401', async () => {
+    const ok = await post('/api/auth/refresh', f.refreshRequest);
+    expect(ok.status).toBe(200);
+    expect(Object.keys(ok.data)).toEqual(['session']);
+    expect((await post('/api/auth/refresh', { refreshToken: 'revoked' })).status).toBe(401);
+    expect((await post('/api/auth/refresh', {})).status).toBe(400);
+  });
+
+  it('logout and /api/me need a known bearer token', async () => {
+    expect(await post('/api/auth/logout', undefined, bearer(f.authSession.accessToken))).toEqual({
+      status: 204,
+      data: null,
+    });
+    expect((await post('/api/auth/logout')).status).toBe(401);
+    expect((await mockRequest({ path: '/api/me' })).status).toBe(401);
+    expect((await mockRequest({ path: '/api/me', headers: bearer('nope') })).status).toBe(401);
+  });
+
+  it('profiles: fixture, 404 for unknown handles, 400 for invalid ones', async () => {
+    expect(await mockRequest({ path: '/api/profiles/null_pointer' })).toEqual({
+      status: 200,
+      data: f.profile,
+    });
+    expect(await mockRequest({ path: '/api/profiles/nobody_here' })).toEqual({
+      status: 404,
+      data: f.errorProfileNotFound,
+    });
+    expect((await mockRequest({ path: '/api/profiles/Bad%20Handle' })).status).toBe(400);
+  });
+});

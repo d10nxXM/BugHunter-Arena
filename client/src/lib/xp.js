@@ -1,10 +1,12 @@
 /**
  * XP and rank tiers. Display only: never sent to the server and never part of
- * the score (docs/SCORING.md). XP is the sum of the best score per challenge,
- * the same number as `totalScore` from GET /api/progress.
+ * the score (docs/SCORING.md "XP and ranks").
  *
- * PROVISIONAL until the user confirms the formula: change only the constants
- * below. Every page reads XP, ranks and "solved" from this module.
+ * The server computes XP: a challenge gives the score of the first attempt that
+ * solved it (score >= SOLVED_MIN_SCORE), unsolved challenges give 0. Pages use
+ * the server's `totalXp` and per-challenge `xp` (GET /api/progress) when they are
+ * present, and fall back to the best score per challenge when an older server
+ * does not send them. Every page reads XP, ranks and "solved" from this module.
  */
 
 /** Best score at or above which a challenge counts as solved. */
@@ -31,10 +33,27 @@ export function challengeXp(bestScore) {
   return Math.min(toXp(bestScore), MAX_CHALLENGE_XP);
 }
 
-/** Total XP from `perChallenge` of GET /api/progress (`[{ bestScore }]`). */
-export function totalXp(perChallenge) {
+function isXpNumber(value) {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+/**
+ * XP of one `perChallenge` entry of GET /api/progress: the server's `xp` when present,
+ * otherwise challengeXp(bestScore).
+ */
+export function entryXp(entry) {
+  if (isXpNumber(entry?.xp)) return challengeXp(entry.xp);
+  return challengeXp(entry?.bestScore);
+}
+
+/**
+ * Total XP. `serverTotal` is `totalXp` from GET /api/progress; when it is a number it wins.
+ * Otherwise the sum of entryXp over `perChallenge` (`[{ xp?, bestScore }]`).
+ */
+export function totalXp(perChallenge, serverTotal) {
+  if (isXpNumber(serverTotal)) return toXp(serverTotal);
   if (!Array.isArray(perChallenge)) return 0;
-  return perChallenge.reduce((sum, item) => sum + challengeXp(item?.bestScore), 0);
+  return perChallenge.reduce((sum, item) => sum + entryXp(item), 0);
 }
 
 /** Whether a best score counts as solved. */

@@ -212,3 +212,113 @@ export const errorRateLimited = {
 export const errorInternal = {
   error: { code: 'INTERNAL_ERROR', message: 'Something went wrong. Please try again.' },
 };
+
+// Accounts: the auth endpoints, GET /api/me and GET /api/profiles/:handle, shaped like the
+// contract in docs/API.md (Phase 2 auth). The mock tokens are not real JWTs.
+
+/** POST /api/auth/signup request */
+export const signupRequest = {
+  handle: 'null_pointer',
+  email: 'hunter@example.com',
+  password: 'correct-horse-battery',
+};
+
+/** POST /api/auth/login request */
+export const loginRequest = { email: 'hunter@example.com', password: 'correct-horse-battery' };
+
+/** The account user in the auth responses; also GET /api/me. */
+export const accountUser = {
+  id: '0b8f4f8e-2c1a-4d3b-9e5f-7a6b5c4d3e2f',
+  handle: 'null_pointer',
+  displayName: 'null_pointer',
+  memberSince: '2026-03-14T09:30:00.000Z',
+};
+
+/** `session` of the auth responses; expiresAt is epoch seconds. */
+export const authSession = {
+  accessToken: 'mock-access-token',
+  refreshToken: 'mock-refresh-token',
+  expiresAt: 1793961600,
+};
+
+/** POST /api/auth/signup (201) and POST /api/auth/login (200) response */
+export const authResponse = { session: authSession, user: accountUser };
+
+/** POST /api/auth/refresh request */
+export const refreshRequest = { refreshToken: 'mock-refresh-token' };
+
+/** POST /api/auth/refresh response */
+export const refreshResponse = {
+  session: {
+    accessToken: 'mock-access-token-2',
+    refreshToken: 'mock-refresh-token-2',
+    expiresAt: 1793965200,
+  },
+};
+
+/** GET /api/me response */
+export const me = accountUser;
+
+/** GET /api/profiles/:handle response */
+export const profile = {
+  handle: 'null_pointer',
+  displayName: 'null_pointer',
+  memberSince: '2026-03-14T09:30:00.000Z',
+  rank: { name: 'Hunter', xp: 169, nextName: 'Exterminator', xpToNext: 31 },
+  totalXp: 169,
+  solved: 2,
+  attempted: 3,
+  challengesAvailable: 6,
+  solvedByLanguage: [{ language: 'python', solved: 2 }],
+  recentSolves: [
+    {
+      challengeId: 'find-max',
+      title: 'Largest number in a list',
+      language: 'python',
+      difficulty: 'easy',
+      bestScore: 89,
+      solvedAt: '2026-11-03T10:15:30.123Z',
+    },
+    {
+      challengeId: 'count-vowels',
+      title: 'Count the vowels',
+      language: 'python',
+      difficulty: 'medium',
+      bestScore: 80,
+      solvedAt: '2026-11-01T18:02:11.000Z',
+    },
+  ],
+};
+
+/** GET /api/profiles/:handle for an account with no attempts */
+export const profileEmpty = {
+  handle: 'fresh_hunter',
+  displayName: 'fresh_hunter',
+  memberSince: '2026-11-06T12:00:00.000Z',
+  rank: { name: 'Larva', xp: 0, nextName: 'Hunter', xpToNext: 100 },
+  totalXp: 0,
+  solved: 0,
+  attempted: 0,
+  challengesAvailable: 6,
+  solvedByLanguage: [],
+  recentSolves: [],
+};
+
+export const errorUnauthorized = {
+  error: { code: 'UNAUTHORIZED', message: 'Log in to continue.' },
+};
+export const errorInvalidCredentials = {
+  error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password.' },
+};
+export const errorHandleTaken = {
+  error: { code: 'HANDLE_TAKEN', message: 'This handle is already taken.' },
+};
+export const errorEmailTaken = {
+  error: { code: 'EMAIL_TAKEN', message: 'An account with this email already exists.' },
+};
+export const errorProfileNotFound = {
+  error: { code: 'NOT_FOUND', message: 'Hunter not found.' },
+};
+export const errorAuthUnavailable = {
+  error: { code: 'AUTH_UNAVAILABLE', message: 'Accounts are not available right now.' },
+};

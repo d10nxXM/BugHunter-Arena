@@ -1,6 +1,9 @@
 import { Suspense, useEffect, useRef } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import { useAuth } from '../hooks/useAuth.js';
 import { useUser } from '../hooks/useUser.js';
+import { isAuthEnabled } from '../lib/authConfig.js';
+import { initials } from '../lib/profileFormat.js';
 import { paths } from '../paths.js';
 import ErrorBoundary from './ErrorBoundary.jsx';
 import Badge from './ui/Badge.jsx';
@@ -105,6 +108,91 @@ function SoonItem({ children }) {
 }
 
 /**
+ * Right side of the header: the account's avatar and "Log out", or the guest's name and
+ * "Log in" (links hidden when accounts are switched off).
+ */
+function AccountActions({ user }) {
+  const { account, logout } = useAuth();
+  const authOn = isAuthEnabled();
+
+  function onLogout() {
+    logout();
+    // The button disappears; keep keyboard focus inside the page.
+    document.getElementById('main')?.focus();
+  }
+
+  if (account && authOn) {
+    return (
+      <>
+        <Link
+          to={paths.profile(account.handle)}
+          aria-label={`Your profile (@${account.handle})`}
+          className={`flex size-10 items-center justify-center rounded-[10px] border border-accent bg-accent-soft text-sm font-bold text-accent ${FOCUS_RING}`}
+        >
+          <span aria-hidden="true">{initials(account.handle)}</span>
+        </Link>
+        <button
+          type="button"
+          onClick={onLogout}
+          className={`rounded-lg px-3 py-2.5 text-[15px] font-medium text-muted hover:text-heading ${FOCUS_RING}`}
+        >
+          Log out
+        </button>
+      </>
+    );
+  }
+  return (
+    <>
+      {user && (
+        <p className="text-sm text-muted">
+          <span className="sr-only">Playing as </span>
+          {user.displayName}
+        </p>
+      )}
+      {authOn && (
+        <Link
+          to={paths.login}
+          className={`rounded-lg px-4 py-2.5 text-[15px] font-medium text-muted hover:text-heading ${FOCUS_RING}`}
+        >
+          Log in
+        </Link>
+      )}
+    </>
+  );
+}
+
+/** Notice after the server rejected the session, with a way back in. */
+function SessionExpiredNotice() {
+  const { account, sessionExpired, dismissExpired } = useAuth();
+  if (!sessionExpired || account || !isAuthEnabled()) return null;
+  return (
+    <div
+      role="status"
+      className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-amber-soft bg-amber-soft px-4 py-2 text-sm text-amber"
+    >
+      <p>
+        <span aria-hidden="true">⚠ </span>
+        Your session has expired. Log in again so new attempts count on your profile.
+      </p>
+      <Link
+        to={paths.login}
+        onClick={dismissExpired}
+        className={`rounded font-semibold underline ${FOCUS_RING}`}
+      >
+        Log in again
+      </Link>
+      <button
+        type="button"
+        onClick={dismissExpired}
+        className={`rounded px-1 font-semibold ${FOCUS_RING}`}
+      >
+        Dismiss
+      </button>
+    </div>
+  );
+}
+
+/**
  * Page width for every route except the full-bleed landing page (layout route in App.jsx).
  * `legacy` keeps pages that still use the old light styles on a light panel so their text stays
  * readable until they are redesigned.
@@ -165,21 +253,11 @@ export default function Layout() {
             </ul>
           </nav>
           <div className="flex flex-[1_1_200px] flex-wrap items-center justify-end gap-3">
-            {user && (
-              <p className="text-sm text-muted">
-                <span className="sr-only">Signed in as </span>
-                {user.displayName}
-              </p>
-            )}
-            <Link
-              to={paths.login}
-              className={`rounded-lg px-4 py-2.5 text-[15px] font-medium text-muted hover:text-heading ${FOCUS_RING}`}
-            >
-              Log in
-            </Link>
+            <AccountActions user={user} />
             <Button to={paths.problems}>Start hunting</Button>
           </div>
         </div>
+        <SessionExpiredNotice />
         {!persisted && (
           <p
             role="status"
