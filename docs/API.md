@@ -17,7 +17,39 @@ Grading happens in two calls: `POST /api/attempts` locks the answer and only the
 | POST | `/api/attempts/:id/evaluation` | Test results in; score and feedback out | Must |
 | GET | `/api/progress?userId=` | Dashboard statistics | Should |
 | GET | `/api/attempts?userId=&challengeId=&limit=&cursor=&cursorId=` | Attempt history | Could |
-| POST | `/api/users` | Create a user with a display name | Could |
+| POST | `/api/users` | Create a guest user with a display name | Could |
+| POST | `/api/auth/signup` | Create an account (handle, email, password); returns a session | Should |
+| POST | `/api/auth/login` | Log in with email and password; returns a session | Should |
+| POST | `/api/auth/refresh` | New session from a refresh token | Should |
+| POST | `/api/auth/logout` | Revoke the current session (Bearer) | Should |
+| GET | `/api/me` | The logged-in account (Bearer) | Should |
+| GET | `/api/profiles/:handle` | Public read-only hunter profile | Should |
+
+## Authentication
+
+Accounts are optional. Guests keep playing with a display name (`POST /api/users`). An account is a handle, an email and a password, managed by Supabase Auth through this API only; the client never talks to Supabase.
+
+The client sends the access token from a session as `Authorization: Bearer <accessToken>`. No cookies are used. The scheme name is case-insensitive.
+
+Optional auth (`POST /api/attempts`, `POST /api/attempts/:id/evaluation`, `GET /api/progress`, `GET /api/attempts`): no `Authorization` header means guest. A header that is present but malformed, invalid or expired returns `401 UNAUTHORIZED`. It never falls back to guest. The token is checked before body or query validation, so a bad token gets `401` and never uses AI quota.
+
+Required auth (`POST /api/auth/logout`, `GET /api/me`): a missing header also returns `401 UNAUTHORIZED`.
+
+A valid token whose Supabase user has no account row returns `401 UNAUTHORIZED`. If Supabase Auth does not answer within 5 s or is down, auth checks and auth endpoints return `503 AUTH_UNAVAILABLE`.
+
+Session object (`expiresAt` is epoch seconds; the access token lives about 1 h, the refresh token rotates on every refresh):
+
+```json
+{ "accessToken": "eyJ...", "refreshToken": "v1.abc...", "expiresAt": 1793980800 }
+```
+
+Account object. `id` is the `users.id` UUID, the same value guests store as `userId`. `displayName` equals the handle. `memberSince` is the row's `created_at`:
+
+```json
+{ "id": "6c1f9a0e-2b3d-4e5f-8a9b-0c1d2e3f4a5b", "handle": "dion_m", "displayName": "dion_m", "memberSince": "2026-11-06T18:00:00.000000+00:00" }
+```
+
+No endpoint returns an email or a password. Tokens appear only in the session of the auth responses below.
 
 ## GET /api/health
 
@@ -120,7 +152,7 @@ Request:
 
 Validation:
 - `challengeId` matches `[a-z0-9-]{1,64}`.
-- `userId` is a UUID or `null`; omitted means `null`.
+- `userId` is a UUID or `null`; omitted means `null`. With a valid Bearer token, `userId` may be omitted, `null` or the token's own `users.id`; the attempt is stored under the account. Any other value returns `403 FORBIDDEN`.
 - `selectedLines` is 1-10 positive integers. Duplicates are removed.
 - `explanation` is 20-1000 characters after trimming.
 - `edgeCase` is `{ args: JSON array, expected: JSON value }`.
@@ -130,7 +162,7 @@ Validation:
 
 Unknown keys are dropped.
 
-Errors: `404 NOT_FOUND` for an unknown `challengeId`, and for a `userId` that does not exist. In both cases nothing is stored and no tests or solution are returned.
+Errors: `404 NOT_FOUND` for an unknown `challengeId`, and for a `userId` that does not exist. Without a token, a `userId` that belongs to an account also returns `404 NOT_FOUND` (the same response as an unknown user). `401 UNAUTHORIZED` for a bad token, `403 FORBIDDEN` for a `userId` that does not match the token. In all these cases nothing is stored and no tests or solution are returned.
 
 Response `201 Created`:
 
@@ -170,7 +202,7 @@ Validation:
 - `testResults` is an array of at most 100 items. Each item is `{ id: string 1-64 chars, passed: boolean, actual?: JSON value, error?: string up to 200 chars or null }`.
 - `edgeCaseCheck` is required: `{ originalOutput: JSON value, referenceOutput: JSON value, error?: string up to 200 chars or null }`. A non-empty `edgeCaseCheck.error` means the original code raised for the edge case. The reference solution is trusted not to raise (see `docs/SCORING.md`).
 
-Invalid input returns `400 VALIDATION_ERROR`. It is checked before the AI rate limit, so a `400` never uses AI quota. An unknown attempt returns `404 NOT_FOUND`. An attempt that is already evaluated returns `409 ALREADY_EVALUATED` (error envelope only; see Timeouts and retries).
+Invalid input returns `400 VALIDATION_ERROR`. It is checked before the AI rate limit, so a `400` never uses AI quota. An unknown attempt returns `404 NOT_FOUND`. An attempt that belongs to an account also returns `404 NOT_FOUND` unless the request carries that account's token. Guest attempts (and attempts without a user) can be evaluated by anyone who knows the attempt id. An attempt that is already evaluated returns `409 ALREADY_EVALUATED` (error envelope only; see Timeouts and retries).
 
 Response `200 OK`:
 
@@ -210,21 +242,22 @@ Known weakness: two matched keyword groups without the cause group still give qu
 ```json
 {
   "totalScore": 245,
+  "totalXp": 241,
   "solved": 3,
   "attempted": 4,
   "averageDurationSec": 212,
-  "perChallenge": [{ "challengeId": "find-max", "bestScore": 89, "attempts": 2 }],
+  "perChallenge": [{ "challengeId": "find-max", "bestScore": 89, "attempts": 2, "xp": 85 }],
   "weakCategories": [{ "category": "Wrong initialization", "misses": 2 }]
 }
 ```
 
-Definitions are in `docs/DATA_MODEL.md` under derived data.
+Definitions are in `docs/DATA_MODEL.md` under derived data. `totalXp` and `perChallenge[].xp` follow `docs/SCORING.md`, "XP and ranks": XP is the score of the first solving attempt, not the best score, and is 0 for an unsolved challenge.
 
-`userId` is required and must be a UUID; otherwise `400 VALIDATION_ERROR`. An unknown user, or one with no attempts, gets `200` with zeros and empty lists: `{ "totalScore": 0, "solved": 0, "attempted": 0, "averageDurationSec": 0, "perChallenge": [], "weakCategories": [] }`. Progress is computed from the user's newest 1000 attempts.
+Without a token, `userId` is required and must be a UUID; otherwise `400 VALIDATION_ERROR`. With a valid Bearer token, `userId` may be omitted or must equal the token's `users.id` (`403 FORBIDDEN` otherwise). An unknown user, a user with no attempts, or an account's id sent without its token gets `200` with zeros and empty lists: `{ "totalScore": 0, "totalXp": 0, "solved": 0, "attempted": 0, "averageDurationSec": 0, "perChallenge": [], "weakCategories": [] }`. Progress is computed from the user's newest 1000 attempts.
 
 ## GET /api/attempts?userId=&challengeId=&limit=&cursor=&cursorId=
 
-- `userId` is required and must be a UUID.
+- `userId` is required and must be a UUID when no token is sent. With a valid Bearer token it may be omitted or must equal the token's `users.id` (`403 FORBIDDEN` otherwise). An account's id sent without its token is treated as an unknown user (`[]`).
 - `challengeId` is optional (`[a-z0-9-]{1,64}`) and restricts the list to one challenge.
 - `limit` is optional: an integer 1-100, default 50.
 - `cursor` and `cursorId` are optional: the `createdAt` (ISO 8601 with offset, URL-encoded, sent back exactly as received) and the `id` of the last item of the previous page. With both, only attempts ordered after that item are returned (`createdAt` earlier, or equal `createdAt` and smaller `id`), so no attempt is skipped or repeated. `cursor` alone returns attempts created strictly before it (kept for compatibility; may skip attempts that share a `createdAt`). `cursorId` without `cursor` returns `400 VALIDATION_ERROR`.
@@ -255,23 +288,109 @@ Response `200 OK`: a bare JSON array, newest first (by `createdAt`, then `id`), 
 
 ## POST /api/users
 
-Request `{ "displayName": "dion" }` (2-32 chars after trimming). Response `201` `{ "id": "uuid", "displayName": "dion" }`.
+Request `{ "displayName": "dion" }` (2-32 chars after trimming). Response `201` `{ "id": "uuid", "displayName": "dion" }`. Creates a guest. Unchanged by accounts.
 
-## Trust model (MVP)
+## POST /api/auth/signup
 
-There is no authentication in the MVP. User ids and attempt ids are random UUIDs, but they are not secrets. Anyone who knows a user id can:
-- read that user's progress (`GET /api/progress`) and attempt history (`GET /api/attempts`);
-- submit attempts under that user id.
+Request:
 
-Anyone who knows a submitted attempt id can evaluate it. Test results, durations and hint counts come from the browser. Hint order is not enforced on the server either. The platform is for practice use only; nothing here is exam-grade.
+```json
+{ "handle": "dion_m", "email": "dion@example.com", "password": "correct horse battery", "claimUserId": null }
+```
+
+Validation:
+- `handle` is trimmed and lowercased, then must match `^[a-z0-9_]{3,20}$`. Reserved handles are rejected: `me admin api auth login signup profile u null undefined`.
+- `email` is trimmed and lowercased, a valid email address of at most 254 characters.
+- `password` is 10 to 72 characters (and at most 72 bytes in UTF-8). It is not trimmed. No composition rules.
+- `claimUserId` is optional: a UUID or `null`. It is the guest `userId` stored on this device.
+
+Response `201 Created`:
+
+```json
+{
+  "session": { "accessToken": "eyJ...", "refreshToken": "v1.abc...", "expiresAt": 1793980800 },
+  "user": { "id": "6c1f9a0e-2b3d-4e5f-8a9b-0c1d2e3f4a5b", "handle": "dion_m", "displayName": "dion_m", "memberSince": "2026-11-06T18:00:00.000000+00:00" }
+}
+```
+
+No confirmation email is sent; the account can log in at once.
+
+Claim: when `claimUserId` names a guest row that has no account yet, that row becomes the account (its attempts move with it) and `user.id` equals `claimUserId`. If the row does not exist or already belongs to an account, a new row is created instead, without an error.
+
+Errors: `400 VALIDATION_ERROR`, `409 HANDLE_TAKEN`, `409 EMAIL_TAKEN`, `429 RATE_LIMITED`, `503 AUTH_UNAVAILABLE`. If the account was created but the automatic login right after it fails, the response is `503 AUTH_UNAVAILABLE`; the account exists and the user can log in.
+
+## POST /api/auth/login
+
+Request `{ "email": "dion@example.com", "password": "correct horse battery" }`. Response `200 OK` with the same `{ session, user }` shape as signup.
+
+A wrong email or password returns `401 INVALID_CREDENTIALS` with the fixed message `Invalid email or password.` Login is by email only.
+
+## POST /api/auth/refresh
+
+Request `{ "refreshToken": "v1.abc..." }`. Response `200 OK` `{ "session": { "accessToken", "refreshToken", "expiresAt" } }`. The old refresh token is used up; store the new one. An invalid, used or expired refresh token returns `401 UNAUTHORIZED`.
+
+## POST /api/auth/logout
+
+Requires `Authorization: Bearer`. No body. Response `204 No Content`. The server revokes the refresh tokens of this session; the access token stays valid until it expires (at most about 1 h). The client drops its stored session in any case.
+
+## GET /api/me
+
+Requires `Authorization: Bearer`. Response `200 OK`: the account object.
+
+## GET /api/profiles/:handle
+
+Public, no auth. `:handle` is lowercased and must match `^[a-z0-9_]{3,20}$`, otherwise `400 VALIDATION_ERROR`. An unknown handle returns `404 NOT_FOUND` (guests have no handle and no profile).
+
+Response `200 OK`:
+
+```json
+{
+  "handle": "dion_m",
+  "displayName": "dion_m",
+  "memberSince": "2026-11-06T18:00:00.000000+00:00",
+  "rank": { "name": "Hunter", "xp": 174, "nextName": "Exterminator", "xpToNext": 26 },
+  "totalXp": 174,
+  "solved": 2,
+  "attempted": 3,
+  "challengesAvailable": 6,
+  "solvedByLanguage": [{ "language": "python", "solved": 2 }],
+  "recentSolves": [
+    { "challengeId": "find-max", "title": "Largest number in a list", "language": "python", "difficulty": "easy", "bestScore": 89, "solvedAt": "2026-11-06T18:20:00.000000+00:00" }
+  ]
+}
+```
+
+- `totalXp` and `rank` follow `docs/SCORING.md`, "XP and ranks". At the top rank `nextName` is `null` and `xpToNext` is 0.
+- `solved` and `attempted` are the same numbers as in `GET /api/progress`. `challengesAvailable` is the number of challenges on the platform.
+- `solvedByLanguage`: one entry per language with at least one solved challenge, most solved first, ties by language name.
+- `recentSolves`: at most 10 solved challenges, newest `solvedAt` first. `solvedAt` is the `createdAt` of the first attempt that solved it (score at least 70). `bestScore` is the best score on that challenge.
+- Never returned: explanations, feedback, weak categories, email or the Supabase user id. Definitions are in `docs/DATA_MODEL.md`, "Derived data for the profile".
+
+## Trust model
+
+Accounts are protected by the Bearer token. For an account, `userId` always comes from the verified token: its raw UUID grants nothing without the token (attempts `404`, progress zeros, history `[]`, evaluation of its attempts `404`). Its public profile shows only the derived data listed under `GET /api/profiles/:handle`.
+
+Guests keep the old rules. Guest ids and attempt ids are random UUIDs, but they are not secrets. Anyone who knows a guest's id can:
+- read that guest's progress (`GET /api/progress`) and attempt history (`GET /api/attempts`);
+- submit attempts under that id;
+- claim that guest's attempts at signup (`claimUserId`), once, as long as the guest row has no account yet.
+
+Anyone who knows the id of a submitted guest attempt can evaluate it. Test results, durations and hint counts come from the browser, also for accounts. Hint order is not enforced on the server either. The platform is for practice use only; nothing here is exam-grade.
+
+Accepted risks:
+- `409 EMAIL_TAKEN` tells anyone whether an email is registered.
+- Emails are not verified: someone can register with another person's address. No email is ever sent.
+- The client stores the session in `localStorage`, so an XSS bug could steal it. AI and student text are never rendered as HTML.
 
 ## Rate limits
 
-Limits are per IP address, since there is no login. Over a limit the server returns `429 RATE_LIMITED`. Responses carry the standard `RateLimit` and `RateLimit-Policy` headers (draft-8).
+Limits are per IP address. Over a limit the server returns `429 RATE_LIMITED`. Responses carry the standard `RateLimit` and `RateLimit-Policy` headers (draft-8).
 
 | Limit | Applies to | Per IP |
 | --- | --- | --- |
 | General | Every request under `/api` | 100 requests per 10 min |
+| Signup | `POST /api/auth/signup` | 5 requests per hour, on top of the general limit |
+| Login | `POST /api/auth/login` | 10 failed logins (any response with status 400 or higher) per 15 min, on top of the general limit. Successful logins are not counted |
 | AI | Requests to `POST /api/challenges/:id/hints` and `POST /api/attempts/:id/evaluation` for which the server calls the LLM | 20 requests that call the LLM per 10 min. One counter shared by both routes, counted on top of the general limit |
 
 The AI limit counts requests, not LLM calls. The evaluation's single retry on invalid output can make a second LLM call within the same request, so one request uses one slot.
@@ -314,6 +433,8 @@ The POST endpoints are not idempotent. A client that gets no response (timeout, 
 - `POST /api/attempts`: the attempt is stored before the response is sent. If the response is lost, the stored attempt stays `submitted`, and its tests and reference solution cannot be fetched again. Retrying stores a second attempt. This is allowed: an unevaluated attempt appears in `GET /api/attempts` with `score: null` and is counted in `perChallenge.attempts` of `GET /api/progress`. When the user has no other attempt on that challenge, it also adds a `perChallenge` entry with `bestScore` 0 and raises `attempted` by one. It does not change `bestScore`, `totalScore`, `solved` or `weakCategories`. Clients should not retry automatically; let the user resubmit.
 - `POST /api/attempts/:id/evaluation`: the result is stored with one atomic update, only while the attempt is `submitted`. Repeating the same request is safe. It returns `200` if no evaluation has been stored yet (and stores this one), or `409 ALREADY_EVALUATED` if one has. A `409` means a result is stored. The `409` body is the error envelope only. To recover the stored result, the client reads `GET /api/attempts?userId=&challengeId=` and follows `cursor` and `cursorId` (the `createdAt` and `id` of the last item on the page) until it finds the item whose `id` equals the attempt id, or the list ends: `status`, `score`, `breakdown` and `feedbackSource` are there; AI feedback text is not. `testsPassed` and `testsTotal` can be computed from the client's own test results: a test counts as passed when `passed` is true and `error` is not `'timeout'`. Attempts with `userId: null` cannot be recovered. A repeat that arrives while the first evaluation is still running may call the AI a second time and use a second AI-quota slot, so clients should check `GET /api/attempts` before repeating.
 - `POST /api/users`: retrying creates a second user. A user with no attempts has no effect anywhere.
+- `POST /api/auth/signup`: not idempotent. A retry after a lost response returns `409 EMAIL_TAKEN`; the client should then send the user to log in.
+- `POST /api/auth/refresh`: the refresh token rotates. If the response is lost, the old token may already be used up and the retry gets `401 UNAUTHORIZED`; the user logs in again.
 
 `GET` requests are safe to retry.
 
@@ -325,9 +446,15 @@ An unavailable AI service is not an error: the evaluation returns `200` with `fe
 
 | HTTP | Code | When |
 | --- | --- | --- |
-| 400 | VALIDATION_ERROR | Invalid, empty or too long input; challenge id not matching `[a-z0-9-]{1,64}`; hint `level` not an integer 1-3; malformed JSON body (also an unsupported charset or encoding); attempt id or `userId` not a UUID; `limit`, `cursor` or `cursorId` invalid, or `cursorId` without `cursor`, on `GET /api/attempts` |
-| 404 | NOT_FOUND | Challenge, attempt or user does not exist (user: `POST /api/attempts` with an unknown `userId`); unknown route (no router handles the path) |
+| 400 | VALIDATION_ERROR | Invalid, empty or too long input; challenge id not matching `[a-z0-9-]{1,64}`; hint `level` not an integer 1-3; malformed JSON body (also an unsupported charset or encoding); attempt id or `userId` not a UUID; `userId` missing without a token; signup `handle`, `email` or `password` invalid; profile handle not matching `^[a-z0-9_]{3,20}$`; `limit`, `cursor` or `cursorId` invalid, or `cursorId` without `cursor`, on `GET /api/attempts` |
+| 401 | UNAUTHORIZED | Missing, malformed, invalid or expired token on a route that needs one, or any bad token sent; invalid refresh token; a token whose user has no account row |
+| 401 | INVALID_CREDENTIALS | Login failed. The message is always `Invalid email or password.` |
+| 403 | FORBIDDEN | `userId` does not match the token |
+| 404 | NOT_FOUND | Challenge, attempt, user or profile does not exist (user: `POST /api/attempts` with an unknown `userId`, or an account's id without its token); unknown route (no router handles the path) |
 | 409 | ALREADY_EVALUATED | Attempt already evaluated |
+| 409 | HANDLE_TAKEN | Signup with a handle that is already used |
+| 409 | EMAIL_TAKEN | Signup with an email that is already registered |
 | 413 | PAYLOAD_TOO_LARGE | Body over 50 KB |
 | 429 | RATE_LIMITED | Too many requests from this IP (see Rate limits) |
 | 500 | INTERNAL_ERROR | Unexpected server error. The message is always the same fixed text, with no details |
+| 503 | AUTH_UNAVAILABLE | Supabase Auth timed out (5 s) or is down. Guest play keeps working |

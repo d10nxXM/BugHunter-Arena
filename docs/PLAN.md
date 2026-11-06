@@ -53,6 +53,19 @@ First AI evaluation run (`npm run eval` in `server/`), 2026-11-03:
 
 Result: ALL PASS.
 
+## Phase 2 auth (2026-11-06)
+
+Accounts (signup, login, refresh, logout), bearer ownership of attempts and progress, public profiles with server-computed XP. Contract: `docs/API.md` (Authentication, auth endpoints, profiles). Guest play stays.
+
+| Worker | Owns |
+| --- | --- |
+| backend-dev (server) | `server/src/lib/config.js`, `server/src/db/auth.js`, `server/src/db/users.js`, `server/src/db/attempts.js`, `server/src/schemas/auth.js`, `server/src/schemas/attempt.js`, `server/src/services/authService.js`, `server/src/services/attemptService.js`, `server/src/services/profileService.js`, `server/src/services/scoringService.js` (XP only), `server/src/middleware/auth.js`, `server/src/middleware/rateLimit.js`, `server/src/middleware/errorHandler.js`, `server/src/routes/{auth,me,profiles,attempts,progress}.js`, `server/src/app.js`, `supabase/migrations/20261106200000_user_accounts.sql`, `server/.env.example`, `render.yaml`, the contract docs |
+| frontend-dev (client) | `client/src/api/**`, `client/src/lib/session.js`, auth context and hooks, Login, Signup and Profile pages, `App.jsx`, `paths.js`, `Layout.jsx` |
+
+- [ ] Push the migration with `npx supabase db push --remote` after the server branch merges.
+- [ ] Set `SUPABASE_ANON_KEY` on the Render API service.
+- [ ] Supabase dashboard: "Confirm email" off, "Allow new users to sign up" off (both done), minimum password length 10, raise the per-IP sign-in and token-refresh limits.
+
 ## M1: what must exist before parallel work
 
 Server foundation (first Claude Code task):

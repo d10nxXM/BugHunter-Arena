@@ -65,9 +65,13 @@ Priority: **Must** = the core flow does not work without it; **Should** = MVP go
 | FR-18 | Dashboard: total score, solved challenges, average time, most frequent bug categories | Should |
 | FR-19 | Retry a challenge or go to the next one | Must |
 | FR-20 | Demo mode (`DEMO_MODE`) with recorded AI responses | Should |
-| FR-21 | Enter a display name, no registration | Could |
+| FR-21 | Guest play with a display name, no registration | Should |
 | FR-22 | Rate how useful the feedback was | Could |
 | FR-23 | View attempt history per challenge | Could |
+| FR-24 | Sign up with handle, email and password | Should |
+| FR-25 | Log in and log out | Should |
+| FR-26 | Public read-only hunter profile at `/u/:handle` | Should |
+| FR-27 | Claim guest progress at signup | Could |
 
 ## Non-functional requirements
 
@@ -86,6 +90,7 @@ Priority: **Must** = the core flow does not work without it; **Should** = MVP go
 | NFR-11 | Compatibility | Current Chrome, Firefox, Edge on laptop and desktop | Checked on all three |
 | NFR-12 | Accessibility | Contrast, keyboard use, status not by color alone | Text contrast >= 4.5:1 |
 | NFR-13 | Maintainability | New challenge is a JSON file, no app code change | < 15 min per challenge |
+| NFR-14 | Security | Auth endpoints rate limited; passwords, tokens and emails never logged | Signup 5 per hour, 10 failed logins per 15 min per IP |
 
 ## Bug categories
 
@@ -129,10 +134,14 @@ How the bug shows in the three Must challenges:
 | Challenge | Left: description and editor. Right: explanation, edge case, hints. Timer in header | Select lines, edit code, run visible tests, hint, submit |
 | Result | Total and per-component score, test table, AI feedback (labelled), misconception, tip | Retry, next challenge, rate feedback |
 | Progress | Total score, solved, average time, score per challenge, top 3 bug categories | Back to challenges |
+| Login | Email, password | Log in, go to signup |
+| Signup | Handle, email, password | Create account, go to login |
+| Profile | Handle, rank, total XP, solved and attempted, recent solves, solved by language, member since | Open a challenge |
 
 ## Out of scope for the MVP
 
-- Registration and role management.
+- Role management, OAuth, password reset, email verification.
+- Global rank, badges, duels, streaks.
 - Many languages or generated challenges.
 - Leaderboards, multiplayer, advanced analytics.
 - Running user code on a server.

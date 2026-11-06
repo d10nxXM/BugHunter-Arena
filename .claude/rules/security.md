@@ -27,7 +27,9 @@ These apply to every change in the repo.
 
 ## Privacy
 
-- No email or password in the MVP. A user is an optional display name.
+- Accounts are optional; guests play with a display name. An account is a handle, an email and a password, managed by Supabase Auth through the Express API only. Passwords never reach our tables or logs. Email lives only in `auth.users`: never in public tables, API responses, logs or LLM prompts.
+- Never log the `Authorization` header, access tokens or refresh tokens, and never put Supabase Auth error bodies in logs.
+- `userId` for an account always comes from the verified token.
 - Logs record errors, routes and timings, never the text of a student's answer.
 - Only challenge content and the student's answer are sent to the LLM, no user identifiers.
 
