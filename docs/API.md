@@ -9,6 +9,7 @@ Grading happens in two calls: `POST /api/attempts` locks the answer and only the
 | Method | Path | Purpose | Priority |
 | --- | --- | --- | --- |
 | GET | `/api/health` | Server status and AI availability | Must |
+| GET | `/healthz` | Liveness check for the hosting platform; not rate limited | Must |
 | GET | `/api/challenges` | Challenge list, no solutions or hidden tests | Must |
 | GET | `/api/challenges/:id` | Description, code and visible tests | Must |
 | POST | `/api/challenges/:id/hints` | Next hint (level 1-3) | Should |
@@ -25,6 +26,14 @@ Grading happens in two calls: `POST /api/attempts` locks the answer and only the
 ```
 
 `ai` is `available`, `unavailable` or `demo`.
+
+## GET /healthz
+
+```json
+{ "status": "ok" }
+```
+
+For the hosting platform's health check and uptime pingers. It is outside `/api`, so it skips CORS, the request log and the rate limits, and frequent checks never get `429`. It says nothing about the AI or the database. Use `GET /api/health` for that.
 
 ## GET /api/challenges
 
