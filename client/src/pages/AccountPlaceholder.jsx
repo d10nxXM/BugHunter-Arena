@@ -3,7 +3,7 @@ import Card from '../components/ui/Card.jsx';
 import { usePageTitle } from '../hooks/usePageTitle.js';
 import { paths } from '../paths.js';
 
-/** Shared placeholder for /login and /signup until accounts exist (a later auth package). */
+/** Shown on /login, /signup and profiles when accounts are switched off (VITE_AUTH_ENABLED=false). */
 export default function AccountPlaceholder({ title }) {
   usePageTitle(title);
   return (
@@ -15,8 +15,8 @@ export default function AccountPlaceholder({ title }) {
         {title}
       </h1>
       <p className="text-muted">
-        Accounts are coming soon. Until then you can solve problems without signing in; your
-        progress is kept in this browser.
+        Accounts are not available right now. You can still solve problems as a guest; your progress
+        is kept in this browser.
       </p>
       <Button to={paths.problems} className="self-start">
         Start hunting

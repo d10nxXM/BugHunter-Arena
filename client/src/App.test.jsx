@@ -4,9 +4,11 @@ import { lazy } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App.jsx';
-import Layout, { HEADING_WAIT_MS } from './components/Layout.jsx';
+import Layout from './components/Layout.jsx';
+import { HEADING_WAIT_MS } from './hooks/useFocusHeadingOnNavigation.js';
 import TestRunnerProvider, { RUNNER_UNAVAILABLE } from './components/TestRunnerProvider.jsx';
 import { USER_STORAGE_KEY } from './context/UserContext.js';
+import AuthProvider from './context/AuthProvider.jsx';
 import UserProvider from './context/UserProvider.jsx';
 import { useTestRunner } from './hooks/useTestRunner.js';
 
@@ -28,11 +30,13 @@ function renderAt(path) {
 function renderLayout(path, routes) {
   return render(
     <UserProvider>
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route element={<Layout />}>{routes}</Route>
-        </Routes>
-      </MemoryRouter>
+      <AuthProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route element={<Layout />}>{routes}</Route>
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
     </UserProvider>,
   );
 }
@@ -51,14 +55,15 @@ describe('App routes', () => {
     ['/challenges/find-max/result', 'Rezultat'],
     ['/dashboard', 'Moj napredak'],
     ['/login', 'Log in'],
-    ['/signup', 'Create account'],
+    ['/signup', 'Create your hunter account', 'Create account'],
     ['/no-such-page', 'Page not found'],
-  ])('%s shows its h1 and title', async (path, heading) => {
+  ])('%s shows its h1 and title', async (path, heading, title = heading) => {
     renderAt(path);
     const h1 = await screen.findByRole('heading', { level: 1 });
     expect(h1).toHaveTextContent(heading);
+    expect(h1).toHaveAttribute('tabindex', '-1');
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(document.title).toBe(`${heading} · BugHunter Arena`);
+    expect(document.title).toBe(`${title} · BugHunter Arena`);
   });
 
   it('/ is the landing page with a link to the problems', async () => {
@@ -85,10 +90,9 @@ describe('App routes', () => {
     );
   });
 
-  it('login and signup say accounts are coming soon', async () => {
-    renderAt('/signup');
-    await screen.findByRole('heading', { level: 1 });
-    expect(screen.getByText(/Accounts are coming soon/)).toBeInTheDocument();
+  it('/profile without a session redirects to the login page', async () => {
+    renderAt('/profile');
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Log in');
   });
 
   it('shows the challenge id from the URL', async () => {

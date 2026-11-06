@@ -8,6 +8,13 @@
 //   HTTP_ERROR     another non-2xx without a usable error envelope
 //   BAD_RESPONSE   2xx whose body is not JSON
 //   CLIENT_ERROR   the request body could not be serialised (a bug in the caller)
+//
+// Accounts: when a session exists (src/lib/session.js), requests carry `Authorization: Bearer`.
+// A session that expires within REFRESH_MARGIN_SEC is refreshed first; all callers share one
+// refresh. A 401 UNAUTHORIZED on a request that carried the token clears the session (the
+// request is not retried). Tokens are never logged.
+
+import { clearSession, readSession, writeSession } from '../lib/session.js';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? '';
 const USE_MOCKS = import.meta.env.VITE_USE_MOCKS === 'true';
@@ -16,11 +23,16 @@ const DEFAULT_TIMEOUT_MS = 10000;
 const HINT_TIMEOUT_MS = 12000;
 // The server's own AI fallback can take about 16 s, so evaluation must wait longer than that.
 const EVALUATION_TIMEOUT_MS = 20000;
+// Auth calls wait longer: the first one often wakes a sleeping server (Render free tier).
+const AUTH_TIMEOUT_MS = 20000;
+/** Refresh the access token when it expires in less than this many seconds. */
+export const REFRESH_MARGIN_SEC = 60;
 
 const MESSAGE_GENERIC = 'Something went wrong talking to the server.';
 const MESSAGE_UNAVAILABLE = 'The server is not available right now.';
 const MESSAGE_TIMEOUT = 'The server is not responding. Please try again.';
 const MESSAGE_CLIENT = 'Something went wrong in the app. Please try again.';
+export const MESSAGE_SESSION_EXPIRED = 'Your session has expired. Please log in again.';
 
 const GATEWAY_STATUSES = new Set([502, 503, 504]);
 
@@ -74,17 +86,21 @@ function startTimeout(ms) {
   return { signal: controller.signal, clear: () => clearTimeout(timer) };
 }
 
-async function send({ method, path, body, json, signal }) {
+async function send({ method, path, body, json, signal, token }) {
+  const headers = {};
+  if (json !== undefined) headers['Content-Type'] = 'application/json';
+  if (token) headers.Authorization = `Bearer ${token}`;
   if (USE_MOCKS) {
     const { mockRequest } = await import('./mocks/index.js');
-    return mockRequest({ method, path, body, signal });
+    return mockRequest({ method, path, body, signal, headers });
   }
   const res = await fetch(`${BASE_URL}${path}`, {
     method,
-    headers: json !== undefined ? { 'Content-Type': 'application/json' } : undefined,
+    headers: Object.keys(headers).length > 0 ? headers : undefined,
     body: json,
     signal,
   });
+  if (res.status === 204) return { status: 204, data: null };
   const data = await res.json().catch((error) => {
     // Only an unparseable body becomes null; an abort or a network failure while reading propagates.
     if (signal.aborted || error?.name !== 'SyntaxError') throw error;
@@ -102,6 +118,7 @@ function report(method, path, error) {
 }
 
 function errorFromResponse(status, data) {
+  if (status === 204) return null;
   const ok = status >= 200 && status < 300;
   if (data === null || data === undefined) {
     if (ok) return new ApiError(MESSAGE_GENERIC, { status, code: 'BAD_RESPONSE' });
@@ -117,13 +134,79 @@ function errorFromResponse(status, data) {
   return new ApiError(message, { status, code });
 }
 
+let refreshInFlight = null;
+
+function isDeadRefresh(error) {
+  return error instanceof ApiError && (error.status === 400 || error.status === 401);
+}
+
 /**
- * Sends one request and returns the parsed JSON body. Throws ApiError (codes above);
- * a caller abort rejects with the caller's AbortError unchanged.
+ * Refreshes `session` once for all concurrent callers. Resolves with the new stored session.
+ * A rejected refresh token (400/401) clears the session ('expired'); other failures keep it.
+ * If the session was replaced (login, another tab) or removed (logout) while the refresh was in
+ * flight, the refreshed tokens are dropped: it resolves with the current session, or rejects
+ * with UNAUTHORIZED after a logout.
+ */
+function refreshShared(session) {
+  if (!refreshInFlight) {
+    refreshInFlight = refreshSession(session.refreshToken)
+      .then((data) => {
+        const current = readSession();
+        if (current?.refreshToken !== session.refreshToken) {
+          if (current) return current;
+          throw new ApiError(MESSAGE_SESSION_EXPIRED, { status: 401, code: 'UNAUTHORIZED' });
+        }
+        const next = writeSession({ ...data?.session, user: session.user }, 'refresh');
+        if (!next) throw new ApiError(MESSAGE_GENERIC, { status: 200, code: 'BAD_RESPONSE' });
+        return next;
+      })
+      .catch((error) => {
+        // Only clear if nobody replaced the session meanwhile (a new login).
+        if (isDeadRefresh(error) && readSession()?.refreshToken === session.refreshToken) {
+          clearSession('expired');
+        }
+        throw error;
+      })
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+  return refreshInFlight;
+}
+
+/**
+ * Access token to send, refreshed first when it is about to expire. Null without a session.
+ * A dead refresh token rejects with UNAUTHORIZED, unless another tab stored a rotated session
+ * meanwhile (then that one is used). When the refresh fails otherwise (network, timeout) a token
+ * that has not expired yet is still used.
+ */
+async function currentAccessToken() {
+  const session = readSession();
+  if (!session) return null;
+  const nowSec = Date.now() / 1000;
+  if (session.expiresAt - nowSec >= REFRESH_MARGIN_SEC) return session.accessToken;
+  try {
+    return (await refreshShared(session)).accessToken;
+  } catch (error) {
+    if (isDeadRefresh(error)) {
+      const latest = readSession();
+      if (latest && latest.refreshToken !== session.refreshToken) return latest.accessToken;
+      throw new ApiError(MESSAGE_SESSION_EXPIRED, { status: 401, code: 'UNAUTHORIZED' });
+    }
+    if (session.expiresAt > nowSec) return session.accessToken;
+    throw error;
+  }
+}
+
+/**
+ * Sends one request and returns the parsed JSON body (null for 204). Throws ApiError (codes
+ * above); a caller abort rejects with the caller's AbortError unchanged.
+ * `auth`: true (default) sends the session's token when there is one, false sends none, a string
+ * sends exactly that token (logout).
  */
 export async function request(
   path,
-  { method = 'GET', body, signal, timeoutMs = DEFAULT_TIMEOUT_MS } = {},
+  { method = 'GET', body, signal, timeoutMs = DEFAULT_TIMEOUT_MS, auth = true } = {},
 ) {
   let json;
   try {
@@ -132,13 +215,26 @@ export async function request(
     throw report(method, path, new ApiError(MESSAGE_CLIENT, { code: 'CLIENT_ERROR', cause }));
   }
 
+  let token = null;
+  if (typeof auth === 'string') token = auth;
+  else if (auth) {
+    try {
+      token = await currentAccessToken();
+    } catch (error) {
+      throw report(method, path, error);
+    }
+    if (signal?.aborted) {
+      throw signal.reason ?? new DOMException('The operation was aborted.', 'AbortError');
+    }
+  }
+
   let timeout;
   let combined;
   let response;
   try {
     timeout = startTimeout(timeoutMs);
     combined = combineSignals([signal, timeout.signal]);
-    response = await send({ method, path, body, json, signal: combined.signal });
+    response = await send({ method, path, body, json, signal: combined.signal, token });
   } catch (cause) {
     if (signal?.aborted) throw cause;
     if (timeout?.signal.aborted) {
@@ -151,7 +247,13 @@ export async function request(
   }
 
   const error = errorFromResponse(response.status, response.data);
-  if (error) throw report(method, path, error);
+  if (error) {
+    if (auth === true && token && error.status === 401 && error.code === 'UNAUTHORIZED') {
+      // Clear only the session this request used; a newer login must survive.
+      if (readSession()?.accessToken === token) clearSession('expired');
+    }
+    throw report(method, path, error);
+  }
   return response.data;
 }
 
@@ -236,4 +338,63 @@ export function nextAttemptsPage(items, limit = 50) {
 /** POST /api/users { displayName } -> 201 { id, displayName } */
 export function createUser(displayName, { signal } = {}) {
   return request('/api/users', { method: 'POST', body: { displayName }, signal });
+}
+
+/**
+ * POST /api/auth/signup { handle, email, password, claimUserId? }
+ * -> 201 { session: { accessToken, refreshToken, expiresAt }, user: { id, handle, displayName,
+ * memberSince } }. claimUserId is sent only when given.
+ */
+export function signup({ handle, email, password, claimUserId }, { signal } = {}) {
+  const body = { handle, email, password };
+  if (claimUserId) body.claimUserId = claimUserId;
+  return request('/api/auth/signup', {
+    method: 'POST',
+    body,
+    signal,
+    auth: false,
+    timeoutMs: AUTH_TIMEOUT_MS,
+  });
+}
+
+/** POST /api/auth/login { email, password } -> 200 { session, user } (same shape as signup) */
+export function login({ email, password }, { signal } = {}) {
+  return request('/api/auth/login', {
+    method: 'POST',
+    body: { email, password },
+    signal,
+    auth: false,
+    timeoutMs: AUTH_TIMEOUT_MS,
+  });
+}
+
+/** POST /api/auth/refresh { refreshToken } -> 200 { session } */
+export function refreshSession(refreshToken, { signal } = {}) {
+  return request('/api/auth/refresh', {
+    method: 'POST',
+    body: { refreshToken },
+    signal,
+    auth: false,
+    timeoutMs: AUTH_TIMEOUT_MS,
+  });
+}
+
+/** POST /api/auth/logout with the given access token -> 204 (resolves null) */
+export function logout(accessToken, { signal } = {}) {
+  return request('/api/auth/logout', { method: 'POST', signal, auth: accessToken });
+}
+
+/** GET /api/me (Bearer) -> { id, handle, displayName, memberSince } */
+export function getMe({ signal } = {}) {
+  return request('/api/me', { signal });
+}
+
+/**
+ * GET /api/profiles/:handle (public, no token) -> { handle, displayName, memberSince,
+ * rank: { name, xp, nextName, xpToNext }, totalXp, solved, attempted, challengesAvailable,
+ * solvedByLanguage: [{ language, solved }], recentSolves: [{ challengeId, title, language,
+ * difficulty, bestScore, solvedAt }] }
+ */
+export function getProfile(handle, { signal } = {}) {
+  return request(`/api/profiles/${enc(handle)}`, { signal, auth: false });
 }

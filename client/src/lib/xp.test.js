@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { RANKS, challengeXp, totalXp, isSolved, rankFor, SOLVED_MIN_SCORE } from './xp.js';
+import { RANKS, challengeXp, entryXp, totalXp, isSolved, rankFor, SOLVED_MIN_SCORE } from './xp.js';
 
 describe('xp', () => {
   it('challengeXp is the best score, clamped to 0-100, invalid as 0', () => {
@@ -15,6 +15,23 @@ describe('xp', () => {
     expect(totalXp([{ bestScore: 94 }, { bestScore: 40 }, { bestScore: null }, null])).toBe(134);
     expect(totalXp([])).toBe(0);
     expect(totalXp(undefined)).toBe(0);
+  });
+
+  it('prefers the server xp per challenge and the server total', () => {
+    expect(entryXp({ bestScore: 94, xp: 81 })).toBe(81);
+    expect(entryXp({ bestScore: 40, xp: 0 })).toBe(0);
+    expect(entryXp({ bestScore: 94 })).toBe(94);
+    expect(entryXp({ bestScore: 94, xp: null })).toBe(94);
+    expect(
+      totalXp([
+        { bestScore: 94, xp: 81 },
+        { bestScore: 40, xp: 0 },
+      ]),
+    ).toBe(81);
+    expect(totalXp([{ bestScore: 94 }], 120)).toBe(120);
+    expect(totalXp([{ bestScore: 94 }], 0)).toBe(0);
+    expect(totalXp([{ bestScore: 94 }], null)).toBe(94);
+    expect(totalXp(undefined, 55)).toBe(55);
   });
 
   it('isSolved uses the threshold', () => {

@@ -1,3 +1,4 @@
+import { isAuthEnabled } from '../../lib/authConfig.js';
 import { paths } from '../../paths.js';
 import Button from '../ui/Button.jsx';
 import { Container } from './SectionHeading.jsx';
@@ -19,9 +20,11 @@ export default function FinalCta() {
             challenge in a few minutes.
           </p>
           <div className="flex flex-wrap justify-center gap-3.5">
-            <Button to={paths.signup} className="min-h-[52px] rounded-[10px] px-7 text-base">
-              Create free account
-            </Button>
+            {isAuthEnabled() && (
+              <Button to={paths.signup} className="min-h-[52px] rounded-[10px] px-7 text-base">
+                Create free account
+              </Button>
+            )}
             <Button
               to={paths.problems}
               variant="secondary"

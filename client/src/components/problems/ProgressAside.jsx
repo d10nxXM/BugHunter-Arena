@@ -1,5 +1,6 @@
 import { Link } from 'react-router';
 import { difficultyClass, difficultyLabel, normalizeDifficulty } from '../../lib/labels.js';
+import { isAuthEnabled } from '../../lib/authConfig.js';
 import { isSolved, rankFor, totalXp } from '../../lib/xp.js';
 import { paths } from '../../paths.js';
 import { buttonClass } from '../ui/buttonClass.js';
@@ -20,9 +21,11 @@ function GuestCard() {
         guest; your solved problems, XP and rank show up here.
       </p>
       <div className="flex flex-wrap gap-2.5">
-        <Link to={paths.signup} className={buttonClass({ size: 'sm' })}>
-          Create account
-        </Link>
+        {isAuthEnabled() && (
+          <Link to={paths.signup} className={buttonClass({ size: 'sm' })}>
+            Create account
+          </Link>
+        )}
         <Link to={paths.dashboard} className={buttonClass({ variant: 'secondary', size: 'sm' })}>
           Open dashboard
         </Link>
@@ -43,8 +46,8 @@ export default function ProgressAside({ challenges, progress }) {
     progress.perChallenge.filter((e) => isSolved(e.bestScore)).map((e) => e.challengeId),
   );
   const solvedCount = list.filter((c) => solvedIds.has(c.id)).length;
-  const rank = rankFor(totalXp(progress.perChallenge));
-  const xp = totalXp(progress.perChallenge);
+  const xp = totalXp(progress.perChallenge, progress.totalXp);
+  const rank = rankFor(xp);
 
   return (
     <Card as="section" aria-labelledby="progress-heading" className="flex flex-col gap-4 p-5.5">

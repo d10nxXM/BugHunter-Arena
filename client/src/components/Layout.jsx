@@ -1,65 +1,19 @@
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import { useFocusHeadingOnNavigation } from '../hooks/useFocusHeadingOnNavigation.js';
 import { useUser } from '../hooks/useUser.js';
 import { paths } from '../paths.js';
 import ErrorBoundary from './ErrorBoundary.jsx';
+import AccountActions from './layout/AccountActions.jsx';
+import { FOCUS_RING } from './layout/focusRing.js';
+import SessionExpiredNotice from './layout/SessionExpiredNotice.jsx';
 import Badge from './ui/Badge.jsx';
 import Button from './ui/Button.jsx';
-
-const FOCUS_RING =
-  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent';
 
 function navLinkClass({ isActive }) {
   return `block rounded-lg px-3.5 py-2.5 ${FOCUS_RING} ${
     isActive ? 'bg-surface-3 text-heading' : 'text-muted hover:text-heading'
   }`;
-}
-
-/** How long to wait for a late h1 (lazy chunk) before giving up on moving focus. */
-export const HEADING_WAIT_MS = 5000;
-
-/**
- * After a navigation, moves focus to the new page's h1 (not on the first load).
- * Contract for pages: render exactly one <h1 tabIndex={-1}>, also while their data is loading,
- * so focus has a target. If the h1 is not there yet (lazy chunk still loading), wait for it, but
- * at most HEADING_WAIT_MS and only while the user has not moved focus elsewhere, so a late h1
- * never steals focus.
- */
-function useFocusHeadingOnNavigation(pathname) {
-  const lastPathname = useRef(pathname);
-
-  useEffect(() => {
-    // Same pathname: first mount, or StrictMode re-running the effect. Do not steal focus.
-    if (lastPathname.current === pathname) return undefined;
-    lastPathname.current = pathname;
-
-    const main = document.getElementById('main');
-    const focusHeading = () => {
-      const h1 = main?.querySelector('h1');
-      if (!h1) return false;
-      h1.focus({ preventScroll: true });
-      return true;
-    };
-    if (focusHeading() || !main) return undefined;
-
-    // Focus at navigation time, usually the link that was clicked.
-    const startFocus = document.activeElement;
-    const focusMovedAway = () => {
-      const active = document.activeElement;
-      return active !== null && active !== document.body && active !== startFocus;
-    };
-
-    const observer = new MutationObserver(() => {
-      if (focusMovedAway() || focusHeading()) stop();
-    });
-    const timer = setTimeout(() => stop(), HEADING_WAIT_MS);
-    function stop() {
-      observer.disconnect();
-      clearTimeout(timer);
-    }
-    observer.observe(main, { childList: true, subtree: true });
-    return stop;
-  }, [pathname]);
 }
 
 function BugLogo() {
@@ -165,21 +119,11 @@ export default function Layout() {
             </ul>
           </nav>
           <div className="flex flex-[1_1_200px] flex-wrap items-center justify-end gap-3">
-            {user && (
-              <p className="text-sm text-muted">
-                <span className="sr-only">Signed in as </span>
-                {user.displayName}
-              </p>
-            )}
-            <Link
-              to={paths.login}
-              className={`rounded-lg px-4 py-2.5 text-[15px] font-medium text-muted hover:text-heading ${FOCUS_RING}`}
-            >
-              Log in
-            </Link>
+            <AccountActions user={user} />
             <Button to={paths.problems}>Start hunting</Button>
           </div>
         </div>
+        <SessionExpiredNotice />
         {!persisted && (
           <p
             role="status"

@@ -7,11 +7,58 @@ const DELAY_MS = 200;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HINTS = { 1: f.hintLevel1, 2: f.hintLevel2, 3: f.hintLevel3 };
 
-let evaluatedAttempts = new Set();
+const HANDLE = /^[a-z0-9_]{3,20}$/;
+const RESERVED_HANDLES = new Set(
+  'me admin api auth login signup profile u null undefined'.split(' '),
+);
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Clears mock state (evaluated attempts). For tests. */
+/** Password of the fixture account (f.loginRequest) in mock mode. */
+export const MOCK_PASSWORD = f.loginRequest.password;
+
+let evaluatedAttempts = new Set();
+// Accounts by email ({ password, user }) and access tokens -> user, so login, /api/me and
+// profiles agree within one page session.
+let accounts;
+let tokens;
+let tokenCounter;
+
+function seedAccounts() {
+  accounts = new Map([[f.loginRequest.email, { password: MOCK_PASSWORD, user: f.accountUser }]]);
+  tokens = new Map([
+    [f.authSession.accessToken, f.accountUser],
+    [f.refreshResponse.session.accessToken, f.accountUser],
+  ]);
+  tokenCounter = 0;
+}
+seedAccounts();
+
+/** Clears mock state (evaluated attempts, accounts). For tests. */
 export function resetMocks() {
   evaluatedAttempts = new Set();
+  seedAccounts();
+}
+
+function findByHandle(handle) {
+  for (const { user } of accounts.values()) if (user.handle === handle) return user;
+  return null;
+}
+
+function newSession(user) {
+  tokenCounter += 1;
+  const accessToken = `mock-access-token-${tokenCounter}`;
+  if (user) tokens.set(accessToken, user);
+  return {
+    accessToken,
+    refreshToken: `mock-refresh-token-${tokenCounter}`,
+    expiresAt: Math.floor(Date.now() / 1000) + 3600,
+  };
+}
+
+function bearerUser(headers) {
+  const header = headers?.Authorization ?? headers?.authorization;
+  const match = typeof header === 'string' ? header.match(/^Bearer (.+)$/) : null;
+  return match ? (tokens.get(match[1]) ?? null) : null;
 }
 
 function abortError(signal) {
@@ -49,7 +96,7 @@ function newId(fallback) {
 }
 
 // The server validates path and body before the handler, so 400 comes before 404 everywhere.
-function route(method, url, body) {
+function route(method, url, body, headers) {
   const path = url.pathname;
   const query = url.searchParams;
   let match;
@@ -117,16 +164,86 @@ function route(method, url, body) {
     return reply(201, { id: newId(f.userCreated.id), displayName: name });
   }
 
+  if (method === 'POST' && path === '/api/auth/signup') {
+    const handle = typeof body?.handle === 'string' ? body.handle.trim().toLowerCase() : '';
+    const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const password = typeof body?.password === 'string' ? body.password : '';
+    if (
+      !HANDLE.test(handle) ||
+      RESERVED_HANDLES.has(handle) ||
+      !EMAIL.test(email) ||
+      email.length > 254 ||
+      password.length < 10 ||
+      password.length > 72
+    ) {
+      return reply(400, f.errorValidationGeneric);
+    }
+    if (findByHandle(handle)) return reply(409, f.errorHandleTaken);
+    if (accounts.has(email)) return reply(409, f.errorEmailTaken);
+    const user = {
+      id: newId(f.accountUser.id),
+      handle,
+      displayName: handle,
+      memberSince: new Date().toISOString(),
+    };
+    accounts.set(email, { password, user });
+    return reply(201, { session: newSession(user), user });
+  }
+
+  if (method === 'POST' && path === '/api/auth/login') {
+    const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+    const password = typeof body?.password === 'string' ? body.password : '';
+    if (!email || !password) return reply(400, f.errorValidationGeneric);
+    const account = accounts.get(email);
+    if (!account || account.password !== password) return reply(401, f.errorInvalidCredentials);
+    return reply(200, { session: newSession(account.user), user: account.user });
+  }
+
+  if (method === 'POST' && path === '/api/auth/refresh') {
+    const refreshToken = body?.refreshToken;
+    if (typeof refreshToken !== 'string' || refreshToken === '') {
+      return reply(400, f.errorValidationGeneric);
+    }
+    if (refreshToken === 'revoked') return reply(401, f.errorUnauthorized);
+    // The mock cannot tell whose refresh token this is; it hands out the fixture account.
+    return reply(200, { session: newSession(f.accountUser) });
+  }
+
+  if (method === 'POST' && path === '/api/auth/logout') {
+    if (!bearerUser(headers)) return reply(401, f.errorUnauthorized);
+    return { status: 204, data: null };
+  }
+
+  if (method === 'GET' && path === '/api/me') {
+    const user = bearerUser(headers);
+    return user ? reply(200, user) : reply(401, f.errorUnauthorized);
+  }
+
+  if ((match = path.match(/^\/api\/profiles\/([^/]+)$/)) && method === 'GET') {
+    const handle = decodeURIComponent(match[1]);
+    if (!HANDLE.test(handle)) return reply(400, f.errorValidationGeneric);
+    if (handle === f.profile.handle) return reply(200, f.profile);
+    const user = findByHandle(handle);
+    if (!user) return reply(404, f.errorProfileNotFound);
+    return reply(200, {
+      ...f.profileEmpty,
+      handle: user.handle,
+      displayName: user.displayName,
+      memberSince: user.memberSince,
+    });
+  }
+
   return reply(404, f.errorRouteNotFound);
 }
 
 /**
- * @param {{ method?: string, path: string, body?: unknown, signal?: AbortSignal }} req
+ * @param {{ method?: string, path: string, body?: unknown, signal?: AbortSignal,
+ *   headers?: Record<string, string> }} req
  * @returns {Promise<{ status: number, data: unknown }>}
  */
-export async function mockRequest({ method = 'GET', path, body, signal }) {
+export async function mockRequest({ method = 'GET', path, body, signal, headers }) {
   await delay(signal);
   // Round-trip the body through JSON, like a real request would.
   const parsedBody = body === undefined ? undefined : JSON.parse(JSON.stringify(body));
-  return route(method.toUpperCase(), new URL(path, 'http://mock.local'), parsedBody);
+  return route(method.toUpperCase(), new URL(path, 'http://mock.local'), parsedBody, headers);
 }

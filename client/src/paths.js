@@ -7,6 +7,10 @@ export const paths = {
   dashboard: '/dashboard',
   login: '/login',
   signup: '/signup',
+  /** Public hunter profile. */
+  profile: (handle) => `/u/${encodeURIComponent(handle)}`,
+  /** Redirects to your own profile, or to the login page. */
+  ownProfile: '/profile',
 };
 
 /**

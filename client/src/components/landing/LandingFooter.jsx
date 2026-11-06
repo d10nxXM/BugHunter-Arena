@@ -1,11 +1,12 @@
 import { Link } from 'react-router';
+import { isAuthEnabled } from '../../lib/authConfig.js';
 import { paths } from '../../paths.js';
 import { Container } from './SectionHeading.jsx';
 
 const LINKS = [
   { to: paths.problems, label: 'Problems' },
   { to: paths.dashboard, label: 'Dashboard' },
-  { to: paths.login, label: 'Log in' },
+  { to: paths.login, label: 'Log in', auth: true },
 ];
 
 /** Landing footer. Links only to routes that exist. */
@@ -24,7 +25,7 @@ export default function LandingFooter() {
         <nav aria-label="Footer">
           <p className="mb-2.5 font-mono text-xs text-subtle">PLATFORM</p>
           <ul className="flex flex-col gap-1 text-sm">
-            {LINKS.map((l) => (
+            {LINKS.filter((l) => !l.auth || isAuthEnabled()).map((l) => (
               <li key={l.to}>
                 <Link
                   to={l.to}
