@@ -5,7 +5,7 @@ import { MESSAGES } from './submitConstants.js';
 
 const MAYBE_SAVED_CODES = new Set(['TIMEOUT', 'NETWORK_ERROR', 'HTTP_ERROR', 'BAD_RESPONSE']);
 
-// Messages written in this app (Montenegrin), safe to show as they are.
+// Messages written in this app, safe to show as they are.
 const OWN_MESSAGES = new Set([
   ...Object.values(MESSAGES),
   RUN_TIMEOUT_MESSAGE,
@@ -38,7 +38,7 @@ export function isRetryable(error) {
   return isAbortError(error) || isRateLimited(error) || isMaybeSaved(error);
 }
 
-/** Montenegrin text for an error, safe to show. Runner and library texts become generic. */
+/** User-facing text for an error, safe to show. Runner and library texts become generic. */
 export function errorMessage(error) {
   if (isAbortError(error)) return MESSAGES.interrupted;
   if (isRateLimited(error)) return MESSAGES.rateLimited;

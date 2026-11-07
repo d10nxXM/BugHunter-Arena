@@ -10,8 +10,8 @@ const MAX_HEIGHT = 480; // px; longer code scrolls, and the gutter follows
 // as markdown or HTML by Monaco (dompurify advisory, see client/README.md).
 const EDITOR_OPTIONS = {
   language: 'python',
-  theme: 'vs-dark',
-  ariaLabel: 'Editor koda',
+  theme: 'bughunter-dark', // defined in workers/monacoSetup.js
+  ariaLabel: 'Code editor',
   automaticLayout: true,
   fontSize: 14,
   lineHeight: LINE_HEIGHT,
@@ -43,15 +43,16 @@ function clampHeight(contentHeight) {
 }
 
 /**
- * Python code editor (Monaco) with a keyboard-accessible line gutter and "Vrati original".
+ * Python code editor (Monaco) with a keyboard-accessible line gutter and "Reset to original".
  *
  * Props (stable, ChallengePage depends on them):
  *   code          current code (controlled)
  *   onChange      (code) => void
  *   selectedLines line numbers (1-based) marked as bug lines, default []
  *   onToggleLine  (lineNumber) => void
- *   readOnly      default false; also makes the gutter aria-disabled (still focusable) and disables "Vrati original"
- *   originalCode  optional; what "Vrati original" restores. Defaults to the first `code` value.
+ *   readOnly      default false; also makes the gutter aria-disabled (still focusable) and disables "Reset to original"
+ *   originalCode  optional; what "Reset to original" restores. Defaults to the first `code` value.
+ *   fileName      optional; shown in the title bar, e.g. "find_max.py".
  */
 export default function CodeEditor({
   code,
@@ -60,6 +61,7 @@ export default function CodeEditor({
   onToggleLine,
   readOnly = false,
   originalCode,
+  fileName,
 }) {
   const [initialCode] = useState(code);
   const original = originalCode ?? initialCode;
@@ -112,7 +114,7 @@ export default function CodeEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Apply code from the parent (for example "Vrati original") without echoing onChange.
+  // Apply code from the parent (for example "Reset to original") without echoing onChange.
   useEffect(() => {
     const editor = editorRef.current;
     const model = editor?.getModel();
@@ -140,7 +142,7 @@ export default function CodeEditor({
         .map((n) => ({
           range: new monaco.Range(n, 1, n, 1),
           // Monaco strips characters like '/' from decoration class names: keep it plain.
-          options: { isWholeLine: true, className: 'bg-amber-950' },
+          options: { isWholeLine: true, className: 'bg-amber-soft' },
         })),
     );
   }, [selectedLines, lineCount]);
@@ -166,66 +168,80 @@ export default function CodeEditor({
   const canReset = !readOnly && code !== original;
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex overflow-hidden rounded border border-slate-700 bg-[#1e1e1e] font-mono text-sm text-slate-100">
-        <div
-          ref={gutterRef}
-          role="group"
-          aria-label="Izbor linija sa greškom"
-          aria-describedby={helpId}
-          onKeyDown={handleGutterKeyDown}
-          className="shrink-0 overflow-hidden border-r border-slate-700"
-          style={{ height }}
-        >
-          <div className="flex flex-col pt-2 pb-6">
-            {lineNumbers.map((n) => {
-              const selected = selectedLines.includes(n);
-              return (
-                <button
-                  key={n}
-                  type="button"
-                  data-line={n}
-                  tabIndex={n === activeLine ? 0 : -1}
-                  aria-pressed={selected}
-                  aria-label={`Linija ${n}`}
-                  aria-disabled={readOnly}
-                  onClick={() => {
-                    // aria-disabled (not disabled) keeps the button focusable for keyboard users.
-                    if (!readOnly) onToggleLine?.(n);
-                  }}
-                  onFocus={() => {
-                    setFocusLine(n);
-                    editorRef.current?.revealLine(n);
-                  }}
-                  className={`h-6 min-w-14 border-l-4 px-2 text-right leading-6 focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:outline-none focus-visible:ring-inset aria-disabled:cursor-default ${
-                    selected
-                      ? 'border-amber-400 bg-amber-200 font-bold text-slate-900'
-                      : 'border-transparent text-slate-300 hover:bg-slate-700'
-                  }`}
-                >
-                  {selected ? <span aria-hidden="true">▶ </span> : null}
-                  {n}
-                </button>
-              );
-            })}
+    <div className="flex flex-col gap-3">
+      {/* On phones the parent lets the editor bleed to the screen edges: no side border or radius. */}
+      <div className="overflow-hidden rounded-[14px] border border-border-strong bg-surface max-sm:rounded-none max-sm:border-x-0">
+        <div className="flex items-center justify-between gap-3 border-b border-border bg-surface-2 py-2 pr-2 pl-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span aria-hidden="true" className="hidden gap-2 sm:flex">
+              <span className="size-[11px] rounded-full bg-border-strong" />
+              <span className="size-[11px] rounded-full bg-border-strong" />
+              <span className="size-[11px] rounded-full bg-border-strong" />
+            </span>
+            {fileName && (
+              <span className="truncate font-mono text-[13px] text-subtle">{fileName}</span>
+            )}
           </div>
+          <button
+            type="button"
+            onClick={() => onChange?.(original)}
+            disabled={!canReset}
+            className="flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium text-muted hover:bg-surface-3 hover:text-heading focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-muted"
+          >
+            <span aria-hidden="true">↺</span>
+            Reset to original
+          </button>
         </div>
-        <div ref={containerRef} className="min-w-0 flex-1" style={{ height }} />
+        <div className="flex font-mono text-sm text-text">
+          <div
+            ref={gutterRef}
+            role="group"
+            aria-label="Choose the lines with the bug"
+            aria-describedby={helpId}
+            onKeyDown={handleGutterKeyDown}
+            className="shrink-0 overflow-hidden border-r border-border bg-surface"
+            style={{ height }}
+          >
+            <div className="flex flex-col pt-2 pb-6">
+              {lineNumbers.map((n) => {
+                const selected = selectedLines.includes(n);
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    data-line={n}
+                    tabIndex={n === activeLine ? 0 : -1}
+                    aria-pressed={selected}
+                    aria-label={`Line ${n}`}
+                    aria-disabled={readOnly}
+                    onClick={() => {
+                      // aria-disabled (not disabled) keeps the button focusable for keyboard users.
+                      if (!readOnly) onToggleLine?.(n);
+                    }}
+                    onFocus={() => {
+                      setFocusLine(n);
+                      editorRef.current?.revealLine(n);
+                    }}
+                    className={`h-6 min-w-12 border-l-[3px] px-2 text-right leading-6 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-amber aria-disabled:cursor-default sm:min-w-14 ${
+                      selected
+                        ? 'border-amber bg-amber-soft font-bold text-amber'
+                        : 'border-transparent text-subtle hover:bg-surface-2 hover:text-muted'
+                    }`}
+                  >
+                    {selected ? <span aria-hidden="true">▶ </span> : null}
+                    {n}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div ref={containerRef} className="min-w-0 flex-1" style={{ height }} />
+        </div>
       </div>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <p id={helpId} className="max-w-prose text-xs text-slate-600">
-          Klikni broj linije da je označiš kao liniju sa greškom. Strelice gore i dolje pomjeraju
-          izbor između linija. U editoru Tab uvlači red; Ctrl+M uključuje prelazak tasterom Tab.
-        </p>
-        <button
-          type="button"
-          onClick={() => onChange?.(original)}
-          disabled={!canReset}
-          className="rounded border border-slate-400 bg-white px-3 py-1 text-sm text-slate-900 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:outline-none disabled:cursor-not-allowed disabled:text-slate-500"
-        >
-          Vrati original
-        </button>
-      </div>
+      <p id={helpId} className="text-[13px] leading-relaxed text-subtle max-sm:px-4">
+        Click a line number to flag it as a bug line. The up and down arrows move between line
+        numbers. In the editor, Tab indents; Ctrl+M switches Tab to moving focus.
+      </p>
     </div>
   );
 }

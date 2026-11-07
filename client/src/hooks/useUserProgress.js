@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ApiError,
   getAttempts,
@@ -8,7 +8,7 @@ import {
 } from '../api/client.js';
 
 const PAGE_SIZE = 20;
-export const GENERIC_ERROR = 'Podaci nisu učitani. Pokušaj ponovo.';
+export const GENERIC_ERROR = 'The data could not be loaded. Please try again.';
 
 function errorMessage(error) {
   return error instanceof ApiError ? error.message : GENERIC_ERROR;
@@ -35,7 +35,7 @@ function useFocusRequest(ref, request) {
 }
 
 /**
- * Server state for one user's progress page: summary, paged history and challenge titles,
+ * Server state for one user's progress page: summary, paged history and the challenge list,
  * plus retry/load-more actions and the refs that receive focus after them.
  * Use it under key={userId} so state resets per user.
  */
@@ -50,7 +50,12 @@ export function useUserProgress(userId) {
   });
   const [historyReload, setHistoryReload] = useState(0);
   const [more, setMore] = useState({ loading: false, error: null, announcement: '' });
-  const [titles, setTitles] = useState(() => new Map());
+  // The challenge list (null until loaded) gives titles, difficulties and categories.
+  const [challenges, setChallenges] = useState(null);
+  const titles = useMemo(
+    () => new Map((challenges ?? []).map((c) => [c.id, c.title])),
+    [challenges],
+  );
   const [focus, setFocus] = useState({ progress: 0, history: 0, end: 0 });
   const progressHeadingRef = useRef(null);
   const historyHeadingRef = useRef(null);
@@ -101,12 +106,12 @@ export function useUserProgress(userId) {
     return () => controller.abort();
   }, [userId, historyReload]);
 
-  // Titles are cosmetic: without them the tables show challenge ids.
+  // The list is cosmetic: without it the page shows challenge ids and skips recommendations.
   useEffect(() => {
     const controller = new AbortController();
     getChallenges({ signal: controller.signal })
       .then((list) => {
-        if (Array.isArray(list)) setTitles(new Map(list.map((c) => [c.id, c.title])));
+        if (Array.isArray(list)) setChallenges(list.filter((c) => typeof c?.id === 'string'));
       })
       .catch((error) => {
         if (isAbort(error, controller.signal)) return;
@@ -137,7 +142,7 @@ export function useUserProgress(userId) {
     if (!next || more.loading) return;
     const controller = new AbortController();
     moreControllerRef.current = controller;
-    setMore({ loading: true, error: null, announcement: 'Učitavanje pokušaja…' });
+    setMore({ loading: true, error: null, announcement: 'Loading attempts…' });
     try {
       const page = await getAttempts(
         { userId, limit: PAGE_SIZE, cursor: next.cursor, cursorId: next.cursorId },
@@ -150,7 +155,7 @@ export function useUserProgress(userId) {
       setMore({
         loading: false,
         error: null,
-        announcement: `Učitano još ${items.length} pokušaja.`,
+        announcement: `Loaded ${items.length} more ${items.length === 1 ? 'attempt' : 'attempts'}.`,
       });
       // At the end the button is replaced by text; move focus there so it is not lost.
       if (!hasMore) requestFocus('end');
@@ -165,6 +170,7 @@ export function useUserProgress(userId) {
     history,
     more,
     titles,
+    challenges,
     progressHeadingRef,
     historyHeadingRef,
     endRef,

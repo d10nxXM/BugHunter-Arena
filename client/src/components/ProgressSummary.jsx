@@ -1,92 +1,82 @@
-import { challengeName, formatDuration } from '../lib/progressFormat.js';
+import { solvedBreakdown } from '../lib/dashboard.js';
+import { formatDuration } from '../lib/progressFormat.js';
+import { rankFor, totalXp } from '../lib/xp.js';
+import ProgressBar from './ui/ProgressBar.jsx';
 
-/**
- * GET /api/progress statistics.
- * @param {{
- *   progress: {
- *     totalScore: number, solved: number, attempted: number, averageDurationSec: number,
- *     perChallenge: Array<{ challengeId: string, bestScore: number, attempts: number }>,
- *     weakCategories: Array<{ category: string, misses: number }>,
- *   },
- *   titles: Map<string, string>,
- * }} props
- */
-export default function ProgressSummary({ progress, titles }) {
-  const perChallenge = Array.isArray(progress.perChallenge) ? progress.perChallenge : [];
-  const weak = Array.isArray(progress.weakCategories) ? progress.weakCategories : [];
+const NUMBER = new Intl.NumberFormat('en-US');
 
+function Tile({ label, children }) {
   return (
-    <>
-      <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Stat label="Ukupni bodovi" value={progress.totalScore} />
-        <Stat label="Riješeni izazovi" value={progress.solved} />
-        <Stat label="Pokušani izazovi" value={progress.attempted} />
-        <Stat
-          label="Prosječno vrijeme rješavanja"
-          value={progress.solved > 0 ? formatDuration(progress.averageDurationSec) : '—'}
-        />
-      </dl>
-
-      <section aria-labelledby="progress-per-challenge" className="mt-8">
-        <h3 id="progress-per-challenge" className="mb-3 text-lg font-semibold">
-          Po izazovima
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-left text-sm">
-            <caption className="sr-only">Najbolji rezultat i broj pokušaja po izazovu</caption>
-            <thead>
-              <tr className="border-b border-slate-300 text-slate-700">
-                <th scope="col" className="py-2 pr-4 font-semibold">
-                  Izazov
-                </th>
-                <th scope="col" className="py-2 pr-4 text-right font-semibold">
-                  Najbolji rezultat
-                </th>
-                <th scope="col" className="py-2 text-right font-semibold">
-                  Pokušaji
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {perChallenge.map((item) => (
-                <tr key={item.challengeId} className="border-b border-slate-200">
-                  <th scope="row" className="py-2 pr-4 font-normal">
-                    {challengeName(titles, item.challengeId)}
-                  </th>
-                  <td className="py-2 pr-4 text-right tabular-nums">{item.bestScore} / 100</td>
-                  <td className="py-2 text-right tabular-nums">{item.attempts}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <section aria-labelledby="progress-weak" className="mt-8">
-        <h3 id="progress-weak" className="mb-3 text-lg font-semibold">
-          Kategorije grešaka za vježbu
-        </h3>
-        {weak.length === 0 ? (
-          <p className="text-slate-700">Nema kategorija u kojima često griješiš.</p>
-        ) : (
-          <ol className="list-decimal space-y-1 pl-6">
-            {weak.map((item) => (
-              <li key={item.category}>
-                {item.category}: {item.misses} {item.misses === 1 ? 'promašaj' : 'promašaja'}
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
-    </>
+    <div className="flex flex-col gap-2.5 rounded-[14px] border border-border bg-surface p-5.5">
+      <dt className="font-mono text-xs text-subtle uppercase">{label}</dt>
+      {children}
+    </div>
   );
 }
 
-function Stat({ label, value }) {
+const VALUE = 'font-display text-[32px] leading-tight font-bold text-heading tabular-nums';
+const NOTE = 'text-[13px] text-subtle';
+
+/**
+ * Stat tiles from GET /api/progress: total XP, rank, bugs found and average solve time.
+ * `challenges` (GET /api/challenges, null until loaded) splits the solved count by difficulty.
+ * @param {{
+ *   progress: {
+ *     totalScore: number, totalXp?: number, solved: number, attempted: number,
+ *     averageDurationSec: number,
+ *     perChallenge: Array<{ challengeId: string, bestScore: number, attempts: number, xp?: number }>,
+ *   },
+ *   challenges: Array<{ id: string, difficulty: string }> | null,
+ * }} props
+ */
+export default function ProgressSummary({ progress, challenges }) {
+  const perChallenge = Array.isArray(progress.perChallenge) ? progress.perChallenge : [];
+  const xp = totalXp(perChallenge, progress.totalXp);
+  const rank = rankFor(xp);
+  const split = challenges ? solvedBreakdown(challenges, perChallenge).byDifficulty : null;
+
   return (
-    <div className="rounded border border-slate-300 bg-white p-3">
-      <dt className="text-sm text-slate-700">{label}</dt>
-      <dd className="text-2xl font-bold tabular-nums">{value}</dd>
-    </div>
+    <dl className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+      <Tile label="Total XP">
+        <dd className={VALUE}>{NUMBER.format(xp)}</dd>
+        <dd className={NOTE}>Total score {NUMBER.format(progress.totalScore)}</dd>
+      </Tile>
+      <Tile label="Rank">
+        <dd className={`${VALUE} text-amber`}>{rank.name}</dd>
+        {rank.next ? (
+          <>
+            <dd>
+              <ProgressBar
+                value={rank.pct}
+                label={`Progress to ${rank.next.name}`}
+                valueText={`${rank.toNext} XP to ${rank.next.name}`}
+                tone="amber"
+              />
+            </dd>
+            <dd className={NOTE}>
+              {rank.toNext} XP to {rank.next.name}
+            </dd>
+          </>
+        ) : (
+          <dd className={NOTE}>Top rank reached</dd>
+        )}
+      </Tile>
+      <Tile label="Bugs found">
+        <dd className={VALUE}>{NUMBER.format(progress.solved)}</dd>
+        {split && (
+          <dd className={NOTE}>
+            {split.easy.solved} easy · {split.medium.solved} medium · {split.hard.solved} hard
+          </dd>
+        )}
+      </Tile>
+      <Tile label="Avg. solve time">
+        <dd className={VALUE}>
+          {progress.solved > 0 ? formatDuration(progress.averageDurationSec) : '—'}
+        </dd>
+        <dd className={NOTE}>
+          {progress.attempted} {progress.attempted === 1 ? 'challenge' : 'challenges'} attempted
+        </dd>
+      </Tile>
+    </dl>
   );
 }

@@ -126,7 +126,7 @@ describe('HARNESS in Pyodide', () => {
     const [r] = run(code);
     expect(r.ok).toBe(false);
     expect(r.actual).toBeNull();
-    expect(r.error).toMatch(/prevelik/);
+    expect(r.error).toMatch(/too large/);
     expect(r.error.length).toBeLessThanOrEqual(MAX_ERROR_LENGTH);
   });
 

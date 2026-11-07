@@ -22,10 +22,15 @@ export default function ChallengeTimer({ startedAt, stoppedAt = null }) {
 
   const elapsed = (stoppedAt ?? now) - startedAt;
   return (
-    <p className="font-mono text-sm text-slate-700">
-      <span>Vrijeme: </span>
-      <time dateTime={`PT${Math.max(0, Math.floor(elapsed / 1000))}S`}>{format(elapsed)}</time>
-      {stoppedAt !== null && <span> (zaustavljeno)</span>}
+    <p className="inline-flex items-center gap-2 rounded-md border border-border bg-surface px-2.5 py-1 font-mono text-sm text-muted">
+      <span aria-hidden="true" className={stoppedAt === null ? 'text-accent' : 'text-subtle'}>
+        ⏱
+      </span>
+      <span>Time: </span>
+      <time dateTime={`PT${Math.max(0, Math.floor(elapsed / 1000))}S`} className="text-heading">
+        {format(elapsed)}
+      </time>
+      {stoppedAt !== null && <span> (stopped)</span>}
     </p>
   );
 }

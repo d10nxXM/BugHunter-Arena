@@ -1,7 +1,7 @@
 import { HINT_PENALTIES } from '../lib/submitConstants.js';
-
-const BUTTON =
-  'rounded bg-sky-800 px-3 py-2 font-medium text-white hover:bg-sky-900 focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:bg-slate-400';
+import Badge from './ui/Badge.jsx';
+import Button from './ui/Button.jsx';
+import Notice from './ui/Notice.jsx';
 
 /**
  * Hints, one level at a time. State lives in ChallengeWorkspace (useHints): the count is reported in the attempt.
@@ -20,64 +20,78 @@ export default function HintPanel({ hints, maxLevel, loading, error, disabled, o
   const exhausted = nextLevel > maxLevel;
 
   let status = '';
-  if (loading) status = 'Učitavam savjet…';
-  else if (hints.length > 0) status = `Prikazan je savjet ${hints.length}.`;
+  if (loading) status = 'Loading hint…';
+  else if (hints.length > 0) status = `Hint ${hints.length} is shown.`;
 
   return (
     <section
       aria-labelledby="hints-heading"
-      className="rounded border border-slate-200 bg-white p-4"
+      className="flex flex-col gap-4 rounded-[14px] border border-amber/30 bg-[#17130c] p-5 sm:p-6"
     >
-      <h2 id="hints-heading" className="text-lg font-semibold">
-        Savjeti
-      </h2>
-      <p className="mt-1 text-sm text-slate-700">
-        Svaki savjet umanjuje bodove: prvi i drugi po 5, treći 10.
-      </p>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="hints-heading" className="font-display text-[19px] font-semibold text-heading">
+            Hints
+          </h2>
+          {maxLevel > 0 && (
+            <span className="font-mono text-xs text-amber">
+              {Math.min(hints.length, maxLevel)} / {maxLevel} used
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-muted">
+          Each hint costs points: the first and second 5 each, the third 10.
+        </p>
+      </div>
 
       {hints.length > 0 && (
-        <ol className="mt-3 space-y-2">
+        <ol className="flex flex-col gap-2.5">
           {hints.map((h) => (
-            <li key={h.level} className="rounded bg-sky-50 px-3 py-2 text-slate-900">
-              <p className="text-sm font-semibold">
-                Savjet {h.level} (−{HINT_PENALTIES[h.level]} bodova)
-                {h.source === 'ai' && <span className="font-normal"> · AI savjet</span>}
+            <li
+              key={h.level}
+              className="flex flex-col gap-1.5 rounded-[10px] border border-amber/20 bg-bg/60 px-4 py-3"
+            >
+              <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-amber">
+                Hint {h.level} (−{HINT_PENALTIES[h.level]} points)
+                {h.source === 'ai' && (
+                  <Badge tone="neutral" mono className="px-1.5 py-0.5 text-[11px]">
+                    AI hint
+                  </Badge>
+                )}
               </p>
-              <p className="whitespace-pre-wrap">{h.hint}</p>
+              <p className="text-[15px] leading-relaxed whitespace-pre-wrap text-text">{h.hint}</p>
             </li>
           ))}
         </ol>
       )}
 
-      <p role="status" aria-live="polite" className="mt-2 text-sm text-slate-700">
+      {/* Kept in the DOM while empty (sr-only), so the live region announces the first hint. */}
+      <p role="status" aria-live="polite" className={status ? 'text-sm text-muted' : 'sr-only'}>
         {status}
       </p>
 
       {error && (
-        <p
-          role="alert"
-          className="mt-2 rounded border-l-4 border-red-700 bg-red-50 px-3 py-2 text-red-900"
-        >
-          <span aria-hidden="true">⚠ </span>
-          {error}
-        </p>
+        <Notice role="alert" tone="danger">
+          <p>{error}</p>
+        </Notice>
       )}
 
       {maxLevel === 0 ? (
-        <p className="mt-3 text-sm text-slate-700">Ovaj izazov nema savjete.</p>
+        <p className="text-sm text-subtle">This challenge has no hints.</p>
       ) : exhausted ? (
-        <p className="mt-3 text-sm text-slate-700">Iskoristio si sve savjete.</p>
+        <p className="text-sm text-subtle">You have used every hint.</p>
       ) : (
-        <button
-          type="button"
-          className={`mt-3 ${BUTTON}`}
+        <Button
+          variant="secondary"
+          size="sm"
+          className="self-start border-amber/40 text-amber hover:bg-amber-soft"
           disabled={disabled || loading}
           onClick={onRequest}
         >
           {loading
-            ? 'Učitavam savjet…'
-            : `Zatraži savjet ${nextLevel} (−${HINT_PENALTIES[nextLevel]} bodova)`}
-        </button>
+            ? 'Loading hint…'
+            : `Request hint ${nextLevel} (−${HINT_PENALTIES[nextLevel]} points)`}
+        </Button>
       )}
     </section>
   );

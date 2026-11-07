@@ -2,19 +2,29 @@ import ChallengeTestSummary from './ChallengeTestSummary.jsx';
 import { countPassed } from '../lib/runnerPayload.js';
 import { FIELD_IDS } from '../lib/submitConstants.js';
 import CodeEditor from './CodeEditor.jsx';
+import Badge from './ui/Badge.jsx';
+import Button from './ui/Button.jsx';
+import Notice from './ui/Notice.jsx';
 
-const BUTTON =
-  'rounded border border-slate-500 bg-white px-3 py-2 font-medium text-slate-900 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:text-slate-500';
-const NOTICE = 'rounded border-l-4 border-red-700 bg-red-50 px-3 py-2 text-red-900';
+const H2 = 'font-display text-[19px] font-semibold text-heading';
 
 function FieldError({ id, message }) {
   if (!message) return null;
   return (
-    <p id={id} tabIndex={-1} className="mt-1 text-sm text-red-800 focus:outline-none">
-      <span aria-hidden="true">⚠ </span>
+    <p
+      id={id}
+      tabIndex={-1}
+      className="flex items-start gap-1.5 text-sm text-hard focus:outline-none max-sm:px-4"
+    >
+      <span aria-hidden="true">✕</span>
       {message}
     </p>
   );
+}
+
+/** Python file name for the editor's title bar, e.g. "find_max.py". */
+function fileNameOf(functionName) {
+  return typeof functionName === 'string' && functionName ? `${functionName}.py` : undefined;
 }
 
 /**
@@ -35,21 +45,25 @@ export default function ChallengeCodePanel({
 }) {
   const runBlocked = !runner.ready || !editable || visibleRun.status === 'running';
   let status = '';
-  if (visibleRun.status === 'running') status = 'Pokrećem testove…';
+  if (visibleRun.status === 'running') status = 'Running tests…';
   else if (visibleRun.status === 'done') {
-    status = `${countPassed(visibleRun.results)} od ${challenge.visibleTests.length} vidljivih testova je prošlo.`;
+    status = `${countPassed(visibleRun.results)} of ${challenge.visibleTests.length} visible tests passed.`;
   }
   const stale = visibleRun.status === 'done' && visibleRun.code !== code;
 
   return (
-    <section aria-labelledby="code-heading">
-      <h2 id="code-heading" className="text-lg font-semibold">
-        Kod
-      </h2>
-      <p className="mt-1 text-sm text-slate-700">
-        Klikni broj linije da je označiš kao sumnjivu, zatim ispravi kod u editoru.
-      </p>
-      <div className="mt-2">
+    <section aria-labelledby="code-heading" className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1">
+        <h2 id="code-heading" className={H2}>
+          Code
+        </h2>
+        <p className="text-sm text-muted">
+          Click a line number to flag it as suspicious, then fix the code in the editor.
+        </p>
+      </div>
+
+      {/* Full width on phones: the editor reaches the screen edges. */}
+      <div className="-mx-4 sm:mx-0">
         <CodeEditor
           key={challenge.id}
           code={code}
@@ -58,41 +72,58 @@ export default function ChallengeCodePanel({
           selectedLines={selectedLines}
           onToggleLine={onToggleLine}
           readOnly={!editable}
+          fileName={fileNameOf(challenge.functionName)}
         />
       </div>
-      <p className="mt-2 text-sm">
-        {selectedLines.length > 0
-          ? `Označene linije: ${selectedLines.join(', ')}`
-          : 'Nijedna linija nije označena.'}
-      </p>
+
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        {selectedLines.length > 0 ? (
+          <>
+            <span className="text-muted">Flagged lines:</span>
+            {selectedLines.map((n) => (
+              <Badge key={n} tone="amber" mono>
+                {n}
+              </Badge>
+            ))}
+          </>
+        ) : (
+          <span className="text-subtle">No lines flagged yet.</span>
+        )}
+      </div>
       <FieldError id={FIELD_IDS.lines} message={errors.lines} />
       <FieldError id={FIELD_IDS.code} message={errors.code} />
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" className={BUTTON} disabled={runBlocked} onClick={onRunVisible}>
-          Pokreni vidljive testove
-        </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="secondary" size="sm" disabled={runBlocked} onClick={onRunVisible}>
+          <span aria-hidden="true">▷</span>
+          Run visible tests
+        </Button>
+        {!runner.loadError && !runner.ready && (
+          <p className="text-sm text-subtle">
+            <span aria-hidden="true" className="mr-1.5 inline-block animate-pulse text-amber">
+              ●
+            </span>
+            Loading the test runner…
+          </p>
+        )}
+        <p role="status" aria-live="polite" className="text-sm font-medium text-text">
+          {status}
+        </p>
       </div>
 
-      {runner.loadError ? (
-        <p className={`mt-2 ${NOTICE}`}>
-          <span aria-hidden="true">⚠ </span>
-          {runner.loadError}
-        </p>
-      ) : (
-        !runner.ready && <p className="mt-2 text-sm text-slate-700">Pokretač testova se učitava…</p>
+      {runner.loadError && (
+        <Notice tone="danger">
+          <p>{runner.loadError}</p>
+        </Notice>
       )}
-
-      <p role="status" aria-live="polite" className="mt-2 font-medium">
-        {status}
-      </p>
       {visibleRun.status === 'error' && (
-        <p role="alert" className={`mt-2 ${NOTICE}`}>
-          <span aria-hidden="true">⚠ </span>
-          Testovi nisu pokrenuti. {visibleRun.message}
-        </p>
+        <Notice role="alert" tone="danger">
+          <p>The tests did not run. {visibleRun.message}</p>
+        </Notice>
       )}
-      {stale && <p className="mt-1 text-sm text-slate-700">Rezultat je za raniji kod.</p>}
+      {stale && (
+        <p className="text-sm text-subtle">These results are for an earlier version of the code.</p>
+      )}
       {visibleRun.status === 'done' && (
         <ChallengeTestSummary
           functionName={challenge.functionName}

@@ -1,8 +1,8 @@
 /**
  * Test double for `workers/monacoSetup.js`. Real Monaco needs a browser (matchMedia, layout), so
  * page tests mock that module with this. The real CodeEditor still renders, with its gutter
- * buttons, "Vrati original" and props; only the editing surface is a textarea that carries
- * Monaco's `ariaLabel` option ("Editor koda"), like the real editor's input does.
+ * buttons, "Reset to original" and props; only the editing surface is a textarea that carries
+ * Monaco's `ariaLabel` option ("Code editor"), like the real editor's input does.
  */
 function emitter() {
   const listeners = new Set();

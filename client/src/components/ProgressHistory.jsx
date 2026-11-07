@@ -4,11 +4,13 @@ import {
   formatDuration,
   SOURCE_LABELS,
 } from '../lib/progressFormat.js';
+import { isSolved } from '../lib/xp.js';
+import { buttonClass } from './ui/buttonClass.js';
 
-const FOCUS_RING = 'focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:outline-none';
+const TH = 'px-4 py-3 font-mono text-xs font-medium text-subtle uppercase';
 
 /**
- * GET /api/attempts history with a "Učitaj još" button. Data lives in UserProgress.
+ * GET /api/attempts history with a "Load more" button. Data lives in UserProgress.
  * @param {{
  *   items: Array<{ id: string, challengeId: string, status: string, score: number | null,
  *     feedbackSource: string | null, hintsUsed: number, durationSec: number, createdAt: string }>,
@@ -32,58 +34,77 @@ export default function ProgressHistory({
   endRef,
 }) {
   if (items.length === 0) {
-    return <p className="text-slate-700">Još nema pokušaja.</p>;
+    return <p className="text-muted">No attempts yet.</p>;
   }
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-sm">
-          <caption className="sr-only">Pokušaji, od najnovijeg</caption>
-          <thead>
-            <tr className="border-b border-slate-300 text-slate-700">
-              <th scope="col" className="py-2 pr-4 font-semibold">
-                Izazov
+      <div className="-mx-6 overflow-x-auto border-y border-border">
+        <table className="w-full min-w-[680px] border-collapse text-left text-sm">
+          <caption className="sr-only">Attempts, newest first</caption>
+          <thead className="bg-surface-2">
+            <tr>
+              <th scope="col" className={`${TH} pl-6`}>
+                Challenge
               </th>
-              <th scope="col" className="py-2 pr-4 font-semibold">
-                Vrijeme
+              <th scope="col" className={TH}>
+                Time
               </th>
-              <th scope="col" className="py-2 pr-4 text-right font-semibold">
-                Rezultat
+              <th scope="col" className={`${TH} text-right`}>
+                Score
               </th>
-              <th scope="col" className="py-2 pr-4 font-semibold">
-                Procjena
+              <th scope="col" className={TH}>
+                Assessment
               </th>
-              <th scope="col" className="py-2 pr-4 text-right font-semibold">
-                Nagovještaji
+              <th scope="col" className={`${TH} text-right`}>
+                Hints
               </th>
-              <th scope="col" className="py-2 text-right font-semibold">
-                Trajanje
+              <th scope="col" className={`${TH} pr-6 text-right`}>
+                Duration
               </th>
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
-              <tr key={item.id} className="border-b border-slate-200">
-                <th scope="row" className="py-2 pr-4 font-normal">
-                  {challengeName(titles, item.challengeId)}
-                </th>
-                <td className="py-2 pr-4 whitespace-nowrap">{formatDateTime(item.createdAt)}</td>
-                <td className="py-2 pr-4 text-right tabular-nums">
-                  {typeof item.score === 'number' ? `${item.score} / 100` : 'Nije ocijenjen'}
-                </td>
-                <td className="py-2 pr-4">{SOURCE_LABELS[item.feedbackSource] ?? '—'}</td>
-                <td className="py-2 pr-4 text-right tabular-nums">{item.hintsUsed ?? '—'}</td>
-                <td className="py-2 text-right tabular-nums">{formatDuration(item.durationSec)}</td>
-              </tr>
-            ))}
+            {items.map((item) => {
+              const scored = typeof item.score === 'number';
+              const scoreColor = !scored
+                ? 'text-subtle'
+                : isSolved(item.score)
+                  ? 'text-accent'
+                  : 'text-amber';
+              return (
+                <tr key={item.id} className="border-t border-surface-2">
+                  <th scope="row" className="py-3 pr-4 pl-6 font-semibold text-heading">
+                    {challengeName(titles, item.challengeId)}
+                  </th>
+                  <td className="px-4 py-3 whitespace-nowrap text-muted">
+                    {formatDateTime(item.createdAt)}
+                  </td>
+                  <td
+                    className={`px-4 py-3 text-right font-mono whitespace-nowrap tabular-nums ${scoreColor}`}
+                  >
+                    {scored ? `${item.score} / 100` : 'Not scored'}
+                  </td>
+                  <td className="px-4 py-3 text-muted">
+                    {SOURCE_LABELS[item.feedbackSource] ?? '—'}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-muted tabular-nums">
+                    {item.hintsUsed ?? '—'}
+                  </td>
+                  <td className="py-3 pr-6 pl-4 text-right font-mono whitespace-nowrap text-muted tabular-nums">
+                    {formatDuration(item.durationSec)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
 
-      <div className="mt-4">
+      <div className="flex flex-col items-start gap-2">
         {loadMoreError && (
-          <p role="alert" className="mb-2 text-red-800">
+          <p role="alert" className="flex items-start gap-1.5 text-sm text-hard">
+            <span aria-hidden="true">⚠</span>
             {loadMoreError}
           </p>
         )}
@@ -95,13 +116,17 @@ export default function ProgressHistory({
               if (!loadingMore) onLoadMore();
             }}
             aria-disabled={loadingMore || undefined}
-            className={`rounded border border-sky-800 px-4 py-2 font-medium text-sky-900 hover:bg-sky-50 aria-disabled:opacity-70 ${FOCUS_RING}`}
+            className={buttonClass({
+              variant: 'secondary',
+              size: 'sm',
+              className: 'aria-disabled:cursor-wait aria-disabled:opacity-60',
+            })}
           >
-            {loadingMore ? 'Učitavanje…' : loadMoreError ? 'Pokušaj ponovo' : 'Učitaj još'}
+            {loadingMore ? 'Loading…' : loadMoreError ? 'Try again' : 'Load more'}
           </button>
         ) : (
-          <p ref={endRef} tabIndex={-1} className="text-slate-700 focus:outline-none">
-            Nema više pokušaja.
+          <p ref={endRef} tabIndex={-1} className="text-sm text-subtle focus:outline-none">
+            No more attempts.
           </p>
         )}
         <p role="status" className="sr-only">

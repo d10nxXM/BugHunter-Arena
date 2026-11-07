@@ -1,3 +1,6 @@
+import Notice from './ui/Notice.jsx';
+import StatusIcon from './ui/StatusIcon.jsx';
+
 // Inline pass/fail list for the visible tests run before submitting. The full result table on
 // the result page belongs to ResultView (worker F).
 
@@ -11,18 +14,16 @@ function show(value) {
 }
 
 function status(result) {
-  if (result.error === 'timeout') {
-    return {
-      icon: '⏱',
-      text: 'Prekinut (3 s)',
-      className: 'border-amber-600 bg-amber-50 text-amber-900',
-    };
-  }
-  if (result.passed) {
-    return { icon: '✓', text: 'Prošao', className: 'border-green-700 bg-green-50 text-green-900' };
-  }
-  return { icon: '✗', text: 'Pao', className: 'border-red-700 bg-red-50 text-red-900' };
+  if (result.error === 'timeout') return { key: 'timeout', text: 'Timed out (3 s)' };
+  if (result.passed) return { key: 'passed', text: 'Passed' };
+  return { key: 'failed', text: 'Failed' };
 }
+
+const ROW_BORDER = {
+  passed: 'border-l-accent',
+  failed: 'border-l-hard',
+  timeout: 'border-l-amber',
+};
 
 /**
  * @param {{ functionName: string, tests: Array<{ id: string, args: unknown[], expected: unknown }>,
@@ -33,33 +34,34 @@ export default function ChallengeTestSummary({ functionName, tests, results, tim
   const byId = new Map(results.map((r) => [r.id, r]));
 
   return (
-    <div className="mt-3">
+    <div className="flex flex-col gap-3">
       {timedOut && (
-        <p className="text-amber-900">
-          <span aria-hidden="true">⏱ </span>
-          Testovi su prekinuti nakon 3 s. Kod se vjerovatno vrti u beskonačnoj petlji.
-        </p>
+        <Notice tone="amber" icon="⏱">
+          <p>The tests were stopped after 3 s. The code is probably stuck in an endless loop.</p>
+        </Notice>
       )}
-      <ul className="mt-2 space-y-2">
+      <ul className="flex flex-col gap-2">
         {tests.map((test) => {
           const result = byId.get(test.id);
           if (!result) return null;
           const s = status(result);
           return (
-            <li key={test.id} className={`rounded border-l-4 px-3 py-2 text-sm ${s.className}`}>
-              <p className="font-semibold">
-                <span aria-hidden="true">{s.icon} </span>
-                {s.text}
-              </p>
-              <p className="font-mono break-all">
-                {functionName}({test.args.map(show).join(', ')})
-              </p>
-              <p>
-                Očekivano: <code className="font-mono">{show(test.expected)}</code>; dobijeno:{' '}
-                <code className="font-mono">{show(result.actual)}</code>
+            <li
+              key={test.id}
+              className={`flex flex-col gap-1.5 rounded-[10px] border border-l-[3px] border-border bg-bg px-3.5 py-3 text-sm ${ROW_BORDER[s.key]}`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                <p className="min-w-0 font-mono break-all text-heading">
+                  {functionName}({test.args.map(show).join(', ')})
+                </p>
+                <StatusIcon status={s.key} label={s.text} showLabel />
+              </div>
+              <p className="text-muted">
+                Expected <code className="font-mono text-text">{show(test.expected)}</code>, got{' '}
+                <code className="font-mono text-text">{show(result.actual)}</code>
               </p>
               {result.error && result.error !== 'timeout' && (
-                <p className="font-mono break-all">Greška: {result.error}</p>
+                <p className="font-mono text-[13px] break-all text-hard">Error: {result.error}</p>
               )}
             </li>
           );

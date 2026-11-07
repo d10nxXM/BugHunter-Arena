@@ -29,11 +29,11 @@ registerChallengePageMocks();
 
 describe('ChallengePage visible tests', () => {
   it('disables running and submitting while the runner is not ready, and shows loadError', async () => {
-    const runner = makeRunner({ ready: false, loadError: 'Pyodide se nije učitao.' });
+    const runner = makeRunner({ ready: false, loadError: 'Pyodide did not load.' });
     const user = userEvent.setup();
     await renderReady({ runner });
-    expect(screen.getByText('Pyodide se nije učitao.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Pokreni vidljive testove' })).toBeDisabled();
+    expect(screen.getByText('Pyodide did not load.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Run visible tests' })).toBeDisabled();
     await fillAnswer(user);
     expect(submitButton()).toBeDisabled();
     expect(runner.run).not.toHaveBeenCalled();
@@ -42,20 +42,20 @@ describe('ChallengePage visible tests', () => {
 
   it('shows a loading note while the runner starts', async () => {
     await renderReady({ runner: makeRunner({ ready: false }) });
-    expect(screen.getByText('Pokretač testova se učitava…')).toBeInTheDocument();
+    expect(screen.getByText('Loading the test runner…')).toBeInTheDocument();
   });
 
   it('runs only the visible tests on the current code and shows the summary', async () => {
     const user = userEvent.setup();
     const { runner } = await renderReady();
-    await user.click(screen.getByRole('button', { name: 'Pokreni vidljive testove' }));
-    expect(await screen.findByText('2 od 2 vidljivih testova je prošlo.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Run visible tests' }));
+    expect(await screen.findByText('2 of 2 visible tests passed.')).toBeInTheDocument();
     expect(runner.run).toHaveBeenCalledWith({
       code: findMaxPublic.code,
       functionName: 'find_max',
       tests: findMaxPublic.visibleTests,
     });
-    expect(screen.getAllByText('Prošao')).toHaveLength(2);
+    expect(screen.getAllByText('Passed')).toHaveLength(2);
   });
 
   it('shows a timed-out run as interrupted', async () => {
@@ -65,10 +65,10 @@ describe('ChallengePage visible tests', () => {
     }));
     const user = userEvent.setup();
     await renderReady({ runner: makeRunner({ run }) });
-    await user.click(screen.getByRole('button', { name: 'Pokreni vidljive testove' }));
-    expect(await screen.findByText('0 od 2 vidljivih testova je prošlo.')).toBeInTheDocument();
-    expect(screen.getAllByText('Prekinut (3 s)')).toHaveLength(2);
-    expect(screen.getByText(/beskonačnoj petlji/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Run visible tests' }));
+    expect(await screen.findByText('0 of 2 visible tests passed.')).toBeInTheDocument();
+    expect(screen.getAllByText('Timed out (3 s)')).toHaveLength(2);
+    expect(screen.getByText(/endless loop/)).toBeInTheDocument();
   });
 
   it('shows a resolved RuntimeError run as failed test results, not a runner error', async () => {
@@ -78,27 +78,27 @@ describe('ChallengePage visible tests', () => {
         id: t.id,
         passed: false,
         actual: null,
-        error: 'RuntimeError: <b>Pyodide se srušio</b>',
+        error: 'RuntimeError: <b>Pyodide crashed</b>',
       })),
     }));
     const user = userEvent.setup();
     await renderReady({ runner: makeRunner({ run }) });
-    await user.click(screen.getByRole('button', { name: 'Pokreni vidljive testove' }));
-    expect(await screen.findByText('0 od 2 vidljivih testova je prošlo.')).toBeInTheDocument();
-    expect(screen.queryByText(/Testovi nisu pokrenuti/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Run visible tests' }));
+    expect(await screen.findByText('0 of 2 visible tests passed.')).toBeInTheDocument();
+    expect(screen.queryByText(/The tests did not run/)).not.toBeInTheDocument();
     // Rendered as text, never as HTML.
-    expect(screen.getAllByText(/RuntimeError: <b>Pyodide se srušio<\/b>/)).toHaveLength(2);
+    expect(screen.getAllByText(/RuntimeError: <b>Pyodide crashed<\/b>/)).toHaveLength(2);
     expect(document.querySelector('b')).toBeNull();
   });
 
   it('treats a rejected run as "did not run"', async () => {
-    const run = vi.fn().mockRejectedValue(new Error('Pokretač je pao.'));
+    const run = vi.fn().mockRejectedValue(new Error('The runner crashed.'));
     const user = userEvent.setup();
     await renderReady({ runner: makeRunner({ run }) });
-    await user.click(screen.getByRole('button', { name: 'Pokreni vidljive testove' }));
+    await user.click(screen.getByRole('button', { name: 'Run visible tests' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Testovi nisu pokrenuti. Pokretač testova je prijavio grešku.',
+      'The tests did not run. The test runner reported an error.',
     );
-    expect(screen.queryByText(/vidljivih testova je prošlo/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/visible tests passed/)).not.toBeInTheDocument();
   });
 });

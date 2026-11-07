@@ -261,7 +261,7 @@ describe('ensureUser', () => {
   });
 
   it('propagates an ApiError and stores nothing', async () => {
-    const error = new ApiError('Neispravan unos.', { status: 400, code: 'VALIDATION_ERROR' });
+    const error = new ApiError('Invalid input.', { status: 400, code: 'VALIDATION_ERROR' });
     createUser.mockRejectedValue(error);
     const { result } = renderHook(() => useUser(), { wrapper });
     await act(async () => {

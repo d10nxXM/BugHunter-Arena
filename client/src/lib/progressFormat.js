@@ -9,7 +9,7 @@ export function formatDuration(totalSec) {
   return minutes > 0 ? `${minutes} min ${seconds} s` : `${seconds} s`;
 }
 
-const DATE_FORMAT = new Intl.DateTimeFormat('sr-Latn-ME', {
+const DATE_FORMAT = new Intl.DateTimeFormat('en-GB', {
   dateStyle: 'medium',
   timeStyle: 'short',
 });
@@ -22,9 +22,9 @@ export function formatDateTime(iso) {
 
 /** Labels for feedbackSource ('ai' | 'fallback' | 'demo'), the same on every screen. */
 export const SOURCE_LABELS = {
-  ai: 'Pomoćna AI procjena',
-  demo: 'Pomoćna AI procjena (demo)',
-  fallback: 'Procjena bez AI-ja',
+  ai: 'AI-assisted assessment',
+  demo: 'AI-assisted assessment (demo)',
+  fallback: 'Assessed without AI',
 };
 
 /** True for a feedbackSource value from docs/API.md. */

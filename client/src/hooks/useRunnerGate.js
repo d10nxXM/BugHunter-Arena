@@ -8,8 +8,8 @@ export const RUNNER_WAIT_MS = 35000;
 /** After a rejected run, time for the runner's not-ready state to reach this component. */
 export const SETTLE_MS = 50;
 
-export const RUN_TIMEOUT_MESSAGE = 'Pokretač testova nije odgovorio.';
-export const RUNNER_WAIT_MESSAGE = 'Pokretač testova nije spreman.';
+export const RUN_TIMEOUT_MESSAGE = 'The test runner did not respond.';
+export const RUNNER_WAIT_MESSAGE = 'The test runner is not ready.';
 
 function abortReason(signal) {
   return signal?.reason ?? new DOMException('The operation was aborted.', 'AbortError');

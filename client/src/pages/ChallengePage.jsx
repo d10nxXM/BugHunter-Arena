@@ -2,15 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { getChallenge } from '../api/client.js';
 import ChallengeWorkspace from '../components/ChallengeWorkspace.jsx';
+import Button from '../components/ui/Button.jsx';
+import Notice from '../components/ui/Notice.jsx';
 import { usePageTitle } from '../hooks/usePageTitle.js';
 import { paths } from '../paths.js';
 
-const LINK =
-  'text-sky-800 underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:outline-none';
-const SECONDARY_BUTTON =
-  'rounded border border-slate-500 bg-white px-3 py-2 font-medium text-slate-900 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:text-slate-500';
-const ALERT =
-  'rounded border-l-4 border-red-700 bg-red-50 px-3 py-2 text-red-900 focus:outline-none';
+const H1 =
+  'font-display text-[30px] font-bold tracking-tight text-heading focus:outline-none sm:text-[34px]';
 
 function isPublicChallenge(data) {
   return (
@@ -35,7 +33,7 @@ export default function ChallengePage() {
     getChallenge(id, { signal: controller.signal })
       .then((challenge) => {
         if (!isPublicChallenge(challenge)) {
-          setLoad({ key: loadKey, status: 'error', message: 'Izazov nije moguće prikazati.' });
+          setLoad({ key: loadKey, status: 'error', message: 'This challenge cannot be shown.' });
           return;
         }
         setLoad({ key: loadKey, status: 'ready', challenge, startedAt: Date.now() });
@@ -49,7 +47,7 @@ export default function ChallengePage() {
         setLoad({
           key: loadKey,
           status: 'error',
-          message: error?.message || 'Izazov nije moguće učitati.',
+          message: error?.message || 'The challenge could not be loaded.',
         });
       });
     return () => controller.abort();
@@ -57,54 +55,60 @@ export default function ChallengePage() {
 
   const current = load.key === loadKey ? load : { status: 'loading' };
   const ready = current.status === 'ready';
-  usePageTitle(ready ? current.challenge.title : `Izazov ${id}`);
+  usePageTitle(ready ? current.challenge.title : `Challenge ${id}`);
 
   return (
     <>
-      <h1 tabIndex={-1} className="text-2xl font-bold focus:outline-none">
-        {ready ? (
-          current.challenge.title
-        ) : (
-          <>
-            Izazov <span className="font-mono">{id}</span>
-          </>
-        )}
-      </h1>
+      <div className="mb-5 flex flex-col gap-2">
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[13px] text-subtle">
+          <Link
+            to={paths.problems}
+            className="rounded text-muted hover:text-heading focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          >
+            <span aria-hidden="true">← </span>Problems
+          </Link>
+          <span aria-hidden="true">$ open ./{id}</span>
+        </p>
+        <h1 tabIndex={-1} className={H1}>
+          {ready ? (
+            current.challenge.title
+          ) : (
+            <>
+              Challenge <span className="font-mono">{id}</span>
+            </>
+          )}
+        </h1>
+      </div>
 
       {current.status === 'loading' && (
-        <p role="status" className="mt-2 text-slate-700">
-          Učitavanje izazova…
+        <p role="status" className="text-muted">
+          Loading challenge…
         </p>
       )}
 
       {current.status === 'notFound' && (
-        <div role="alert" className={`mt-2 ${ALERT}`}>
+        <Notice role="alert" tone="danger" className="max-w-xl">
+          <p>This challenge does not exist.</p>
           <p>
-            <span aria-hidden="true">⚠ </span>
-            Izazov ne postoji.
-          </p>
-          <p className="mt-1">
-            <Link to={paths.problems} className={LINK}>
-              Nazad na izazove
+            <Link
+              to={paths.problems}
+              className="font-medium text-heading underline underline-offset-4 hover:text-accent"
+            >
+              Back to problems
             </Link>
           </p>
-        </div>
+        </Notice>
       )}
 
       {current.status === 'error' && (
-        <div role="alert" className={`mt-2 ${ALERT}`}>
-          <p>
-            <span aria-hidden="true">⚠ </span>
-            {current.message}
-          </p>
-          <button
-            type="button"
-            className={`mt-2 ${SECONDARY_BUTTON}`}
-            onClick={() => setReloadCount((n) => n + 1)}
-          >
-            Pokušaj ponovo
-          </button>
-        </div>
+        <Notice role="alert" tone="danger" className="max-w-xl">
+          <p>{current.message}</p>
+          <div>
+            <Button variant="secondary" size="sm" onClick={() => setReloadCount((n) => n + 1)}>
+              Try again
+            </Button>
+          </div>
+        </Notice>
       )}
 
       {ready && (

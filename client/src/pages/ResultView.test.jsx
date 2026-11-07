@@ -61,7 +61,7 @@ function renderResult({ path = '/challenges/find-max/result', state } = {}) {
 }
 
 function breakdownRow(label) {
-  const table = screen.getByRole('table', { name: 'Bodovi po dijelovima' });
+  const table = screen.getByRole('table', { name: 'Points per part' });
   return within(table).getByRole('row', { name: new RegExp(label) });
 }
 
@@ -71,52 +71,52 @@ describe('ResultView', () => {
 
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('heading', { level: 1 })).toHaveAttribute('tabindex', '-1');
-    expect(document.title).toBe('Rezultat · BugHunter Arena');
+    expect(document.title).toBe('Result · BugHunter Arena');
     expect(screen.getByText(/89 \/ 100/)).toBeInTheDocument();
 
-    expect(breakdownRow('Pronalaženje linije s greškom')).toHaveTextContent('4040');
-    expect(breakdownRow('Objašnjenje')).toHaveTextContent('2430');
-    expect(breakdownRow('Granični slučaj')).toHaveTextContent('2020');
-    expect(breakdownRow('Ispravka koda')).toHaveTextContent('1010');
-    const penalty = breakdownRow('Kazna za nagovještaje');
+    expect(breakdownRow('Finding the bug line')).toHaveTextContent('4040');
+    expect(breakdownRow('Explanation')).toHaveTextContent('2430');
+    expect(breakdownRow('Edge case')).toHaveTextContent('2020');
+    expect(breakdownRow('Code fix')).toHaveTextContent('1010');
+    const penalty = breakdownRow('Hint penalty');
     expect(within(penalty).getAllByRole('cell')[0]).toHaveTextContent('-5');
-    expect(within(penalty).getAllByRole('cell')[1]).toHaveTextContent('do -20');
-    expect(breakdownRow('Ukupno')).toHaveTextContent('89');
+    expect(within(penalty).getAllByRole('cell')[1]).toHaveTextContent('up to -20');
+    expect(breakdownRow('Total')).toHaveTextContent('89');
 
-    expect(screen.getByText('Pomoćna AI procjena')).toBeInTheDocument();
-    expect(screen.queryByText('Procjena bez AI-ja')).not.toBeInTheDocument();
+    expect(screen.getByText('AI-assisted assessment')).toBeInTheDocument();
+    expect(screen.queryByText('Assessed without AI')).not.toBeInTheDocument();
     expect(screen.getByText(evaluationAi.feedback.feedback)).toBeInTheDocument();
     expect(screen.getByText(evaluationAi.feedback.detected_misconception)).toBeInTheDocument();
     expect(screen.getByText(evaluationAi.feedback.practice_tip)).toBeInTheDocument();
-    expect(screen.getByText('Kvalitet objašnjenja: 8 / 10')).toBeInTheDocument();
-    expect(screen.getByText('Prošlo 4 od 4 testova.')).toBeInTheDocument();
+    expect(screen.getByText('Explanation quality: 8 / 10')).toBeInTheDocument();
+    expect(screen.getByText('4 of 4 tests passed.')).toBeInTheDocument();
   });
 
-  it('labels the fallback result "Procjena bez AI-ja" with score 74', () => {
+  it('labels the fallback result "Assessed without AI" with score 74', () => {
     renderResult({ state: makeState({ evaluation: evaluationFallback }) });
 
     expect(screen.getByText(/74 \/ 100/)).toBeInTheDocument();
-    expect(screen.getByText('Procjena bez AI-ja')).toBeInTheDocument();
-    expect(screen.queryByText('Pomoćna AI procjena')).not.toBeInTheDocument();
-    expect(breakdownRow('Objašnjenje')).toHaveTextContent('930');
-    expect(screen.getByText('Objašnjenje nije potpuno tačno.')).toBeInTheDocument();
+    expect(screen.getByText('Assessed without AI')).toBeInTheDocument();
+    expect(screen.queryByText('AI-assisted assessment')).not.toBeInTheDocument();
+    expect(breakdownRow('Explanation')).toHaveTextContent('930');
+    expect(screen.getByText('Your explanation is not fully correct.')).toBeInTheDocument();
     expect(screen.getByText(evaluationFallback.feedback.feedback)).toBeInTheDocument();
-    expect(screen.queryByText('Savjet za vježbu')).not.toBeInTheDocument();
+    expect(screen.queryByText('Practice tip')).not.toBeInTheDocument();
   });
 
   it('labels demo feedback as a recorded AI answer', () => {
     renderResult({
       state: makeState({ evaluation: { ...evaluationAi, feedbackSource: 'demo' } }),
     });
-    expect(screen.getByText('Pomoćna AI procjena (demo)')).toBeInTheDocument();
+    expect(screen.getByText('AI-assisted assessment (demo)')).toBeInTheDocument();
   });
 
-  it('shows "Rezultat nije dostupan." with a link back when there is no state', () => {
+  it('shows "This result is not available." with a link back when there is no state', () => {
     renderResult({ state: undefined });
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Rezultat' })).toBeInTheDocument();
-    expect(screen.getByText('Rezultat nije dostupan.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Nazad na izazov' })).toHaveAttribute(
+    expect(screen.getByRole('heading', { level: 1, name: 'Result' })).toBeInTheDocument();
+    expect(screen.getByText('This result is not available.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to the challenge' })).toHaveAttribute(
       'href',
       '/challenges/find-max',
     );
@@ -129,8 +129,8 @@ describe('ResultView', () => {
       state: makeState(),
     });
 
-    expect(screen.getByText('Rezultat nije dostupan.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Nazad na izazov' })).toHaveAttribute(
+    expect(screen.getByText('This result is not available.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Back to the challenge' })).toHaveAttribute(
       'href',
       '/challenges/other-one',
     );
@@ -167,17 +167,17 @@ describe('ResultView', () => {
       }),
     });
 
-    const table = screen.getByRole('table', { name: 'Rezultati testova' });
+    const table = screen.getByRole('table', { name: 'Test results' });
     const rows = within(table).getAllByRole('row').slice(1);
     expect(rows).toHaveLength(4);
-    expect(rows[0]).toHaveTextContent('vidljivi');
-    expect(rows[0]).toHaveTextContent('Prošao');
-    expect(rows[1]).toHaveTextContent('Pao');
-    expect(rows[2]).toHaveTextContent('skriveni');
-    expect(rows[2]).toHaveTextContent('Prekinut (3 s)');
-    expect(rows[2]).not.toHaveTextContent('Prošao');
-    expect(rows[3]).toHaveTextContent('Pao');
-    expect(rows[3]).toHaveTextContent('Greška: ZeroDivisionError: division by zero');
+    expect(rows[0]).toHaveTextContent('visible');
+    expect(rows[0]).toHaveTextContent('Passed');
+    expect(rows[1]).toHaveTextContent('Failed');
+    expect(rows[2]).toHaveTextContent('hidden');
+    expect(rows[2]).toHaveTextContent('Timed out (3 s)');
+    expect(rows[2]).not.toHaveTextContent('Passed');
+    expect(rows[3]).toHaveTextContent('Failed');
+    expect(rows[3]).toHaveTextContent('Error: ZeroDivisionError: division by zero');
     expect(rows[2]).toHaveTextContent('[-8,-3,-10]');
     // Icons are decorative next to the text.
     for (const row of rows) {
@@ -189,26 +189,24 @@ describe('ResultView', () => {
     renderResult({
       state: makeState({ testResults: [{ id: 't1', passed: true, error: 'timeout' }] }),
     });
-    const rows = within(screen.getByRole('table', { name: 'Rezultati testova' })).getAllByRole(
-      'row',
-    );
-    expect(rows[1]).toHaveTextContent('Prekinut (3 s)');
-    expect(rows[2]).toHaveTextContent('Nije pokrenut');
+    const rows = within(screen.getByRole('table', { name: 'Test results' })).getAllByRole('row');
+    expect(rows[1]).toHaveTextContent('Timed out (3 s)');
+    expect(rows[2]).toHaveTextContent('Not run');
   });
 
   it('shows the reference solution read-only and the next-step links', () => {
     renderResult({ state: makeState() });
 
-    expect(screen.getByRole('heading', { level: 2, name: 'Referentno rješenje' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 2, name: 'Reference solution' })).toBeVisible();
     const code = screen.getByText(attemptCreated.referenceSolution);
     expect(code.closest('pre')).not.toBeNull();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
 
-    expect(screen.getByRole('link', { name: 'Pokušaj ponovo' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Try again' })).toHaveAttribute(
       'href',
       '/challenges/find-max',
     );
-    expect(screen.getByRole('link', { name: 'Moj napredak' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'My dashboard' })).toHaveAttribute(
       'href',
       '/dashboard',
     );
@@ -216,27 +214,27 @@ describe('ResultView', () => {
 
   it('omits the solution section when the state has no referenceSolution', () => {
     renderResult({ state: makeState({ referenceSolution: undefined }) });
-    expect(screen.queryByText('Referentno rješenje')).not.toBeInTheDocument();
+    expect(screen.queryByText('Reference solution')).not.toBeInTheDocument();
   });
 
   it('shows the challenge title and links the next challenge in list order', async () => {
     renderResult({ state: makeState() });
 
-    expect(await screen.findByText('Izazov: Largest number in a list')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Sljedeći izazov: Zbir liste' })).toHaveAttribute(
+    expect(await screen.findByText('Largest number in a list')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Next challenge: Zbir liste' })).toHaveAttribute(
       'href',
       '/challenges/sum-list',
     );
-    expect(screen.getByRole('link', { name: 'Svi izazovi' })).toHaveAttribute('href', '/problems');
+    expect(screen.getByRole('link', { name: 'All problems' })).toHaveAttribute('href', '/problems');
   });
 
   it('offers only "Svi izazovi" for the last challenge', async () => {
     getChallenges.mockResolvedValue([...TWO_CHALLENGES].reverse());
     renderResult({ state: makeState() });
 
-    expect(await screen.findByText('Izazov: Largest number in a list')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /Sljedeći izazov/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Svi izazovi' })).toBeInTheDocument();
+    expect(await screen.findByText('Largest number in a list')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Next challenge/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'All problems' })).toBeInTheDocument();
   });
 
   it('falls back to the id and "Svi izazovi" when the list fails to load', async () => {
@@ -246,8 +244,8 @@ describe('ResultView', () => {
 
     await waitFor(() => expect(getChallenges).toHaveBeenCalled());
     expect(screen.getByText('find-max')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /Sljedeći izazov/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Svi izazovi' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Next challenge/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'All problems' })).toBeInTheDocument();
   });
 
   it('aborts the challenge list request on unmount', () => {
@@ -271,7 +269,7 @@ describe('ResultView', () => {
     ['a NaN score', { score: Number.NaN }],
   ])('treats %s as unavailable', (_, change) => {
     renderResult({ state: makeState({ evaluation: { ...evaluationAi, ...change } }) });
-    expect(screen.getByText('Rezultat nije dostupan.')).toBeInTheDocument();
+    expect(screen.getByText('This result is not available.')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 });
@@ -284,15 +282,15 @@ describe('ScoreBreakdown', () => {
         breakdown={{ ...evaluationAi.breakdown, hintPenalty: 0, explanation: 24 }}
       />,
     );
-    const row = screen.getByRole('row', { name: /Kazna za nagovještaje/ });
+    const row = screen.getByRole('row', { name: /Hint penalty/ });
     const cell = within(row).getAllByRole('cell')[0];
     expect(cell).toHaveTextContent(/^0$/);
-    expect(cell).not.toHaveClass('text-red-800');
+    expect(cell).not.toHaveClass('text-hard');
   });
 
   it('shows a negative hint penalty in red', () => {
     render(<ScoreBreakdown score={89} breakdown={evaluationAi.breakdown} />);
-    const row = screen.getByRole('row', { name: /Kazna za nagovještaje/ });
-    expect(within(row).getAllByRole('cell')[0]).toHaveClass('text-red-800');
+    const row = screen.getByRole('row', { name: /Hint penalty/ });
+    expect(within(row).getAllByRole('cell')[0]).toHaveClass('text-hard');
   });
 });

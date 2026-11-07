@@ -137,15 +137,15 @@ def _bh_make():
         setup_error = None
         function = None
         try:
-            _exec(_compile(code, "<kod>", "exec", dont_inherit=True), namespace)
+            _exec(_compile(code, "<code>", "exec", dont_inherit=True), namespace)
         except _BaseException as exc:
             setup_error = format_error(exc)
         if setup_error is None:
             function = namespace.get(function_name)
             if function is None:
-                setup_error = clip("NameError: funkcija '" + function_name + "' nije definisana")
+                setup_error = clip("NameError: function '" + function_name + "' is not defined")
             elif not _callable(function):
-                setup_error = clip("TypeError: '" + function_name + "' nije funkcija")
+                setup_error = clip("TypeError: '" + function_name + "' is not a function")
 
         results = []
         for test in tests:
@@ -161,11 +161,11 @@ def _bh_make():
             try:
                 encoded = _dumps(check_json(value, 0), allow_nan=False)
             except _BaseException:
-                error = clip("TypeError: rezultat tipa '" + type_name(value) + "' nije JSON vrijednost")
+                error = clip("TypeError: a result of type '" + type_name(value) + "' is not a JSON value")
                 results.append({"id": test_id, "ok": False, "actual": None, "error": error})
                 continue
             if _len(encoded) > _MAX_ACTUAL:
-                error = clip("ValueError: rezultat je prevelik (preko " + _str(_MAX_ACTUAL) + " znakova)")
+                error = clip("ValueError: the result is too large (over " + _str(_MAX_ACTUAL) + " characters)")
                 results.append({"id": test_id, "ok": False, "actual": None, "error": error})
                 continue
             results.append({"id": test_id, "ok": True, "actual": encoded, "error": None})

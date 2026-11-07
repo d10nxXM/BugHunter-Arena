@@ -37,7 +37,7 @@ export function recoveryStep({ status, reposted }) {
 }
 
 /**
- * A manual "Pošalji rezultat ponovo": with a user id and a possibly stored evaluation, look it
+ * A manual "Send result again": with a user id and a possibly stored evaluation, look it
  * up first. Otherwise POST directly; an anonymous re-POST after a possibly stored evaluation
  * spends the single re-POST budget. Returns { lookup, spendRepost }.
  */

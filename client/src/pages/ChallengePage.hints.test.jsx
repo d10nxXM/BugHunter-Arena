@@ -35,16 +35,16 @@ describe('ChallengePage hints', () => {
     const user = userEvent.setup();
     await renderReady();
 
-    await user.click(screen.getByRole('button', { name: 'Zatraži savjet 1 (−5 bodova)' }));
+    await user.click(screen.getByRole('button', { name: 'Request hint 1 (−5 points)' }));
     expect(await screen.findByText(hintLevel1.hint)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Zatraži savjet 2 (−5 bodova)' }));
+    await user.click(screen.getByRole('button', { name: 'Request hint 2 (−5 points)' }));
     expect(await screen.findByText(hintLevel2.hint)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Zatraži savjet 3 (−10 bodova)' }));
+    await user.click(screen.getByRole('button', { name: 'Request hint 3 (−10 points)' }));
     expect(await screen.findByText(hintLevel3.hint)).toBeInTheDocument();
 
     expect(screen.getByText(hintLevel1.hint)).toBeInTheDocument();
-    expect(screen.getByText('Iskoristio si sve savjete.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Zatraži savjet/ })).not.toBeInTheDocument();
+    expect(screen.getByText('You have used every hint.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Request hint/ })).not.toBeInTheDocument();
     expect(requestHint.mock.calls.map(([id, body]) => [id, body.level])).toEqual([
       ['find-max', 1],
       ['find-max', 2],
@@ -61,10 +61,10 @@ describe('ChallengePage hints', () => {
     requestHint.mockResolvedValueOnce(hintLevel1);
     const user = userEvent.setup();
     await renderReady();
-    await user.click(screen.getByRole('button', { name: 'Linija 2' }));
-    await user.click(screen.getByLabelText('Objašnjenje greške'));
+    await user.click(screen.getByRole('button', { name: 'Line 2' }));
+    await user.click(screen.getByLabelText('Explain the bug'));
     await user.paste('nula');
-    await user.click(screen.getByRole('button', { name: /Zatraži savjet 1/ }));
+    await user.click(screen.getByRole('button', { name: /Request hint 1/ }));
     await screen.findByText(hintLevel1.hint);
     expect(requestHint).toHaveBeenCalledWith(
       'find-max',
@@ -85,17 +85,17 @@ describe('ChallengePage hints', () => {
     const user = userEvent.setup();
     await renderReady();
 
-    await user.click(screen.getByRole('button', { name: /Zatraži savjet 1/ }));
-    expect(screen.getByRole('button', { name: 'Učitavam savjet…' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: /Request hint 1/ }));
+    expect(screen.getByRole('button', { name: 'Loading hint…' })).toBeDisabled();
     rejectHint(
       new ApiError('Previše zahtjeva. Sačekaj malo pa pokušaj ponovo.', {
         status: 429,
         code: 'RATE_LIMITED',
       }),
     );
-    expect(await screen.findByRole('alert')).toHaveTextContent('Previše zahtjeva.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Too many requests.');
 
-    await user.click(screen.getByRole('button', { name: /Zatraži savjet 1/ }));
+    await user.click(screen.getByRole('button', { name: /Request hint 1/ }));
     expect(await screen.findByText(hintLevel1.hint)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(requestHint.mock.calls.map(([, body]) => body.level)).toEqual([1, 1]);

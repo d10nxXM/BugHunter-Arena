@@ -1,4 +1,4 @@
-// Constants for the challenge submit flow: validation limits, DOM ids, Montenegrin messages
+// Constants for the challenge submit flow: validation limits, DOM ids, messages
 // and the submission phase table.
 
 /** Limits from the POST /api/attempts validation (docs/API.md). */
@@ -32,19 +32,19 @@ export const MAX_ERROR_LENGTH = 200;
 export const EDGE_CASE_TEST_ID = 'edge-case';
 
 export const MESSAGES = {
-  attemptMaybeLost: 'Predaja možda nije stigla do servera. Pokušaj ponovo.',
-  resultMaybeSaved: 'Rezultat je možda sačuvan, ali ga nismo mogli učitati.',
+  attemptMaybeLost: 'Your answer may not have reached the server. Please try again.',
+  resultMaybeSaved: 'Your result may be saved, but it could not be loaded.',
   resultNotSaved:
-    'Ocjena nije sačuvana na serveru. Vrati se na listu izazova ili predaj odgovor ponovo.',
-  interrupted: 'Slanje je prekinuto. Pokušaj ponovo.',
-  rateLimited: 'Previše zahtjeva. Sačekaj malo pa pokušaj ponovo.',
-  generic: 'Došlo je do greške. Pokušaj ponovo.',
-  hintMissing: 'Savjet nije stigao. Pokušaj ponovo.',
-  runnerFailed: 'Pokretač testova je prijavio grešku.',
-  incompleteResults: 'Rezultati testova nisu potpuni, pa nisu poslati.',
-  testsNotRun: 'Testovi nisu pokrenuti, pa rezultat nije poslat.',
-  badAttempt: 'Server je vratio neočekivan odgovor na predaju.',
-  badEvaluation: 'Server je vratio neočekivanu ocjenu.',
+    'The result was not saved on the server. Go back to the problems or submit again.',
+  interrupted: 'Sending was interrupted. Please try again.',
+  rateLimited: 'Too many requests. Wait a moment and try again.',
+  generic: 'Something went wrong. Please try again.',
+  hintMissing: 'The hint did not arrive. Please try again.',
+  runnerFailed: 'The test runner reported an error.',
+  incompleteResults: 'The test results are incomplete, so they were not sent.',
+  testsNotRun: 'The tests did not run, so the result was not sent.',
+  badAttempt: 'The server sent an unexpected response to your answer.',
+  badEvaluation: 'The server sent an unexpected result.',
 };
 
 /**
@@ -53,18 +53,19 @@ export const MESSAGES = {
  */
 export const PHASES = {
   idle: { editable: true, busy: false, status: '' },
-  creating: { editable: false, busy: true, status: 'Šaljem odgovor…' },
+  creating: { editable: false, busy: true, status: 'Sending your answer…' },
   createFailed: { editable: true, busy: false, status: '' },
-  testing: { editable: false, busy: true, status: 'Pokrećem sve testove na tvom kodu…' },
+  testing: { editable: false, busy: true, status: 'Running every test on your code…' },
   testsFailed: { editable: false, busy: false, status: '' },
   evaluating: {
     editable: false,
     busy: true,
-    status: 'Računam bodove i čekam pomoćnu AI procjenu. Ovo može potrajati nekoliko sekundi…',
+    status:
+      'Scoring your answer and waiting for the AI-assisted assessment. This can take a few seconds…',
   },
   evalFailed: { editable: false, busy: false, status: '' },
-  recovering: { editable: false, busy: true, status: 'Provjeravam da li je rezultat sačuvan…' },
+  recovering: { editable: false, busy: true, status: 'Checking whether your result was saved…' },
   recovered: { editable: false, busy: false, status: '' },
   unknown: { editable: false, busy: false, status: '' },
-  done: { editable: false, busy: true, status: 'Rezultat je spreman.' },
+  done: { editable: false, busy: true, status: 'Your result is ready.' },
 };

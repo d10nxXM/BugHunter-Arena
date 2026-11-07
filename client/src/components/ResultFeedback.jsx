@@ -1,4 +1,5 @@
 import { SOURCE_LABELS } from '../lib/progressFormat.js';
+import Badge from './ui/Badge.jsx';
 
 // AI or fallback feedback for one attempt. Every field is untrusted text: it is rendered only as
 // React text children, never as HTML, markdown or Monaco content.
@@ -6,15 +7,18 @@ import { SOURCE_LABELS } from '../lib/progressFormat.js';
 const SOURCE = {
   ai: {
     label: SOURCE_LABELS.ai,
-    note: 'Procjenu objašnjenja je dao AI mentor. AI utiče na najviše 30 od 100 bodova.',
+    tone: 'accent',
+    note: 'The AI mentor assessed your explanation. The AI affects at most 30 of 100 points.',
   },
   demo: {
     label: SOURCE_LABELS.demo,
-    note: 'Demo režim: prikazan je unaprijed snimljen odgovor AI mentora.',
+    tone: 'accent',
+    note: 'Demo mode: a recorded AI mentor response is shown.',
   },
   fallback: {
     label: SOURCE_LABELS.fallback,
-    note: 'AI mentor trenutno nije dostupan. Objašnjenje je ocijenjeno prema ključnim pojmovima.',
+    tone: 'amber',
+    note: 'The AI mentor is not available right now. Your explanation was scored by its key terms.',
   },
 };
 
@@ -41,55 +45,57 @@ export default function ResultFeedback({ feedbackSource, feedback }) {
   const correct = feedback?.is_correct === true;
 
   return (
-    <div className="space-y-3">
-      <p>
-        <span
-          className={`inline-block rounded border px-2 py-0.5 text-sm font-semibold ${
-            feedbackSource === 'fallback'
-              ? 'border-amber-700 bg-amber-50 text-amber-900'
-              : 'border-sky-700 bg-sky-50 text-sky-900'
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <p>
+          <Badge tone={source.tone}>{source.label}</Badge>
+        </p>
+        <p className="text-[13px] text-subtle">{source.note}</p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <p
+          className={`inline-flex items-center gap-1.5 font-medium ${
+            correct ? 'text-accent' : 'text-amber'
           }`}
         >
-          {source.label}
-        </span>
-      </p>
-      <p className="text-sm text-slate-700">{source.note}</p>
-
-      <p
-        className={`inline-flex items-center gap-1 font-medium ${
-          correct ? 'text-emerald-800' : 'text-amber-900'
-        }`}
-      >
-        <span aria-hidden="true">{correct ? '✓' : '!'}</span>
-        {correct ? 'Objašnjenje je tačno.' : 'Objašnjenje nije potpuno tačno.'}
-      </p>
-      {typeof quality === 'number' && Number.isFinite(quality) && (
-        <p>Kvalitet objašnjenja: {quality} / 10</p>
-      )}
+          <span aria-hidden="true">{correct ? '✓' : '!'}</span>
+          {correct ? 'Your explanation is correct.' : 'Your explanation is not fully correct.'}
+        </p>
+        {typeof quality === 'number' && Number.isFinite(quality) && (
+          <p className="font-mono text-sm text-muted">Explanation quality: {quality} / 10</p>
+        )}
+      </div>
       {feedback?.needs_clarification === true && (
-        <p className="text-amber-900">Objašnjenje treba jasnije opisati.</p>
+        <p className="text-sm text-amber">Your explanation needs to be clearer.</p>
       )}
 
-      {main && <p className="whitespace-pre-line">{main}</p>}
+      {main && <p className="text-[15px] leading-relaxed whitespace-pre-line text-text">{main}</p>}
 
       {(misconception || hint || tip) && (
-        <dl className="space-y-3">
+        <dl className="flex flex-col gap-3">
           {misconception && (
-            <div>
-              <dt className="font-semibold">Uočena zabluda</dt>
-              <dd className="whitespace-pre-line">{misconception}</dd>
+            <div className="rounded-[10px] border border-border bg-bg px-4 py-3">
+              <dt className="font-mono text-xs text-hard uppercase">Misconception spotted</dt>
+              <dd className="mt-1.5 text-sm leading-relaxed whitespace-pre-line text-text">
+                {misconception}
+              </dd>
             </div>
           )}
           {hint && (
-            <div>
-              <dt className="font-semibold">Smjernica</dt>
-              <dd className="whitespace-pre-line">{hint}</dd>
+            <div className="rounded-[10px] border border-border bg-bg px-4 py-3">
+              <dt className="font-mono text-xs text-amber uppercase">Pointer</dt>
+              <dd className="mt-1.5 text-sm leading-relaxed whitespace-pre-line text-text">
+                {hint}
+              </dd>
             </div>
           )}
           {tip && (
-            <div>
-              <dt className="font-semibold">Savjet za vježbu</dt>
-              <dd className="whitespace-pre-line">{tip}</dd>
+            <div className="rounded-[10px] border border-border bg-bg px-4 py-3">
+              <dt className="font-mono text-xs text-accent uppercase">Practice tip</dt>
+              <dd className="mt-1.5 text-sm leading-relaxed whitespace-pre-line text-text">
+                {tip}
+              </dd>
             </div>
           )}
         </dl>

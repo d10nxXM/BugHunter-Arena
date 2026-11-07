@@ -15,18 +15,14 @@ export const INIT_TIMEOUT_MS = 30000;
 export const MAX_CRASH_RESTARTS = 3;
 export const MAX_TEST_ID_LENGTH = 64;
 
-export const RUNNER_UNAVAILABLE = 'Pokretanje testova nije dostupno u ovom pregledaču.';
-export const RUNNER_NOT_READY = 'Python okruženje se još učitava. Pokušaj ponovo za par sekundi.';
-export const LOAD_FAILED =
-  'Python okruženje nije moguće učitati. Osvježi stranicu i pokušaj ponovo.';
-export const LOAD_TIMEOUT =
-  'Učitavanje Python okruženja traje predugo. Osvježi stranicu i pokušaj ponovo.';
-export const RUNNER_CRASHED =
-  'Python okruženje je prestalo da radi. Osvježi stranicu i pokušaj ponovo.';
-export const TOO_MANY_RESTARTS =
-  'Python okruženje se ruši pri svakom pokretanju. Osvježi stranicu.';
-export const BAD_REQUEST = 'Testovi nisu pokrenuti: neispravan zahtjev.';
-export const RUNNER_STOPPED = 'Pokretanje testova je prekinuto.';
+export const RUNNER_UNAVAILABLE = 'Running tests is not available in this browser.';
+export const RUNNER_NOT_READY = 'Python is still loading. Try again in a few seconds.';
+export const LOAD_FAILED = 'Python could not be loaded. Reload the page and try again.';
+export const LOAD_TIMEOUT = 'Python is taking too long to load. Reload the page and try again.';
+export const RUNNER_CRASHED = 'Python stopped working. Reload the page and try again.';
+export const TOO_MANY_RESTARTS = 'Python crashes on every run. Reload the page.';
+export const BAD_REQUEST = 'Tests did not run: invalid request.';
+export const RUNNER_STOPPED = 'The test run was stopped.';
 
 export const TIMEOUT_ERROR = 'timeout';
 
@@ -73,7 +69,7 @@ function failedResults(tests, error) {
 }
 
 function crashError(message) {
-  const detail = typeof message === 'string' && message ? message : 'Python okruženje se srušilo';
+  const detail = typeof message === 'string' && message ? message : 'Python crashed';
   return `RuntimeError: ${detail}`.slice(0, MAX_ERROR_LENGTH);
 }
 
@@ -218,7 +214,7 @@ export function createRunnerClient({
     if (data.type === 'result') {
       const results = buildResults(job.tests, data.results);
       if (results === null) {
-        finishWithCrash(job, 'neispravan odgovor Python okruženja');
+        finishWithCrash(job, 'invalid response from Python');
         return;
       }
       clearTimeout(job.timer);
