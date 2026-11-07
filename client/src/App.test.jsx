@@ -51,9 +51,9 @@ afterEach(() => vi.restoreAllMocks());
 describe('App routes', () => {
   it.each([
     ['/problems', 'Problems'],
-    ['/challenges/find-max', 'Izazov find-max'],
-    ['/challenges/find-max/result', 'Rezultat'],
-    ['/dashboard', 'Moj napredak'],
+    ['/challenges/find-max', 'Challenge find-max'],
+    ['/challenges/find-max/result', 'Result'],
+    ['/dashboard', 'Your dashboard', 'Dashboard'],
     ['/login', 'Log in'],
     ['/signup', 'Create your hunter account', 'Create account'],
     ['/no-such-page', 'Page not found'],
@@ -82,7 +82,7 @@ describe('App routes', () => {
 
   it('/progress redirects to the dashboard', async () => {
     renderAt('/progress');
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Moj napredak');
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Your dashboard');
     const nav = screen.getByRole('navigation', { name: 'Main navigation' });
     expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
       'aria-current',
@@ -148,21 +148,73 @@ describe('App routes', () => {
     renderAt('/problems');
     await screen.findByRole('heading', { level: 1, name: 'Problems' });
     await user.click(screen.getByRole('link', { name: 'Dashboard' }));
-    const h1 = await screen.findByRole('heading', { level: 1, name: 'Moj napredak' });
+    const h1 = await screen.findByRole('heading', { level: 1, name: 'Your dashboard' });
     await expect.poll(() => document.activeElement).toBe(h1);
   });
 
-  it('Tab goes skip link, logo, nav links, then the account actions', async () => {
+  it('Tab goes skip link, logo, menu button, nav links, then the account actions', async () => {
     const user = userEvent.setup();
     renderAt('/dashboard');
     await screen.findByRole('heading', { level: 1 });
-    const order = ['Skip to content', 'BugHunter Arena', 'Dashboard', 'Problems', 'Log in'];
-    for (const name of order) {
-      await user.tab();
-      expect(screen.getByRole('link', { name })).toHaveFocus();
-    }
     await user.tab();
-    expect(screen.getByRole('link', { name: 'Start hunting' })).toHaveFocus();
+    expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('link', { name: 'BugHunter Arena' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Menu' })).toHaveFocus();
+    for (const name of ['Dashboard', 'Problems', 'Log in', 'Start hunting']) {
+      await user.tab();
+      expect(within(screen.getByRole('banner')).getByRole('link', { name })).toHaveFocus();
+    }
+  });
+
+  it('the menu button opens the menu, Escape closes it and navigating closes it', async () => {
+    const user = userEvent.setup();
+    renderAt('/dashboard');
+    await screen.findByRole('heading', { level: 1 });
+    const button = screen.getByRole('button', { name: 'Menu' });
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    expect(button).toHaveAttribute('aria-controls', 'site-menu');
+
+    await user.click(button);
+    expect(button).toHaveAttribute('aria-expanded', 'true');
+    expect(document.getElementById('site-menu')).toHaveClass('flex');
+    await user.keyboard('{Escape}');
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    expect(button).toHaveFocus();
+
+    await user.click(button);
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+    await user.click(within(nav).getByRole('link', { name: 'Problems' }));
+    await screen.findByRole('heading', { level: 1, name: 'Problems' });
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('regression: the menu stays closed when you come back to the page it was opened on', async () => {
+    const user = userEvent.setup();
+    renderAt('/dashboard');
+    await screen.findByRole('heading', { level: 1 });
+    const button = screen.getByRole('button', { name: 'Menu' });
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+
+    await user.click(button);
+    await user.click(within(nav).getByRole('link', { name: 'Problems' }));
+    await screen.findByRole('heading', { level: 1, name: 'Problems' });
+    await user.click(within(nav).getByRole('link', { name: 'Dashboard' }));
+    await screen.findByRole('heading', { level: 1, name: /dashboard|Welcome back/ });
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('a menu link to the current page closes the menu', async () => {
+    const user = userEvent.setup();
+    renderAt('/dashboard');
+    await screen.findByRole('heading', { level: 1 });
+    const button = screen.getByRole('button', { name: 'Menu' });
+
+    await user.click(button);
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+    await user.click(within(nav).getByRole('link', { name: 'Dashboard' }));
+    expect(button).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('shows the stored display name in the header', async () => {

@@ -12,7 +12,7 @@ export function truncateError(error) {
       try {
         text = JSON.stringify(error);
       } catch {
-        text = 'Greška';
+        text = 'Error';
       }
     }
   } else text = String(error);

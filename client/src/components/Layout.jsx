@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { Suspense, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { useFocusHeadingOnNavigation } from '../hooks/useFocusHeadingOnNavigation.js';
 import { useUser } from '../hooks/useUser.js';
@@ -58,26 +58,68 @@ function SoonItem({ children }) {
   );
 }
 
-/**
- * Page width for every route except the full-bleed landing page (layout route in App.jsx).
- * `legacy` keeps pages that still use the old light styles on a light panel so their text stays
- * readable until they are redesigned.
- */
-export function PageContainer({ legacy = false }) {
-  const inner = legacy ? (
-    <div className="rounded-[14px] bg-slate-50 p-4 text-slate-900 [color-scheme:light] sm:p-6">
+function MenuIcon({ open }) {
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
+      {open ? (
+        <>
+          <path d="M6 6l12 12" />
+          <path d="M18 6L6 18" />
+        </>
+      ) : (
+        <>
+          <path d="M4 7h16" />
+          <path d="M4 12h16" />
+          <path d="M4 17h16" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+/** Page width for every route except the full-bleed landing page (layout route in App.jsx). */
+export function PageContainer() {
+  return (
+    <div className="mx-auto w-full max-w-[1320px] px-4 pt-8 pb-18 sm:px-6 sm:pt-10">
       <Outlet />
     </div>
-  ) : (
-    <Outlet />
   );
-  return <div className="mx-auto w-full max-w-[1320px] px-4 pt-10 pb-18 sm:px-6">{inner}</div>;
 }
 
 export default function Layout() {
   const { pathname } = useLocation();
   const { user, persisted } = useUser();
   useFocusHeadingOnNavigation(pathname);
+  // Below lg the nav and account actions sit behind a menu button. Navigating closes it: the
+  // reset happens during render (no effect), so a later visit to the same page starts closed.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPath, setMenuPath] = useState(pathname);
+  if (menuPath !== pathname) {
+    setMenuPath(pathname);
+    setMenuOpen(false);
+  }
+  const menuButtonRef = useRef(null);
+
+  function closeMenuOnEscape(event) {
+    if (event.key !== 'Escape' || !menuOpen) return;
+    setMenuOpen(false);
+    menuButtonRef.current?.focus();
+  }
+
+  // A link to the page you are already on does not change the path, so close on any link click.
+  function closeMenuOnLinkClick(event) {
+    if (event.target instanceof Element && event.target.closest('a')) setMenuOpen(false);
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-bg font-sans text-text">
@@ -87,8 +129,8 @@ export default function Layout() {
       >
         Skip to content
       </a>
-      <header className="border-b border-track bg-nav">
-        <div className="mx-auto flex max-w-[1320px] flex-wrap items-center gap-x-7 gap-y-4 px-4 py-3 sm:px-6">
+      <header className="border-b border-track bg-nav" onKeyDown={closeMenuOnEscape}>
+        <div className="mx-auto flex max-w-[1320px] flex-wrap items-center gap-x-7 px-4 py-3 sm:px-6">
           <Link
             to={paths.home}
             className={`flex items-center gap-2.5 rounded-lg text-heading ${FOCUS_RING}`}
@@ -98,29 +140,48 @@ export default function Layout() {
               BugHunter <span className="text-accent">Arena</span>
             </span>
           </Link>
-          <nav aria-label="Main navigation">
-            <ul className="flex flex-wrap gap-1 text-[15px] font-medium">
-              <li>
-                <NavLink to={paths.dashboard} className={navLinkClass}>
-                  Dashboard
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to={paths.problems} className={navLinkClass}>
-                  Problems
-                </NavLink>
-              </li>
-              <li>
-                <SoonItem>Arena</SoonItem>
-              </li>
-              <li>
-                <SoonItem>Leaderboard</SoonItem>
-              </li>
-            </ul>
-          </nav>
-          <div className="flex flex-[1_1_200px] flex-wrap items-center justify-end gap-3">
-            <AccountActions user={user} />
-            <Button to={paths.problems}>Start hunting</Button>
+          <button
+            ref={menuButtonRef}
+            type="button"
+            aria-expanded={menuOpen}
+            aria-controls="site-menu"
+            onClick={() => setMenuOpen((open) => !open)}
+            className={`ml-auto flex size-11 items-center justify-center rounded-lg border border-border-strong text-heading hover:bg-surface-3 lg:hidden ${FOCUS_RING}`}
+          >
+            <MenuIcon open={menuOpen} />
+            <span className="sr-only">Menu</span>
+          </button>
+          <div
+            id="site-menu"
+            onClick={closeMenuOnLinkClick}
+            className={`${menuOpen ? 'flex' : 'hidden'} w-full flex-col gap-4 pt-4 pb-2 lg:flex lg:w-auto lg:flex-1 lg:flex-row lg:items-center lg:gap-7 lg:p-0`}
+          >
+            <nav aria-label="Main navigation">
+              <ul className="flex flex-col gap-1 text-[15px] font-medium lg:flex-row">
+                <li>
+                  <NavLink to={paths.dashboard} className={navLinkClass}>
+                    Dashboard
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to={paths.problems} className={navLinkClass}>
+                    Problems
+                  </NavLink>
+                </li>
+                <li>
+                  <SoonItem>Arena</SoonItem>
+                </li>
+                <li>
+                  <SoonItem>Leaderboard</SoonItem>
+                </li>
+              </ul>
+            </nav>
+            <div className="flex flex-wrap items-center gap-3 border-t border-track pt-4 lg:ml-auto lg:justify-end lg:border-0 lg:pt-0">
+              <AccountActions user={user} />
+              <Button to={paths.problems} className="max-lg:ml-auto">
+                Start hunting
+              </Button>
+            </div>
           </div>
         </div>
         <SessionExpiredNotice />

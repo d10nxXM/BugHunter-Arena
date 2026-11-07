@@ -18,4 +18,29 @@ self.MonacoEnvironment = {
   },
 };
 
+// Editor theme on the site's surface colors (src/index.css), so the editor matches the cards.
+// CodeEditor selects it by this name.
+monaco.editor.defineTheme('bughunter-dark', {
+  base: 'vs-dark',
+  inherit: true,
+  rules: [
+    { token: 'comment', foreground: '8d9bb0', fontStyle: 'italic' },
+    { token: 'keyword', foreground: 'c792ea' },
+    { token: 'number', foreground: 'f78c6c' },
+    { token: 'string', foreground: 'c3e88d' },
+  ],
+  colors: {
+    'editor.background': '#0f141c',
+    'editor.foreground': '#e6edf6',
+    'editor.lineHighlightBackground': '#161e29',
+    'editor.lineHighlightBorder': '#00000000',
+    'editor.selectionBackground': '#263243',
+    'editorCursor.foreground': '#5eea8c',
+    'editorIndentGuide.background1': '#1c2532',
+    'editorWidget.background': '#18202c',
+    'scrollbarSlider.background': '#26324380',
+    'scrollbarSlider.hoverBackground': '#263243',
+  },
+});
+
 export { monaco };

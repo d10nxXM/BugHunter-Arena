@@ -189,32 +189,32 @@ describe('ChallengePage submit', () => {
   it('gives up waiting when the restarted runner reports loadError', async () => {
     let setRunner;
     const runner = makeRestartingRunner(() =>
-      act(() => setRunner({ ...runner, ready: false, loadError: 'Pyodide se nije učitao.' })),
+      act(() => setRunner({ ...runner, ready: false, loadError: 'Pyodide did not load.' })),
     );
     const user = userEvent.setup();
     ({ setRunner } = await renderReady({ runner }));
     await fillAnswer(user);
     await user.click(submitButton());
-    expect(await screen.findByRole('alert')).toHaveTextContent('Testovi nisu pokrenuti');
+    expect(await screen.findByRole('alert')).toHaveTextContent('The tests did not run');
     expect(submitEvaluation).not.toHaveBeenCalled();
   });
 
   it('does not send an evaluation when the run rejects, and lets the student run again', async () => {
     const runner = makeRunner();
     const base = runner.run.getMockImplementation();
-    runner.run.mockRejectedValueOnce(new Error('Pokretač je pao.'));
+    runner.run.mockRejectedValueOnce(new Error('The runner crashed.'));
     const user = userEvent.setup();
     await renderReady({ runner });
     await fillAnswer(user);
     await user.click(submitButton());
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Testovi nisu pokrenuti, pa rezultat nije poslat.');
+    expect(alert).toHaveTextContent('The tests did not run, so the result was not sent.');
     await waitFor(() => expect(alert).toHaveFocus());
     expect(submitEvaluation).not.toHaveBeenCalled();
 
     runner.run.mockImplementation(base);
-    await user.click(within(alert).getByRole('button', { name: 'Pokreni testove ponovo' }));
+    await user.click(within(alert).getByRole('button', { name: 'Run the tests again' }));
     await screen.findByTestId('result-state');
     expect(createAttempt).toHaveBeenCalledTimes(1);
     expect(submitEvaluation).toHaveBeenCalledTimes(1);
@@ -231,7 +231,7 @@ describe('ChallengePage submit', () => {
     await renderReady({ runner });
     await fillAnswer(user);
     await user.click(submitButton());
-    expect(await screen.findByRole('alert')).toHaveTextContent('Rezultati testova nisu potpuni');
+    expect(await screen.findByRole('alert')).toHaveTextContent('The test results are incomplete');
     expect(submitEvaluation).not.toHaveBeenCalled();
   });
 
@@ -242,25 +242,25 @@ describe('ChallengePage submit', () => {
     await fillAnswer(user);
     await user.click(submitButton());
     expect(
-      await screen.findByText(/čekam pomoćnu AI procjenu/, {}, { timeout: 2000 }),
+      await screen.findByText(/waiting for the AI-assisted assessment/, {}, { timeout: 2000 }),
     ).toBeInTheDocument();
     expect(submitButton()).toBeDisabled();
-    expect(screen.getByLabelText('Objašnjenje greške')).toBeDisabled();
-    expect(screen.getByRole('button', { name: /Zatraži savjet 1/ })).toBeDisabled();
-    expect(screen.getByText('(zaustavljeno)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Explain the bug')).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Request hint 1/ })).toBeDisabled();
+    expect(screen.getByText('(stopped)')).toBeInTheDocument();
   });
 
   it('shows a server validation error from createAttempt without the maybe-saved text', async () => {
     createAttempt.mockRejectedValueOnce(
-      new ApiError('Neispravan unos.', { status: 400, code: 'VALIDATION_ERROR' }),
+      new ApiError('Invalid input.', { status: 400, code: 'VALIDATION_ERROR' }),
     );
     const user = userEvent.setup();
     await renderReady();
     await fillAnswer(user);
     await user.click(submitButton());
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Neispravan unos.');
-    expect(alert).not.toHaveTextContent('možda');
+    expect(alert).toHaveTextContent('Invalid input.');
+    expect(alert).not.toHaveTextContent('may');
     expect(submitButton()).toBeEnabled();
   });
 });

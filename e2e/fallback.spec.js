@@ -11,9 +11,9 @@ test.describe('journey 3 (AI unavailable): fallback', () => {
     await challenge.solveFindMax({ hints: 1 });
 
     const result = new ResultPage(page);
-    await expect(page.getByText('Procjena bez AI-ja', { exact: true })).toBeVisible();
+    await expect(page.getByText('Assessed without AI', { exact: true })).toBeVisible();
     await expect(
-      page.getByText('AI mentor trenutno nije dostupan. Objašnjenje je ocijenjeno prema ključnim pojmovima.'),
+      page.getByText('The AI mentor is not available right now. Your explanation was scored by its key terms.'),
     ).toBeVisible();
 
     // Keyword fallback: all three groups match -> quality 10 -> 30 points. 40 + 30 + 20 + 10 - 5.
@@ -25,7 +25,7 @@ test.describe('journey 3 (AI unavailable): fallback', () => {
       hintPenalty: -5,
     });
     await result.expectScore(95);
-    await expect(page.getByText('Prošlo 4 od 4 testova.')).toBeVisible();
+    await expect(page.getByText('4 of 4 tests passed.')).toBeVisible();
 
     const hint = net.apiCalls.find((c) => c.path === '/api/challenges/find-max/hints');
     expect(JSON.parse(hint.body).source).toBe('written');

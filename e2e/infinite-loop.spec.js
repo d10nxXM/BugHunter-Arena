@@ -14,29 +14,28 @@ test.describe('journey 4: infinite loop', () => {
 
     const started = Date.now();
     await challenge.runVisibleTests();
-    await expect(page.getByText('Pokrećem testove…')).toBeVisible();
+    await expect(page.getByText('Running tests…')).toBeVisible();
 
     // The worker is busy, the page is not: the line gutter still reacts while the loop runs.
     await challenge.selectLine(1);
 
     await expect(
-      page.getByText('Testovi su prekinuti nakon 3 s. Kod se vjerovatno vrti u beskonačnoj petlji.'),
+      page.getByText('The tests were stopped after 3 s. The code is probably stuck in an endless loop.'),
     ).toBeVisible({ timeout: 15_000 });
     const elapsed = Date.now() - started;
     expect(elapsed, 'interrupted no earlier than the 3 s limit').toBeGreaterThanOrEqual(2_500);
     expect(elapsed, 'interrupted within a sane time after the limit').toBeLessThan(12_000);
 
-    await expect(page.getByText('Prekinut (3 s)')).toHaveCount(2);
-    await expect(page.getByText('0 od 2 vidljivih testova je prošlo.')).toBeVisible();
+    await expect(page.getByText('Timed out (3 s)')).toHaveCount(2);
+    await expect(page.getByText('0 of 2 visible tests passed.')).toBeVisible();
 
-    // Known open bug: two "Vrati original" buttons are rendered, hence .first().
     // A normal run after the interruption works (the worker is restarted).
-    await page.getByRole('button', { name: 'Vrati original' }).first().click();
+    await page.getByRole('button', { name: 'Reset to original' }).click();
     await challenge.waitForRunner();
     await challenge.runVisibleTests();
-    await expect(page.getByText('2 od 2 vidljivih testova je prošlo.')).toBeVisible({
+    await expect(page.getByText('2 of 2 visible tests passed.')).toBeVisible({
       timeout: 30_000,
     });
-    await expect(page.getByText('Prekinut (3 s)')).toHaveCount(0);
+    await expect(page.getByText('Timed out (3 s)')).toHaveCount(0);
   });
 });

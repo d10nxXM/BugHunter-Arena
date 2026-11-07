@@ -10,7 +10,7 @@ import { createContext, useContext } from 'react';
  *
  * Rules for consumers:
  * - Never run tests, submit an attempt or send an evaluation while `ready` is false.
- * - Show `loadError` (Montenegrin) when it is set.
+ * - Show `loadError` when it is set.
  * - When run() rejects, treat it as "tests did not run": show the error, do not send results.
  *   A rejection never means "the tests failed".
  *
@@ -37,7 +37,7 @@ import { createContext, useContext } from 'react';
  *   { timedOut: true, results } with error 'timeout' (passed: false, actual: null) for every
  *   test, and start a fresh worker (ready false until it is ready again).
  * - Limit the number of restarts; past it, set loadError instead of restarting forever.
- * - run() while !ready rejects with an Error whose message is Montenegrin.
+ * - run() while !ready rejects with an Error whose message is safe to show.
  * - StrictMode: the effect that starts the worker terminates it in its cleanup.
  * - Memoise the context value (useMemo over ready, loadError and a stable run from useCallback),
  *   so consumers do not re-render or re-run effects on every provider render.

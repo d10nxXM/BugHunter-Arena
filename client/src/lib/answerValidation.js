@@ -7,25 +7,25 @@ import {
 
 /**
  * Validates the answer before POST /api/attempts.
- * Returns { errors, edgeCase }: errors maps field -> Montenegrin message (empty when valid);
+ * Returns { errors, edgeCase }: errors maps field -> message (empty when valid);
  * edgeCase is { args, expected } once both edge-case fields parse.
  */
 export function validateAnswer({ selectedLines, explanation, edgeArgs, edgeExpected, code }) {
   const errors = {};
-  if (selectedLines.length === 0) errors.lines = 'Označi bar jednu liniju sa greškom.';
+  if (selectedLines.length === 0) errors.lines = 'Flag at least one line with the bug.';
   else if (selectedLines.length > MAX_SELECTED_LINES) {
-    errors.lines = `Možeš označiti najviše ${MAX_SELECTED_LINES} linija.`;
+    errors.lines = `You can flag at most ${MAX_SELECTED_LINES} lines.`;
   }
 
   if (code.length > MAX_FIXED_CODE) {
-    errors.code = `Kod može imati najviše ${MAX_FIXED_CODE} karaktera.`;
+    errors.code = `The code can have at most ${MAX_FIXED_CODE} characters.`;
   }
 
   const length = explanation.trim().length;
   if (length < EXPLANATION_MIN) {
-    errors.explanation = `Objašnjenje mora imati najmanje ${EXPLANATION_MIN} karaktera.`;
+    errors.explanation = `The explanation needs at least ${EXPLANATION_MIN} characters.`;
   } else if (length > EXPLANATION_MAX) {
-    errors.explanation = `Objašnjenje može imati najviše ${EXPLANATION_MAX} karaktera.`;
+    errors.explanation = `The explanation can have at most ${EXPLANATION_MAX} characters.`;
   }
 
   let args;
@@ -33,7 +33,7 @@ export function validateAnswer({ selectedLines, explanation, edgeArgs, edgeExpec
     if (edgeArgs.trim() === '') throw new Error('empty');
     args = JSON.parse(`[${edgeArgs}]`);
   } catch {
-    errors.edgeArgs = 'Unesi argumente kao JSON vrijednosti odvojene zarezom, npr. [1, 2], 3.';
+    errors.edgeArgs = 'Enter the arguments as comma-separated JSON values, e.g. [1, 2], 3.';
   }
 
   let expected;
@@ -41,7 +41,7 @@ export function validateAnswer({ selectedLines, explanation, edgeArgs, edgeExpec
     if (edgeExpected.trim() === '') throw new Error('empty');
     expected = JSON.parse(edgeExpected);
   } catch {
-    errors.edgeExpected = 'Unesi očekivani rezultat kao JSON vrijednost, npr. 5, "tekst" ili null.';
+    errors.edgeExpected = 'Enter the expected result as a JSON value, e.g. 5, "text" or null.';
   }
 
   const edgeCase = errors.edgeArgs || errors.edgeExpected ? null : { args, expected };

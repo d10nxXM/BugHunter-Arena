@@ -23,7 +23,7 @@ test.describe('journey 1: solve find_max (DEMO_MODE=true)', () => {
 
     // The original code passes both visible tests (the bug shows only on hidden ones).
     await challenge.runVisibleTests();
-    await expect(page.getByText('2 od 2 vidljivih testova je prošlo.')).toBeVisible();
+    await expect(page.getByText('2 of 2 visible tests passed.')).toBeVisible();
 
     await challenge.solveFindMax({ hints: 1 });
 
@@ -36,8 +36,8 @@ test.describe('journey 1: solve find_max (DEMO_MODE=true)', () => {
       fix: 10,
       hintPenalty: -5,
     });
-    await expect(page.getByText('Prošlo 4 od 4 testova.')).toBeVisible();
-    await expect(page.getByText('Pomoćna AI procjena (demo)')).toBeVisible();
+    await expect(page.getByText('4 of 4 tests passed.')).toBeVisible();
+    await expect(page.getByText('AI-assisted assessment (demo)')).toBeVisible();
 
     // Locked now: the reference solution is allowed to appear, but only after POST /api/attempts.
     const attemptIndex = net.apiCalls.findIndex(
@@ -54,7 +54,7 @@ test.describe('journey 1: solve find_max (DEMO_MODE=true)', () => {
     const result = new ResultPage(page);
     await result.expectScore(94);
     expect((await result.breakdownValues()).hintPenalty).toBe(0);
-    await expect(page.getByText('Prošlo 4 od 4 testova.')).toBeVisible();
+    await expect(page.getByText('4 of 4 tests passed.')).toBeVisible();
   });
 });
 
@@ -63,10 +63,10 @@ test.describe('journey 5: validation', () => {
     const challenge = new ChallengePage(page);
     await challenge.open();
     await challenge.selectLine(2);
-    await challenge.fillAnswer({ explanation: 'prekratko', args: '[-8, -3, -10]', expected: '-3' });
+    await challenge.fillAnswer({ explanation: 'too short', args: '[-8, -3, -10]', expected: '-3' });
     await challenge.submit();
 
-    await expect(page.getByText('Objašnjenje mora imati najmanje 20 karaktera.')).toBeVisible();
+    await expect(page.getByText('The explanation needs at least 20 characters.')).toBeVisible();
     await expect(challenge.explanation).toHaveAttribute('aria-invalid', 'true');
     await expect(page).toHaveURL(/\/challenges\/find-max$/);
     expect(net.apiCalls.some((c) => c.method === 'POST' && c.path === '/api/attempts')).toBe(false);

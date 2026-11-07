@@ -32,20 +32,20 @@ describe('ChallengePage loading', () => {
     getChallenge.mockReturnValue(new Promise(() => {}));
     renderPage();
     const h1 = screen.getByRole('heading', { level: 1 });
-    expect(h1).toHaveTextContent('Izazov find-max');
+    expect(h1).toHaveTextContent('Challenge find-max');
     expect(h1).toHaveAttribute('tabindex', '-1');
-    expect(screen.getByRole('status')).toHaveTextContent('Učitavanje izazova…');
+    expect(screen.getByRole('status')).toHaveTextContent('Loading challenge…');
     expect(getChallenge).toHaveBeenCalledWith('find-max', expect.anything());
   });
 
-  it('shows "Izazov ne postoji." for a 404, with the h1 and a link back', async () => {
+  it('shows "This challenge does not exist." for a 404, with the h1 and a link back', async () => {
     getChallenge.mockRejectedValue(
-      new ApiError('Izazov ne postoji.', { status: 404, code: 'NOT_FOUND' }),
+      new ApiError('Challenge not found.', { status: 404, code: 'NOT_FOUND' }),
     );
     renderPage();
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Izazov ne postoji.');
-    expect(within(alert).getByRole('link', { name: 'Nazad na izazove' })).toHaveAttribute(
+    expect(alert).toHaveTextContent('This challenge does not exist.');
+    expect(within(alert).getByRole('link', { name: 'Back to problems' })).toHaveAttribute(
       'href',
       '/problems',
     );
@@ -55,15 +55,15 @@ describe('ChallengePage loading', () => {
   it('shows an error with a retry that loads the challenge', async () => {
     getChallenge
       .mockRejectedValueOnce(
-        new ApiError('Server trenutno nije dostupan.', { code: 'NETWORK_ERROR' }),
+        new ApiError('The server is not available right now.', { code: 'NETWORK_ERROR' }),
       )
       .mockResolvedValueOnce(structuredClone(findMaxPublic));
     const user = userEvent.setup();
     renderPage();
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Server trenutno nije dostupan.');
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Izazov find-max');
-    await user.click(within(alert).getByRole('button', { name: 'Pokušaj ponovo' }));
+    expect(alert).toHaveTextContent('The server is not available right now.');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Challenge find-max');
+    await user.click(within(alert).getByRole('button', { name: 'Try again' }));
     expect(
       await screen.findByRole('heading', { level: 1, name: findMaxPublic.title }),
     ).toBeInTheDocument();
@@ -72,9 +72,9 @@ describe('ChallengePage loading', () => {
   it('shows the description, the code and the page title once loaded', async () => {
     await renderReady();
     expect(screen.getByText(findMaxPublic.description)).toBeInTheDocument();
-    expect(screen.getByLabelText('Editor koda')).toHaveValue(findMaxPublic.code);
+    expect(screen.getByLabelText('Code editor')).toHaveValue(findMaxPublic.code);
     expect(document.title).toBe(`${findMaxPublic.title} · BugHunter Arena`);
-    expect(screen.getByText('Vrijeme:')).toBeInTheDocument();
+    expect(screen.getByText('Time:')).toBeInTheDocument();
   });
 });
 
@@ -82,22 +82,28 @@ describe('ChallengePage answer', () => {
   it('selects and deselects lines', async () => {
     const user = userEvent.setup();
     await renderReady();
-    const line2 = screen.getByRole('button', { name: 'Linija 2' });
+    const line2 = screen.getByRole('button', { name: 'Line 2' });
     await user.click(line2);
     expect(line2).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText('Označene linije: 2')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Linija 4' }));
-    expect(screen.getByText('Označene linije: 2, 4')).toBeInTheDocument();
+    expect(screen.getByText('Flagged lines:').parentElement).toHaveTextContent(
+      /Flagged lines:\s*2$/,
+    );
+    await user.click(screen.getByRole('button', { name: 'Line 4' }));
+    expect(screen.getByText('Flagged lines:').parentElement).toHaveTextContent(
+      /Flagged lines:\s*2\s*4$/,
+    );
     await user.click(line2);
     expect(line2).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByText('Označene linije: 4')).toBeInTheDocument();
+    expect(screen.getByText('Flagged lines:').parentElement).toHaveTextContent(
+      /Flagged lines:\s*4$/,
+    );
   });
 
   it('requires a selected line and focuses its error', async () => {
     const user = userEvent.setup();
     await renderReady();
     await user.click(submitButton());
-    const error = screen.getByText('Označi bar jednu liniju sa greškom.');
+    const error = screen.getByText('Flag at least one line with the bug.');
     await waitFor(() => expect(error.closest('p')).toHaveFocus());
     expect(createAttempt).not.toHaveBeenCalled();
   });
@@ -107,9 +113,9 @@ describe('ChallengePage answer', () => {
     await renderReady();
     await fillAnswer(user, { explanation: 'prekratko      ' });
     await user.click(submitButton());
-    const field = screen.getByLabelText('Objašnjenje greške');
+    const field = screen.getByLabelText('Explain the bug');
     expect(field).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByText('Objašnjenje mora imati najmanje 20 karaktera.')).toBeInTheDocument();
+    expect(screen.getByText('The explanation needs at least 20 characters.')).toBeInTheDocument();
     await waitFor(() => expect(field).toHaveFocus());
     expect(createAttempt).not.toHaveBeenCalled();
 
@@ -122,7 +128,9 @@ describe('ChallengePage answer', () => {
     await renderReady();
     await fillAnswer(user, { explanation: 'a'.repeat(1001) });
     await user.click(submitButton());
-    expect(screen.getByText('Objašnjenje može imati najviše 1000 karaktera.')).toBeInTheDocument();
+    expect(
+      screen.getByText('The explanation can have at most 1000 characters.'),
+    ).toBeInTheDocument();
     expect(createAttempt).not.toHaveBeenCalled();
   });
 
@@ -130,7 +138,7 @@ describe('ChallengePage answer', () => {
     const user = userEvent.setup();
     await renderReady();
     await fillAnswer(user);
-    const args = screen.getByLabelText(/Argumenti poziva/);
+    const args = screen.getByLabelText(/Arguments for/);
     await user.clear(args);
     await user.click(args);
     await user.paste('lista');
@@ -140,12 +148,12 @@ describe('ChallengePage answer', () => {
     expect(createAttempt).not.toHaveBeenCalled();
   });
 
-  it('"Vrati original" restores the original code', async () => {
+  it('"Reset to original" restores the original code', async () => {
     const user = userEvent.setup();
     await renderReady();
-    const editor = screen.getByLabelText('Editor koda');
+    const editor = screen.getByLabelText('Code editor');
     await user.type(editor, '\n# x');
-    await user.click(screen.getByRole('button', { name: 'Vrati original' }));
+    await user.click(screen.getByRole('button', { name: 'Reset to original' }));
     expect(editor).toHaveValue(findMaxPublic.code);
   });
 });

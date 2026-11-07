@@ -15,6 +15,9 @@ import ChallengeCodePanel from './ChallengeCodePanel.jsx';
 import ChallengeSubmissionOutcome from './ChallengeSubmissionOutcome.jsx';
 import ChallengeTimer from './ChallengeTimer.jsx';
 import HintPanel from './HintPanel.jsx';
+import Badge from './ui/Badge.jsx';
+import DifficultyBadge from './ui/DifficultyBadge.jsx';
+import { languageLabel } from '../lib/labels.js';
 
 /** The solve screen for one loaded challenge; remounted (keyed) per challenge. */
 export default function ChallengeWorkspace({ challenge, startedAt }) {
@@ -130,24 +133,31 @@ export default function ChallengeWorkspace({ challenge, startedAt }) {
   }
 
   let submitNote = null;
-  if (!runner.ready) submitNote = 'Predaja je moguća kada se pokretač testova učita.';
-  else if (editable && sideBusy) submitNote = 'Sačekaj da se završe testovi ili savjet.';
+  if (!runner.ready) submitNote = 'You can submit once the test runner has loaded.';
+  else if (editable && sideBusy) submitNote = 'Wait for the tests or the hint to finish.';
 
   return (
     <>
-      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-700">
-        <span>Jezik: {challenge.language}</span>
-        <span>Težina: {challenge.difficulty}</span>
-        <span>Kategorija: {challenge.bugCategory}</span>
-        <ChallengeTimer startedAt={startedAt} stoppedAt={flow.stoppedAt} />
+      <div className="flex flex-wrap items-center gap-2.5">
+        <Badge mono>{languageLabel(challenge.language)}</Badge>
+        <DifficultyBadge difficulty={challenge.difficulty} />
+        {challenge.bugCategory && <Badge>{challenge.bugCategory}</Badge>}
+        <div className="ml-auto">
+          <ChallengeTimer startedAt={startedAt} stoppedAt={flow.stoppedAt} />
+        </div>
       </div>
-      <div className="mt-4 grid gap-6 lg:grid-cols-2">
-        <div className="min-w-0 space-y-4">
-          <section aria-labelledby="task-heading">
-            <h2 id="task-heading" className="text-lg font-semibold">
-              Zadatak
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <section
+            aria-labelledby="task-heading"
+            className="flex flex-col gap-2 rounded-[14px] border border-border bg-surface p-5 sm:p-6"
+          >
+            <h2 id="task-heading" className="font-mono text-xs text-subtle uppercase">
+              Task
             </h2>
-            <p className="mt-1 whitespace-pre-wrap">{challenge.description}</p>
+            <p className="text-[15px] leading-relaxed whitespace-pre-wrap text-text">
+              {challenge.description}
+            </p>
           </section>
           <ChallengeCodePanel
             challenge={challenge}
@@ -162,7 +172,7 @@ export default function ChallengeWorkspace({ challenge, startedAt }) {
             onRunVisible={handleRunVisible}
           />
         </div>
-        <div className="min-w-0 space-y-4">
+        <div className="flex min-w-0 flex-col gap-5">
           <AnswerForm
             values={values}
             errors={errors}
@@ -176,7 +186,19 @@ export default function ChallengeWorkspace({ challenge, startedAt }) {
             submitDisabled={submitBlocked}
             submitNote={submitNote}
           />
-          <div role="status" aria-live="polite" className="font-medium">
+          <div
+            role="status"
+            aria-live="polite"
+            className={
+              phase.status ? 'flex items-center gap-2.5 text-sm font-medium text-accent' : 'sr-only'
+            }
+          >
+            {phase.busy && phase.status && (
+              <span
+                aria-hidden="true"
+                className="size-4 shrink-0 animate-spin rounded-full border-2 border-accent/30 border-t-accent"
+              />
+            )}
             {phase.status}
           </div>
           <ChallengeSubmissionOutcome submission={flow.submission} onAction={handleOutcomeAction} />

@@ -19,8 +19,6 @@ const NotFound = lazy(() => import('./pages/NotFound.jsx'));
 
 // Route table. Suspense and the error boundary live in Layout, so the header stays while a page
 // loads or fails. The landing page is full-bleed; every other page sits in PageContainer.
-// `legacy` containers hold pages that still use the old light styles (removed as each page is
-// redesigned).
 export default function App() {
   return (
     <UserProvider>
@@ -29,12 +27,10 @@ export default function App() {
           <Routes>
             <Route element={<Layout />}>
               <Route path={paths.home} element={<Landing />} />
-              <Route element={<PageContainer legacy />}>
+              <Route element={<PageContainer />}>
                 <Route path="/challenges/:id" element={<ChallengePage />} />
                 <Route path="/challenges/:id/result" element={<ResultView />} />
                 <Route path={paths.dashboard} element={<Dashboard />} />
-              </Route>
-              <Route element={<PageContainer />}>
                 <Route path={paths.problems} element={<ChallengeList />} />
                 <Route path={paths.login} element={<Login />} />
                 <Route path={paths.signup} element={<Signup />} />

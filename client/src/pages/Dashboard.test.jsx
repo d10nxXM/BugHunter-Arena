@@ -11,6 +11,7 @@ import {
   userCreated,
 } from '../api/mocks/fixtures.js';
 import { USER_STORAGE_KEY } from '../context/UserContext.js';
+import AuthProvider from '../context/AuthProvider.jsx';
 import UserProvider from '../context/UserProvider.jsx';
 import Dashboard from './Dashboard.jsx';
 
@@ -34,9 +35,11 @@ function storeUser(user = USER) {
 function renderDashboard() {
   return render(
     <UserProvider>
-      <MemoryRouter initialEntries={['/dashboard']}>
-        <Dashboard />
-      </MemoryRouter>
+      <AuthProvider>
+        <MemoryRouter initialEntries={['/dashboard']}>
+          <Dashboard />
+        </MemoryRouter>
+      </AuthProvider>
     </UserProvider>,
   );
 }
@@ -71,33 +74,33 @@ describe('Dashboard without a user', () => {
   it('renders the h1 and a labelled name form, and loads nothing', () => {
     renderDashboard();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole('heading', { level: 1, name: 'Moj napredak' })).toHaveAttribute(
+    expect(screen.getByRole('heading', { level: 1, name: 'Your dashboard' })).toHaveAttribute(
       'tabindex',
       '-1',
     );
-    expect(screen.getByLabelText('Ime za prikaz')).toBeInTheDocument();
+    expect(screen.getByLabelText('Display name')).toBeInTheDocument();
     expect(getProgress).not.toHaveBeenCalled();
     expect(getAttempts).not.toHaveBeenCalled();
   });
 
-  it('validates the name length in Montenegrin and focuses the field', async () => {
+  it('validates the name length and focuses the field', async () => {
     const user = userEvent.setup();
     renderDashboard();
-    const input = screen.getByLabelText('Ime za prikaz');
+    const input = screen.getByLabelText('Display name');
 
-    await user.click(screen.getByRole('button', { name: 'Sačuvaj ime' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('Unesi ime.');
+    await user.click(screen.getByRole('button', { name: 'Save name' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a name.');
     expect(input).toHaveFocus();
     expect(input).toHaveAttribute('aria-invalid', 'true');
 
     await user.type(input, ' a ');
-    await user.click(screen.getByRole('button', { name: 'Sačuvaj ime' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('Ime mora imati najmanje 2 znaka.');
+    await user.click(screen.getByRole('button', { name: 'Save name' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('The name needs at least 2 characters.');
 
     await user.clear(input);
     await user.type(input, 'x'.repeat(33));
-    await user.click(screen.getByRole('button', { name: 'Sačuvaj ime' }));
-    expect(screen.getByRole('alert')).toHaveTextContent('Ime može imati najviše 32 znaka.');
+    await user.click(screen.getByRole('button', { name: 'Save name' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('The name can have at most 32 characters.');
     expect(createUser).not.toHaveBeenCalled();
   });
 
@@ -106,13 +109,13 @@ describe('Dashboard without a user', () => {
     const user = userEvent.setup();
     renderDashboard();
 
-    await user.type(screen.getByLabelText('Ime za prikaz'), '  dion  ');
-    await user.click(screen.getByRole('button', { name: 'Sačuvaj ime' }));
+    await user.type(screen.getByLabelText('Display name'), '  dion  ');
+    await user.click(screen.getByRole('button', { name: 'Save name' }));
 
-    expect(await screen.findByRole('heading', { name: 'Korisnik' })).toHaveFocus();
+    expect(await screen.findByRole('heading', { name: 'Hunter' })).toHaveFocus();
     expect(createUser).toHaveBeenCalledWith('dion');
     expect(screen.getByText('dion')).toBeInTheDocument();
-    expect(await screen.findByText('245')).toBeInTheDocument();
+    expect(await screen.findByText('241')).toBeInTheDocument();
     expect(getProgress).toHaveBeenCalledWith(userCreated.id, expect.anything());
     expect(JSON.parse(localStorage.getItem(USER_STORAGE_KEY))).toEqual({
       userId: userCreated.id,
@@ -122,18 +125,20 @@ describe('Dashboard without a user', () => {
 
   it('shows the ApiError message and keeps the form when creating fails', async () => {
     createUser.mockRejectedValue(
-      new ApiError('Server trenutno nije dostupan.', { code: 'NETWORK_ERROR' }),
+      new ApiError('The server is not available right now.', { code: 'NETWORK_ERROR' }),
     );
     const user = userEvent.setup();
     renderDashboard();
 
-    const input = screen.getByLabelText('Ime za prikaz');
+    const input = screen.getByLabelText('Display name');
     await user.type(input, 'dion');
-    await user.click(screen.getByRole('button', { name: 'Sačuvaj ime' }));
+    await user.click(screen.getByRole('button', { name: 'Save name' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Server trenutno nije dostupan.');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The server is not available right now.',
+    );
     expect(input).toHaveFocus();
-    expect(screen.getByRole('button', { name: 'Sačuvaj ime' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Save name' })).toBeEnabled();
     expect(localStorage.getItem(USER_STORAGE_KEY)).toBeNull();
   });
 
@@ -142,11 +147,11 @@ describe('Dashboard without a user', () => {
     const user = userEvent.setup();
     renderDashboard();
 
-    await user.type(screen.getByLabelText('Ime za prikaz'), 'dion');
-    await user.click(screen.getByRole('button', { name: 'Sačuvaj ime' }));
+    await user.type(screen.getByLabelText('Display name'), 'dion');
+    await user.click(screen.getByRole('button', { name: 'Save name' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Ime nije sačuvano. Pokušaj ponovo.',
+      'The name was not saved. Please try again.',
     );
     expect(screen.queryByText('boom')).not.toBeInTheDocument();
   });
@@ -155,32 +160,30 @@ describe('Dashboard without a user', () => {
 describe('Dashboard with a user', () => {
   beforeEach(() => storeUser());
 
-  it('shows totals, per-challenge results and weak categories', async () => {
+  it('shows XP, rank, bugs found, solve time, skills and misses', async () => {
     renderDashboard();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Moj napredak' })).toBeInTheDocument();
-    expect(screen.getByText('Učitavanje napretka…')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Welcome back, dion' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Loading your progress…')).toBeInTheDocument();
 
-    const totals = await screen.findByText('Ukupni bodovi');
-    expect(totals.nextSibling).toHaveTextContent('245');
-    expect(screen.getByText('Riješeni izazovi').nextSibling).toHaveTextContent('3');
-    expect(screen.getByText('Pokušani izazovi').nextSibling).toHaveTextContent('4');
-    expect(screen.getByText('Prosječno vrijeme rješavanja').nextSibling).toHaveTextContent(
-      '3 min 32 s',
-    );
+    const xp = await screen.findByText('Total XP');
+    expect(xp.nextSibling).toHaveTextContent('241');
+    expect(screen.getByText('Rank').nextSibling).toHaveTextContent('Exterminator');
+    expect(screen.getByText('59 XP to Arena Legend')).toBeInTheDocument();
+    expect(screen.getByText('Bugs found').nextSibling).toHaveTextContent('3');
+    expect(await screen.findByText('1 easy · 0 medium · 0 hard')).toBeInTheDocument();
+    expect(screen.getByText('Avg. solve time').nextSibling).toHaveTextContent('3 min 32 s');
+    expect(screen.getByText('Progress loaded.')).toHaveAttribute('role', 'status');
 
-    const perChallenge = screen.getByRole('table', {
-      name: 'Najbolji rezultat i broj pokušaja po izazovu',
-    });
-    const row = within(perChallenge).getByRole('row', { name: /Largest number in a list/ });
-    expect(row).toHaveTextContent('89 / 100');
-    expect(row).toHaveTextContent('2');
-    // No client-side "solved" label until the server sends perChallenge[].solved.
-    expect(within(perChallenge).queryByRole('columnheader', { name: 'Status' })).toBeNull();
-    expect(perChallenge).not.toHaveTextContent('Riješen');
-    expect(screen.getByText('Napredak učitan.')).toHaveAttribute('role', 'status');
-
-    expect(screen.getByText('Wrong initialization: 2 promašaja')).toBeInTheDocument();
+    const skills = screen.getByRole('region', { name: 'Skills by bug class' });
+    expect(skills).toHaveTextContent('Wrong initialization');
+    expect(skills).toHaveTextContent('1 / 1');
+    expect(skills).toHaveTextContent('2 misses: worth practising');
+    // Every listed challenge is solved, so there is nothing to continue or recommend.
+    expect(screen.getByRole('heading', { name: 'All bugs squashed' })).toBeInTheDocument();
+    expect(screen.getByText('Nothing left to recommend. Nice hunting.')).toBeInTheDocument();
     expect(getProgress).toHaveBeenCalledWith(USER.userId, expect.anything());
   });
 
@@ -189,30 +192,33 @@ describe('Dashboard with a user', () => {
     getAttempts.mockResolvedValue([]);
     renderDashboard();
 
-    expect(await screen.findByText(/Još nemaš nijedan pokušaj/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Izaberi izazov' })).toHaveAttribute(
+    expect(await screen.findByText(/You have no attempts yet/)).toBeInTheDocument();
+    expect(screen.getByText('Total XP').nextSibling).toHaveTextContent('0');
+    expect(
+      await screen.findByRole('heading', { name: 'Start your next hunt' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Start hunt' })).toHaveAttribute(
       'href',
-      '/problems',
+      '/challenges/find-max',
     );
-    expect(await screen.findByText('Još nema pokušaja.')).toBeInTheDocument();
-    expect(screen.queryByText('Ukupni bodovi')).not.toBeInTheDocument();
+    expect(await screen.findByText('No attempts yet.')).toBeInTheDocument();
   });
 
   it('shows an error with retry for progress, and loads again on retry', async () => {
     getProgress
       .mockRejectedValueOnce(
-        new ApiError('Server ne odgovara. Pokušaj ponovo.', { code: 'TIMEOUT' }),
+        new ApiError('The server is not responding. Please try again.', { code: 'TIMEOUT' }),
       )
       .mockResolvedValueOnce(progress);
     const user = userEvent.setup();
     renderDashboard();
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Server ne odgovara. Pokušaj ponovo.');
-    await user.click(within(alert).getByRole('button', { name: 'Pokušaj ponovo' }));
-    expect(screen.getByRole('heading', { level: 2, name: 'Pregled' })).toHaveFocus();
+    expect(alert).toHaveTextContent('The server is not responding. Please try again.');
+    await user.click(within(alert).getByRole('button', { name: 'Try again' }));
+    expect(screen.getByRole('heading', { level: 2, name: 'Overview' })).toHaveFocus();
 
-    expect(await screen.findByText('Ukupni bodovi')).toBeInTheDocument();
+    expect(await screen.findByText('Total XP')).toBeInTheDocument();
     expect(getProgress).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
@@ -220,40 +226,40 @@ describe('Dashboard with a user', () => {
   it('shows an error with retry for the history', async () => {
     getAttempts
       .mockRejectedValueOnce(
-        new ApiError('Server trenutno nije dostupan.', { code: 'NETWORK_ERROR' }),
+        new ApiError('The server is not available right now.', { code: 'NETWORK_ERROR' }),
       )
       .mockResolvedValueOnce(attemptsPage);
     const user = userEvent.setup();
     renderDashboard();
 
     const alert = await screen.findByRole('alert');
-    await user.click(within(alert).getByRole('button', { name: 'Pokušaj ponovo' }));
-    expect(screen.getByRole('heading', { level: 2, name: 'Istorija pokušaja' })).toHaveFocus();
+    await user.click(within(alert).getByRole('button', { name: 'Try again' }));
+    expect(screen.getByRole('heading', { level: 2, name: 'Attempt history' })).toHaveFocus();
 
-    const table = await screen.findByRole('table', { name: 'Pokušaji, od najnovijeg' });
+    const table = await screen.findByRole('table', { name: 'Attempts, newest first' });
     expect(within(table).getByText('89 / 100')).toBeInTheDocument();
     expect(getAttempts).toHaveBeenCalledTimes(2);
   });
 
-  it('pages the history with "Učitaj još" using cursor and cursorId, and stops at the end', async () => {
+  it('pages the history with "Load more" using cursor and cursorId, and stops at the end', async () => {
     const first = makeAttempts(20);
     const second = makeAttempts(3, 20);
     getAttempts.mockResolvedValueOnce(first).mockResolvedValueOnce(second);
     const user = userEvent.setup();
     renderDashboard();
 
-    const table = await screen.findByRole('table', { name: 'Pokušaji, od najnovijeg' });
+    const table = await screen.findByRole('table', { name: 'Attempts, newest first' });
     expect(within(table).getAllByRole('row')).toHaveLength(21);
-    expect(within(table).getByText('Nije ocijenjen')).toBeInTheDocument();
+    expect(within(table).getByText('Not scored')).toBeInTheDocument();
     expect(getAttempts).toHaveBeenNthCalledWith(
       1,
       { userId: USER.userId, limit: 20 },
       expect.anything(),
     );
 
-    await user.click(screen.getByRole('button', { name: 'Učitaj još' }));
+    await user.click(screen.getByRole('button', { name: 'Load more' }));
 
-    const end = await screen.findByText('Nema više pokušaja.');
+    const end = await screen.findByText('No more attempts.');
     expect(end).toHaveFocus();
     expect(within(table).getAllByRole('row')).toHaveLength(24);
     expect(getAttempts).toHaveBeenNthCalledWith(
@@ -266,33 +272,33 @@ describe('Dashboard with a user', () => {
       },
       expect.anything(),
     );
-    expect(screen.queryByRole('button', { name: 'Učitaj još' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
     expect(getAttempts).toHaveBeenCalledTimes(2);
   });
 
-  it('shows no "Učitaj još" when the first page is short', async () => {
+  it('shows no "Load more" when the first page is short', async () => {
     renderDashboard();
-    expect(await screen.findByText('Nema više pokušaja.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Učitaj još' })).not.toBeInTheDocument();
+    expect(await screen.findByText('No more attempts.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
   });
 
   it('keeps loaded rows and offers retry when loading more fails', async () => {
     getAttempts
       .mockResolvedValueOnce(makeAttempts(20))
       .mockRejectedValueOnce(
-        new ApiError('Server ne odgovara. Pokušaj ponovo.', { code: 'TIMEOUT' }),
+        new ApiError('The server is not responding. Please try again.', { code: 'TIMEOUT' }),
       )
       .mockResolvedValueOnce([]);
     const user = userEvent.setup();
     renderDashboard();
 
-    await user.click(await screen.findByRole('button', { name: 'Učitaj još' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Server ne odgovara.');
-    const table = screen.getByRole('table', { name: 'Pokušaji, od najnovijeg' });
+    await user.click(await screen.findByRole('button', { name: 'Load more' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('The server is not responding.');
+    const table = screen.getByRole('table', { name: 'Attempts, newest first' });
     expect(within(table).getAllByRole('row')).toHaveLength(21);
 
-    await user.click(screen.getByRole('button', { name: 'Pokušaj ponovo' }));
-    expect(await screen.findByText('Nema više pokušaja.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByText('No more attempts.')).toBeInTheDocument();
     expect(getAttempts).toHaveBeenCalledTimes(3);
   });
 
@@ -300,29 +306,28 @@ describe('Dashboard with a user', () => {
     getChallenges.mockRejectedValue(new ApiError('x', { code: 'NETWORK_ERROR' }));
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     renderDashboard();
-    const table = await screen.findByRole('table', {
-      name: 'Najbolji rezultat i broj pokušaja po izazovu',
-    });
+    const table = await screen.findByRole('table', { name: 'Attempts, newest first' });
     expect(within(table).getByText('find-max')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Recommended for you' })).not.toBeInTheDocument();
   });
 
   it('removes the name with clearUser and shows the form again', async () => {
     const user = userEvent.setup();
     renderDashboard();
-    await screen.findByText('Ukupni bodovi');
+    await screen.findByText('Total XP');
 
-    await user.click(screen.getByRole('button', { name: 'Ukloni ime' }));
+    await user.click(screen.getByRole('button', { name: 'Remove name' }));
     const warning = screen.getByText(
-      'Nakon uklanjanja imena nećeš moći vidjeti dosadašnji napredak.',
+      'After removing the name you will no longer see your progress so far.',
     );
     expect(warning).toHaveFocus();
     expect(localStorage.getItem(USER_STORAGE_KEY)).not.toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Da, ukloni ime' }));
+    await user.click(screen.getByRole('button', { name: 'Yes, remove the name' }));
 
-    expect(screen.getByLabelText('Ime za prikaz')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Tvoje ime' })).toHaveFocus();
+    expect(screen.getByLabelText('Display name')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your name' })).toHaveFocus();
     expect(localStorage.getItem(USER_STORAGE_KEY)).toBeNull();
-    expect(screen.queryByText('Ukupni bodovi')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total XP')).not.toBeInTheDocument();
   });
 
   it('changes the name by creating a new user and reloads progress for it', async () => {
@@ -330,70 +335,70 @@ describe('Dashboard with a user', () => {
     createUser.mockResolvedValue({ id: newId, displayName: 'novo' });
     const user = userEvent.setup();
     renderDashboard();
-    await screen.findByText('Ukupni bodovi');
+    await screen.findByText('Total XP');
 
-    await user.click(screen.getByRole('button', { name: 'Promijeni ime' }));
-    const input = screen.getByLabelText('Ime za prikaz');
+    await user.click(screen.getByRole('button', { name: 'Change name' }));
+    const input = screen.getByLabelText('Display name');
     expect(input).toHaveFocus();
     expect(input).toHaveValue('dion');
     await user.clear(input);
     await user.type(input, 'novo');
-    await user.click(screen.getByRole('button', { name: 'Sačuvaj novo ime' }));
+    await user.click(screen.getByRole('button', { name: 'Save new name' }));
 
-    expect(await screen.findByRole('heading', { name: 'Korisnik' })).toHaveFocus();
+    expect(await screen.findByRole('heading', { name: 'Hunter' })).toHaveFocus();
     expect(screen.getByText('novo')).toBeInTheDocument();
     await waitFor(() => expect(getProgress).toHaveBeenLastCalledWith(newId, expect.anything()));
     expect(JSON.parse(localStorage.getItem(USER_STORAGE_KEY)).userId).toBe(newId);
   });
 
   it('keeps the old user when changing the name fails, and cancel restores the view', async () => {
-    createUser.mockRejectedValue(new ApiError('Neispravan unos.', { code: 'VALIDATION_ERROR' }));
+    createUser.mockRejectedValue(new ApiError('Invalid input.', { code: 'VALIDATION_ERROR' }));
     const user = userEvent.setup();
     renderDashboard();
-    await screen.findByText('Ukupni bodovi');
+    await screen.findByText('Total XP');
 
-    await user.click(screen.getByRole('button', { name: 'Promijeni ime' }));
-    await user.type(screen.getByLabelText('Ime za prikaz'), '2');
-    await user.click(screen.getByRole('button', { name: 'Sačuvaj novo ime' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Neispravan unos.');
+    await user.click(screen.getByRole('button', { name: 'Change name' }));
+    await user.type(screen.getByLabelText('Display name'), '2');
+    await user.click(screen.getByRole('button', { name: 'Save new name' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid input.');
     expect(JSON.parse(localStorage.getItem(USER_STORAGE_KEY)).userId).toBe(USER.userId);
 
-    await user.click(screen.getByRole('button', { name: 'Odustani' }));
-    expect(screen.getByRole('heading', { name: 'Korisnik' })).toHaveFocus();
-    expect(screen.getByRole('button', { name: 'Promijeni ime' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('heading', { name: 'Hunter' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Change name' })).toBeInTheDocument();
   });
 
   it('cancels removing the name and keeps the user', async () => {
     const user = userEvent.setup();
     renderDashboard();
-    await screen.findByText('Ukupni bodovi');
+    await screen.findByText('Total XP');
 
-    await user.click(screen.getByRole('button', { name: 'Ukloni ime' }));
-    await user.click(screen.getByRole('button', { name: 'Odustani' }));
+    await user.click(screen.getByRole('button', { name: 'Remove name' }));
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
-    expect(screen.getByRole('heading', { name: 'Korisnik' })).toHaveFocus();
-    expect(screen.getByRole('button', { name: 'Ukloni ime' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hunter' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Remove name' })).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem(USER_STORAGE_KEY)).userId).toBe(USER.userId);
   });
 
   it('closes the form without creating a user when the name is unchanged', async () => {
     const user = userEvent.setup();
     renderDashboard();
-    await screen.findByText('Ukupni bodovi');
+    await screen.findByText('Total XP');
 
-    await user.click(screen.getByRole('button', { name: 'Promijeni ime' }));
-    const input = screen.getByLabelText('Ime za prikaz');
+    await user.click(screen.getByRole('button', { name: 'Change name' }));
+    const input = screen.getByLabelText('Display name');
     await user.clear(input);
     await user.type(input, '  dion ');
-    await user.click(screen.getByRole('button', { name: 'Sačuvaj novo ime' }));
+    await user.click(screen.getByRole('button', { name: 'Save new name' }));
 
-    expect(await screen.findByRole('heading', { name: 'Korisnik' })).toHaveFocus();
-    expect(screen.getByRole('button', { name: 'Promijeni ime' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Hunter' })).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Change name' })).toBeInTheDocument();
     expect(createUser).not.toHaveBeenCalled();
     expect(getProgress).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps "Odustani" inactive while a new name is being saved', async () => {
+  it('keeps "Cancel" inactive while a new name is being saved', async () => {
     let resolve;
     createUser.mockImplementation(
       () =>
@@ -403,16 +408,16 @@ describe('Dashboard with a user', () => {
     );
     const user = userEvent.setup();
     renderDashboard();
-    await screen.findByText('Ukupni bodovi');
+    await screen.findByText('Total XP');
 
-    await user.click(screen.getByRole('button', { name: 'Promijeni ime' }));
-    await user.type(screen.getByLabelText('Ime za prikaz'), '2');
-    await user.click(screen.getByRole('button', { name: 'Sačuvaj novo ime' }));
+    await user.click(screen.getByRole('button', { name: 'Change name' }));
+    await user.type(screen.getByLabelText('Display name'), '2');
+    await user.click(screen.getByRole('button', { name: 'Save new name' }));
 
-    const cancel = screen.getByRole('button', { name: 'Odustani' });
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
     expect(cancel).toHaveAttribute('aria-disabled', 'true');
     await user.click(cancel);
-    expect(screen.getByLabelText('Ime za prikaz')).toBeInTheDocument();
+    expect(screen.getByLabelText('Display name')).toBeInTheDocument();
 
     resolve({ id: '11111111-2222-4333-8444-555555555555', displayName: 'dion2' });
     expect(await screen.findByText('dion2')).toBeInTheDocument();
@@ -423,8 +428,8 @@ describe('Dashboard with a user', () => {
     renderDashboard();
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Podaci nisu učitani. Pokušaj ponovo.');
-    expect(screen.queryByText('Ukupni bodovi')).not.toBeInTheDocument();
+    expect(alert).toHaveTextContent('The data could not be loaded. Please try again.');
+    expect(screen.queryByText('Total XP')).not.toBeInTheDocument();
   });
 
   it('shows the error state when progress lacks finite attempted, solved and totalScore', async () => {
@@ -432,9 +437,9 @@ describe('Dashboard with a user', () => {
     renderDashboard();
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Podaci nisu učitani. Pokušaj ponovo.');
-    expect(within(alert).getByRole('button', { name: 'Pokušaj ponovo' })).toBeInTheDocument();
-    expect(screen.queryByText('Ukupni bodovi')).not.toBeInTheDocument();
+    expect(alert).toHaveTextContent('The data could not be loaded. Please try again.');
+    expect(within(alert).getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+    expect(screen.queryByText('Total XP')).not.toBeInTheDocument();
   });
 
   it('ignores a createUser result that arrives after unmount', async () => {
@@ -448,11 +453,11 @@ describe('Dashboard with a user', () => {
     );
     const user = userEvent.setup();
     const { unmount } = renderDashboard();
-    await screen.findByText('Ukupni bodovi');
+    await screen.findByText('Total XP');
 
-    await user.click(screen.getByRole('button', { name: 'Promijeni ime' }));
-    await user.type(screen.getByLabelText('Ime za prikaz'), '2');
-    await user.click(screen.getByRole('button', { name: 'Sačuvaj novo ime' }));
+    await user.click(screen.getByRole('button', { name: 'Change name' }));
+    await user.type(screen.getByLabelText('Display name'), '2');
+    await user.click(screen.getByRole('button', { name: 'Save new name' }));
     unmount();
     resolve({ id: '11111111-2222-4333-8444-555555555555', displayName: 'dion2' });
     await new Promise((r) => setTimeout(r, 0));
@@ -462,7 +467,7 @@ describe('Dashboard with a user', () => {
     errorSpy.mockRestore();
   });
 
-  it('announces a loaded page and keeps "Učitaj još" focusable while loading', async () => {
+  it('announces a loaded page and keeps "Load more" focusable while loading', async () => {
     let resolveSecond;
     getAttempts.mockResolvedValueOnce(makeAttempts(20)).mockImplementationOnce(
       () =>
@@ -473,8 +478,8 @@ describe('Dashboard with a user', () => {
     const user = userEvent.setup();
     renderDashboard();
 
-    await user.click(await screen.findByRole('button', { name: 'Učitaj još' }));
-    const busy = screen.getByRole('button', { name: 'Učitavanje…' });
+    await user.click(await screen.findByRole('button', { name: 'Load more' }));
+    const busy = screen.getByRole('button', { name: 'Loading…' });
     expect(busy).toHaveAttribute('aria-disabled', 'true');
     expect(busy).not.toBeDisabled();
     expect(busy).toHaveFocus();
@@ -482,8 +487,8 @@ describe('Dashboard with a user', () => {
     expect(getAttempts).toHaveBeenCalledTimes(2);
 
     resolveSecond(makeAttempts(20, 20));
-    expect(await screen.findByText('Učitano još 20 pokušaja.')).toHaveAttribute('role', 'status');
-    expect(screen.getByRole('button', { name: 'Učitaj još' })).toHaveFocus();
+    expect(await screen.findByText('Loaded 20 more attempts.')).toHaveAttribute('role', 'status');
+    expect(screen.getByRole('button', { name: 'Load more' })).toHaveFocus();
   });
 
   it('puts the challenge first in the history and labels each feedback source', async () => {
@@ -498,12 +503,12 @@ describe('Dashboard with a user', () => {
     ]);
     renderDashboard();
 
-    const table = await screen.findByRole('table', { name: 'Pokušaji, od najnovijeg' });
-    expect(within(table).getAllByRole('columnheader')[0]).toHaveTextContent('Izazov');
+    const table = await screen.findByRole('table', { name: 'Attempts, newest first' });
+    expect(within(table).getAllByRole('columnheader')[0]).toHaveTextContent('Challenge');
     const rows = within(table).getAllByRole('row').slice(1);
     expect(within(rows[0]).getByRole('rowheader')).toHaveTextContent('Largest number in a list');
-    expect(rows[0]).toHaveTextContent('Pomoćna AI procjena');
-    expect(rows[1]).toHaveTextContent('Procjena bez AI-ja');
-    expect(rows[2]).toHaveTextContent('Pomoćna AI procjena (demo)');
+    expect(rows[0]).toHaveTextContent('AI-assisted assessment');
+    expect(rows[1]).toHaveTextContent('Assessed without AI');
+    expect(rows[2]).toHaveTextContent('AI-assisted assessment (demo)');
   });
 });

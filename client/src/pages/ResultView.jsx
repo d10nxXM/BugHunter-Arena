@@ -4,13 +4,15 @@ import { getChallenges } from '../api/client.js';
 import ResultFeedback from '../components/ResultFeedback.jsx';
 import ScoreBreakdown from '../components/ScoreBreakdown.jsx';
 import TestResults from '../components/TestResults.jsx';
+import Button from '../components/ui/Button.jsx';
 import { usePageTitle } from '../hooks/usePageTitle.js';
 import { isFeedbackSource } from '../lib/progressFormat.js';
+import { isSolved, SOLVED_MIN_SCORE } from '../lib/xp.js';
 import { paths } from '../paths.js';
 
-const FOCUS_RING = 'focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:outline-none';
-const LINK = `text-sky-800 underline underline-offset-4 ${FOCUS_RING}`;
-const PRIMARY = `inline-block rounded bg-sky-800 px-4 py-2 font-semibold text-white hover:bg-sky-900 ${FOCUS_RING} focus-visible:ring-offset-2`;
+const LINK =
+  'rounded font-medium text-muted underline-offset-4 hover:text-heading hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent';
+const H1 = 'font-display text-[34px] font-bold tracking-tight text-heading focus:outline-none';
 
 /** True when state is a ResultState (src/paths.js) for this challenge. */
 function isResultState(state, id) {
@@ -54,7 +56,7 @@ function useChallengeContext(id, enabled) {
       })
       .catch((error) => {
         if (controller.signal.aborted || error?.name === 'AbortError') return;
-        // Cosmetic: the page keeps the id and the "Svi izazovi" link.
+        // Cosmetic: the page keeps the id and the "All problems" link.
         if (import.meta.env.DEV) console.warn('[result] challenge list not loaded');
       });
     return () => controller.abort();
@@ -66,16 +68,24 @@ function useChallengeContext(id, enabled) {
 
 function Heading() {
   return (
-    <h1 tabIndex={-1} className="text-2xl font-bold focus:outline-none">
-      Rezultat
-    </h1>
+    <div className="flex flex-col gap-1.5">
+      <p aria-hidden="true" className="font-mono text-[13px] text-subtle">
+        $ cat ./result
+      </p>
+      <h1 tabIndex={-1} className={H1}>
+        Result
+      </h1>
+    </div>
   );
 }
 
-function Section({ id, title, children }) {
+function Section({ id, title, className = '', children }) {
   return (
-    <section aria-labelledby={id} className="mt-8">
-      <h2 id={id} className="mb-3 text-xl font-semibold">
+    <section
+      aria-labelledby={id}
+      className={`flex flex-col gap-4 rounded-[14px] border border-border bg-surface p-5 sm:p-6 ${className}`}
+    >
+      <h2 id={id} className="font-display text-[19px] font-semibold text-heading">
         {title}
       </h2>
       {children}
@@ -83,8 +93,43 @@ function Section({ id, title, children }) {
   );
 }
 
+const RING_RADIUS = 52;
+const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
+
+/** Score ring: decorative; the number next to it is the text. */
+function ScoreRing({ score, solved }) {
+  const fraction = Math.min(1, Math.max(0, score / 100));
+  return (
+    <svg
+      aria-hidden="true"
+      focusable="false"
+      viewBox="0 0 120 120"
+      className="size-28 shrink-0 -rotate-90 sm:size-32"
+    >
+      <circle
+        cx="60"
+        cy="60"
+        r={RING_RADIUS}
+        fill="none"
+        strokeWidth="9"
+        className="stroke-track"
+      />
+      <circle
+        cx="60"
+        cy="60"
+        r={RING_RADIUS}
+        fill="none"
+        strokeWidth="9"
+        strokeLinecap="round"
+        strokeDasharray={`${RING_LENGTH * fraction} ${RING_LENGTH}`}
+        className={solved ? 'stroke-accent' : 'stroke-amber'}
+      />
+    </svg>
+  );
+}
+
 export default function ResultView() {
-  usePageTitle('Rezultat');
+  usePageTitle('Result');
   const { id } = useParams();
   const { state } = useLocation();
   const valid = isResultState(state, id);
@@ -92,75 +137,121 @@ export default function ResultView() {
 
   if (!valid) {
     return (
-      <>
+      <div className="flex flex-col items-start gap-4">
         <Heading />
-        <p className="mt-2 text-slate-800">Rezultat nije dostupan.</p>
-        <p className="mt-4">
-          <Link to={paths.challenge(id)} className={LINK}>
-            Nazad na izazov
-          </Link>
-        </p>
-      </>
+        <p className="text-muted">This result is not available.</p>
+        <Button to={paths.challenge(id)} variant="secondary">
+          Back to the challenge
+        </Button>
+      </div>
     );
   }
 
   const { evaluation } = state;
   const tests = Array.isArray(state.tests) ? state.tests : [];
   const testResults = Array.isArray(state.testResults) ? state.testResults : [];
+  const solved = isSolved(evaluation.score);
+  const hasTestCount =
+    typeof evaluation.testsPassed === 'number' && typeof evaluation.testsTotal === 'number';
+  const hasSolution = typeof state.referenceSolution === 'string' && state.referenceSolution !== '';
+  // One primary action: the next challenge once this one is solved, otherwise another try.
+  const nextFirst = solved && challenge.nextId;
 
   return (
-    <>
+    <div className="flex flex-col gap-6">
       <Heading />
-      <p className="mt-2 text-slate-700">
-        Izazov: {challenge.title ? challenge.title : <span className="font-mono">{id}</span>}
-      </p>
-      <p className="mt-4 text-3xl font-bold">Ukupno: {evaluation.score} / 100</p>
 
-      <Section id="result-score" title="Bodovi">
-        <ScoreBreakdown score={evaluation.score} breakdown={evaluation.breakdown} />
-        <p className="mt-2 text-sm text-slate-700">
-          Vrijeme rješavanja ne utiče na bodove. Bodove računa server.
-        </p>
-      </Section>
-
-      <Section id="result-feedback" title="Povratna informacija">
-        <ResultFeedback feedbackSource={evaluation.feedbackSource} feedback={evaluation.feedback} />
-      </Section>
-
-      <Section id="result-tests" title="Testovi">
-        {typeof evaluation.testsPassed === 'number' &&
-          typeof evaluation.testsTotal === 'number' && (
-            <p className="mb-3">
-              Prošlo {evaluation.testsPassed} od {evaluation.testsTotal} testova.
+      <section
+        aria-label="Score"
+        className={`flex flex-wrap items-center gap-6 rounded-[14px] border p-5 sm:p-7 ${
+          solved ? 'border-accent/30 bg-accent-soft/50' : 'border-amber/30 bg-amber-soft/50'
+        }`}
+      >
+        <ScoreRing score={evaluation.score} solved={solved} />
+        <div className="flex min-w-0 flex-[1_1_260px] flex-col gap-2">
+          <p className="text-sm text-muted">
+            Challenge:{' '}
+            {challenge.title ? (
+              <span className="text-heading">{challenge.title}</span>
+            ) : (
+              <span className="font-mono text-heading">{id}</span>
+            )}
+          </p>
+          <p className="font-display text-4xl font-bold text-heading tabular-nums sm:text-5xl">
+            <span className="sr-only">Total: </span>
+            {evaluation.score} / 100
+          </p>
+          <p
+            className={`inline-flex items-center gap-1.5 font-medium ${solved ? 'text-accent' : 'text-amber'}`}
+          >
+            <span aria-hidden="true">{solved ? '✓' : '!'}</span>
+            {solved
+              ? 'Bug squashed. This counts as solved.'
+              : `Not solved yet: you need at least ${SOLVED_MIN_SCORE} points.`}
+          </p>
+          {hasTestCount && (
+            <p className="font-mono text-sm text-muted">
+              {evaluation.testsPassed} of {evaluation.testsTotal} tests passed.
             </p>
           )}
+        </div>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <Section id="result-score" title="Points">
+          <ScoreBreakdown score={evaluation.score} breakdown={evaluation.breakdown} />
+          <p className="text-[13px] text-subtle">
+            Your solving time does not change the points. The server computes them.
+          </p>
+        </Section>
+
+        <Section id="result-feedback" title="Feedback">
+          <ResultFeedback
+            feedbackSource={evaluation.feedbackSource}
+            feedback={evaluation.feedback}
+          />
+        </Section>
+      </div>
+
+      <Section id="result-tests" title="Tests">
         <TestResults tests={tests} results={testResults} />
       </Section>
 
-      {typeof state.referenceSolution === 'string' && state.referenceSolution !== '' && (
-        <Section id="result-solution" title="Referentno rješenje">
-          <pre className="overflow-x-auto rounded border border-slate-700 bg-slate-900 p-3 font-mono text-sm text-slate-100">
+      {hasSolution && (
+        <Section id="result-solution" title="Reference solution">
+          <pre className="overflow-x-auto rounded-[12px] border border-border bg-bg p-4 font-mono text-sm leading-relaxed text-text">
             <code>{state.referenceSolution}</code>
           </pre>
         </Section>
       )}
 
-      <nav aria-label="Sljedeći korak" className="mt-8 flex flex-wrap items-center gap-4">
-        <Link to={paths.challenge(id)} className={PRIMARY}>
-          Pokušaj ponovo
-        </Link>
-        <Link to={paths.dashboard} className={LINK}>
-          Moj napredak
-        </Link>
-        {challenge.nextId && (
-          <Link to={paths.challenge(challenge.nextId)} className={LINK}>
-            Sljedeći izazov: {challenge.nextTitle ?? challenge.nextId}
-          </Link>
+      <nav aria-label="Next step" className="flex flex-wrap items-center gap-x-5 gap-y-3">
+        {nextFirst ? (
+          <>
+            <Button to={paths.challenge(challenge.nextId)}>
+              Next challenge: {challenge.nextTitle ?? challenge.nextId}
+            </Button>
+            <Button to={paths.challenge(id)} variant="secondary">
+              Try again
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button to={paths.challenge(id)}>Try again</Button>
+            {challenge.nextId && (
+              <Button to={paths.challenge(challenge.nextId)} variant="secondary">
+                Next challenge: {challenge.nextTitle ?? challenge.nextId}
+              </Button>
+            )}
+          </>
         )}
+        <Link to={paths.dashboard} className={LINK}>
+          My dashboard
+        </Link>
         <Link to={paths.problems} className={LINK}>
-          Svi izazovi
+          All problems
         </Link>
       </nav>
-    </>
+    </div>
   );
 }

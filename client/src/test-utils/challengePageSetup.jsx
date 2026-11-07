@@ -43,9 +43,9 @@ export const EXPLANATION =
 export const FIXED_CODE = 'def find_max(numbers):\n    return max(numbers) if numbers else None';
 
 export const timeoutError = () =>
-  new ApiError('Server ne odgovara. Pokušaj ponovo.', { code: 'TIMEOUT' });
+  new ApiError('The server is not responding. Please try again.', { code: 'TIMEOUT' });
 export const conflictError = () =>
-  new ApiError('Pokušaj je već ocijenjen.', { status: 409, code: 'ALREADY_EVALUATED' });
+  new ApiError('The attempt is already evaluated.', { status: 409, code: 'ALREADY_EVALUATED' });
 
 /** Resets the mocked API (default: challenge loads, attempt and evaluation succeed) per test. */
 export function registerChallengePageMocks() {
@@ -108,20 +108,20 @@ export async function renderReady(options) {
 
 /** Selects line 2, writes the explanation and edge case, and replaces the code with a fix. */
 export async function fillAnswer(user, { explanation = EXPLANATION } = {}) {
-  await user.click(screen.getByRole('button', { name: 'Linija 2' }));
-  await user.click(screen.getByLabelText('Objašnjenje greške'));
+  await user.click(screen.getByRole('button', { name: 'Line 2' }));
+  await user.click(screen.getByLabelText('Explain the bug'));
   await user.paste(explanation);
-  await user.click(screen.getByLabelText(/Argumenti poziva/));
+  await user.click(screen.getByLabelText(/Arguments for/));
   await user.paste('[-8, -3, -10]');
-  await user.click(screen.getByLabelText('Očekivani rezultat'));
+  await user.click(screen.getByLabelText('Expected result'));
   await user.paste('-3');
-  const editor = screen.getByLabelText('Editor koda');
+  const editor = screen.getByLabelText('Code editor');
   await user.clear(editor);
   await user.click(editor);
   await user.paste(FIXED_CODE);
 }
 
-export const submitButton = () => screen.getByRole('button', { name: 'Predaj odgovor' });
+export const submitButton = () => screen.getByRole('button', { name: 'Submit answer' });
 
 export function resultState() {
   return JSON.parse(screen.getByTestId('result-state').textContent);

@@ -88,3 +88,8 @@ services:
       - path: /assets/*
         name: Cache-Control
         value: public, max-age=31536000, immutable
+      # Pyodide (~10 MB) is copied from the pinned npm package without hashed names, so it is
+      # cached for a day instead of forever. A Pyodide upgrade reaches everyone within 24 h.
+      - path: /pyodide/*
+        name: Cache-Control
+        value: public, max-age=86400

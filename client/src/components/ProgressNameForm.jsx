@@ -4,22 +4,22 @@ import { USER_CHANGED_MESSAGE } from '../context/UserProvider.jsx';
 
 const MIN = 2;
 const MAX = 32;
-const FOCUS_RING = 'focus-visible:ring-2 focus-visible:ring-sky-700 focus-visible:outline-none';
+import Button from './ui/Button.jsx';
 
-/** Montenegrin validation message for a display name, or null when it is valid (2-32 trimmed). */
+/** Validation message for a display name, or null when it is valid (2-32 trimmed). */
 function validate(name) {
   const length = name.trim().length;
-  if (length === 0) return 'Unesi ime.';
-  if (length < MIN) return `Ime mora imati najmanje ${MIN} znaka.`;
-  if (length > MAX) return `Ime može imati najviše ${MAX} znaka.`;
+  if (length === 0) return 'Enter a name.';
+  if (length < MIN) return `The name needs at least ${MIN} characters.`;
+  if (length > MAX) return `The name can have at most ${MAX} characters.`;
   return null;
 }
 
-/** ApiError messages and USER_CHANGED_MESSAGE are Montenegrin texts that are safe to show. */
+/** ApiError messages and USER_CHANGED_MESSAGE are texts that are safe to show. */
 function messageOf(error) {
   if (error instanceof ApiError) return error.message;
   if (error instanceof Error && error.message === USER_CHANGED_MESSAGE) return USER_CHANGED_MESSAGE;
-  return 'Ime nije sačuvano. Pokušaj ponovo.';
+  return 'The name was not saved. Please try again.';
 }
 
 /**
@@ -85,14 +85,11 @@ export default function ProgressNameForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="max-w-md space-y-3">
-      <div>
-        <label htmlFor={inputId} className="block font-medium">
-          Ime za prikaz
+    <form onSubmit={handleSubmit} noValidate className="flex max-w-md flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <label htmlFor={inputId} className="text-sm font-medium text-text">
+          Display name
         </label>
-        <p id={hintId} className="text-sm text-slate-700">
-          Od {MIN} do {MAX} znaka. Bez lozinke i bez e-pošte.
-        </p>
         <input
           ref={inputRef}
           id={inputId}
@@ -102,42 +99,48 @@ export default function ProgressNameForm({
           onChange={(event) => setName(event.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${hintId} ${errorId}` : hintId}
-          className={`mt-1 w-full rounded border border-slate-500 bg-white px-3 py-2 ${FOCUS_RING}`}
+          className={`min-h-12 w-full rounded-[10px] border bg-bg px-3.5 text-[15px] text-heading focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+            error ? 'border-hard' : 'border-border-strong'
+          }`}
         />
+        <p id={hintId} className="text-[13px] text-subtle">
+          {MIN} to {MAX} characters. No password and no email.
+        </p>
         {error && (
-          <p id={errorId} role="alert" className="mt-1 text-sm text-red-800">
+          <p id={errorId} role="alert" className="flex items-start gap-1.5 text-sm text-hard">
+            <span aria-hidden="true">✕</span>
             {error}
           </p>
         )}
       </div>
       {!persisted && (
-        <p className="text-sm text-amber-900">
-          Ime će važiti samo dok je stranica otvorena, jer preglednik ne dozvoljava čuvanje.
+        <p className="text-sm text-amber">
+          The name only lasts while this page is open, because the browser does not allow saving.
         </p>
       )}
       <div className="flex flex-wrap gap-3">
-        <button
+        <Button
           type="submit"
           aria-disabled={pending || undefined}
-          className={`rounded bg-sky-800 px-4 py-2 font-semibold text-white hover:bg-sky-900 aria-disabled:opacity-70 ${FOCUS_RING} focus-visible:ring-offset-2`}
+          className="aria-disabled:cursor-wait aria-disabled:opacity-60"
         >
-          {pending ? 'Čuvanje…' : submitLabel}
-        </button>
+          {pending ? 'Saving…' : submitLabel}
+        </Button>
         {onCancel && (
-          <button
-            type="button"
+          <Button
+            variant="secondary"
             onClick={() => {
               if (!pending) onCancel();
             }}
             aria-disabled={pending || undefined}
-            className={`rounded border border-slate-500 px-4 py-2 aria-disabled:opacity-70 ${FOCUS_RING}`}
+            className="aria-disabled:cursor-wait aria-disabled:opacity-60"
           >
-            Odustani
-          </button>
+            Cancel
+          </Button>
         )}
       </div>
       <p role="status" className="sr-only">
-        {pending ? 'Čuvanje imena…' : ''}
+        {pending ? 'Saving the name…' : ''}
       </p>
     </form>
   );
