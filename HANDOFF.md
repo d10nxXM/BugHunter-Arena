@@ -1,6 +1,58 @@
-# Handoff - BugHunter Arena (2026-11-06, evening)
+# Handoff - BugHunter Arena (updated 2026-11-07)
 
 Deadline: public deploy on Render by **Sat 2026-11-07 12:00 CET**.
+
+## Continue here: branch `feat/dark-challenge-result-dashboard`
+
+Pushed to `origin`, **not merged into `main`** (so not deployed). Start with:
+
+```bash
+git fetch origin
+git checkout feat/dark-challenge-result-dashboard
+cd client && npm ci
+```
+
+### Done on the branch
+- **Challenge page** (`/challenges/:id`): English and the dark design.
+  - Monaco theme on the site colors (`bughunter-dark`, defined in `src/workers/monacoSetup.js`).
+  - Flagged lines show as badges; the hint panel is amber.
+  - On phones the editor reaches the screen edges.
+  - The submit button now has `id="answer-submit"`, so the existing focus requests reach it.
+- **Result page**: score ring, points breakdown with bars, feedback cards and the test table. When the challenge is solved, the primary action is "Next challenge".
+- **Dashboard** (`/dashboard`): mockup layout, with **real data only**.
+  - Shows stat tiles (XP, rank, bugs found, average solve time), "Continue where you left off", "Recommended for you", "Skills by bug class", "Recent activity", the attempt history and a "Random challenge" button.
+  - The derived data lives in `src/lib/dashboard.js`, with tests.
+  - Guests can change or remove their name. An account links to its public profile.
+  - Left out, because there is no data for them: global position, weekly hunt, the activity heatmap and duels.
+- **Mobile header**: below `lg` (1024 px) the header shows the logo and a ☰ button. The menu closes on Escape and when you navigate.
+- **Text**: all remaining Montenegrin UI text is now English, including runner, worker, submit and validation messages.
+- **Layout**: `PageContainer legacy` (the light panel) is removed.
+- **`render.yaml`**: `/pyodide/*` is cached for a day (`max-age=86400`).
+- **Checks**: client lint passes, all 544 client tests pass and `npm run build` passes.
+
+### Next steps for this branch, in order
+1. **Update the e2e tests.** `e2e/dashboard.spec.js`, `e2e/hints.spec.js` and `e2e/pages/ChallengePage.js` still look for the old Montenegrin text. Use the same strings as the updated unit tests:
+   - "Submit answer"
+   - "Explain the bug"
+   - "Request hint 1 (−5 points)"
+   - "Run visible tests"
+   - "Reset to original"
+   - "Line N"
+   - "Code editor"
+   - "Result"
+   - "Your dashboard" / "Welcome back, <name>"
+   - "Load more"
+
+   Then run `e2e-runner`.
+2. **Check the pages in a browser.** Nobody has looked at them yet; only the tests and the build passed. Look at desktop (1440 px) and phone (375 px) for `/challenges/find-max`, the result page after a solve, and `/dashboard`, both as a guest and with an account. Watch for:
+   - the editor on phones;
+   - the ☰ menu;
+   - the result page on a narrow screen.
+3. Run the `react-reviewer` and `code-reviewer` agents on the branch diff (`git diff main...`).
+4. Merge into `main` and push. Render deploys from `main`. Then do the live browser check from "Open right now" item 3.
+5. Optional: the `ChallengePage` chunk is about 2.7 MB (Monaco). Splitting it is not urgent.
+
+Note: Pyodide already starts loading when the app opens (`TestRunnerProvider` at the root), so `/problems` needs no separate preload. The new cache header removes the repeat download.
 
 ## Where the project is
 
@@ -53,13 +105,13 @@ Everything below is merged into `main` and pushed. Lint passes and all tests pas
    - `smoke_152646` (`smoke_152646@example.com`)
 3. **Browser end-to-end on the live site:** sign up, solve `find-max`, and check that the profile shows 1 solved and the XP. Then log out and back in, check that guest play still works, and check claim at signup.
 
-4. **Montenegrin leftovers (in progress).** The challenge page, the result page and `/dashboard` were still Montenegrin and in the old light design. A frontend branch is converting them to English and the dark design, including a full-width editor on phones.
-5. **Mobile header.** At 375 px the header wraps onto three rows, about half the first screen. It needs a menu button or a single scrolling row.
+4. **Montenegrin leftovers and old light design:** done on `feat/dark-challenge-result-dashboard`, not merged yet (see the top section).
+5. **Mobile header:** done on the same branch (☰ menu below 1024 px).
 6. **Speed.**
    - The free Render API sleeps after about 15 minutes, so the first request takes 30 to 60 s, and it is slow even when awake. Keep it awake with a paid instance or an external `/healthz` ping every 10 min.
-   - Cache `/pyodide/*` for a day in `render.yaml`. It is `max-age=0` now.
-   - Preload Pyodide on `/problems`.
-   - Cache the challenge list and verified tokens on the server for about 60 s.
+   - ~~Cache `/pyodide/*` for a day in `render.yaml`.~~ Done on the branch.
+   - ~~Preload Pyodide on `/problems`.~~ Not needed: Pyodide already loads when the app opens.
+   - Cache the challenge list and verified tokens on the server for about 60 s (server work, still open).
 
 ## Next steps, in order
 
@@ -67,27 +119,9 @@ Everything below is merged into `main` and pushed. Lint passes and all tests pas
 2. **Supabase dashboard**, done by the project owner:
    - Raise the per-IP limits for sign-ins and token refresh (Authentication > Rate Limits). Every login comes from Render's single IP.
    - Optionally set the minimum password length to 10. The server already enforces it.
-3. Check `/dashboard` against the new design.
+3. Finish and merge `feat/dark-challenge-result-dashboard` (steps in the top section). `/dashboard` now follows the mockup with real data.
 4. Run `e2e-runner` (Playwright) on the user journeys plus an auth journey before the demo.
 5. Wake the API before the demo. The Render free tier sleeps, and a cold start takes about 50 s.
-
-##
-
- Three pages are still in Montenegrin and still use the old light design:
-   - Challenge page (/challenges/:id): "Zadatak", "Tvoj odgovor", "Predaj odgovor", "Zatraži savjet". It's the core of the app.
-   - Result page: "Rezultat", "Nazad".
-   - Dashboard: "Moj napredak".
-
-   Only the landing page, problems and the new account pages were converted to English and the dark design. These three were never on the list. That breaks the "everything in English" decision and makes the site look like two different apps. I'd fix this before tomorrow, ahead of the speed work.
-2. The header takes half the phone screen. On mobile the menu wraps onto three rows: the links, then "Leaderboard", then the buttons. A menu button (☰) or a single scrolling row would fix it.
-3. The code editor is narrow on phones. It's about 250 px wide, so longer code lines get cut off on the right. It still scrolls sideways inside the editor, so it works.
-
-Fine on mobile: landing, problems, login, signup and profile. They fit the screen and their text is English.
-
-I suggest this order for tonight:
-1. Convert the challenge, result and dashboard pages to English with the new dark design.
-2. Fix the mobile header.
-3. Do the speed fixes from before (cache the Python files, load Python earlier).
 
 
 ## Known follow-ups (not blocking the deploy)
