@@ -6,8 +6,8 @@ export class ChallengeListPage {
   }
 
   async open() {
-    await this.page.goto('/');
-    await expect(this.page.getByRole('heading', { level: 1, name: 'Izazovi' })).toBeVisible();
+    await this.page.goto('/problems');
+    await expect(this.page.getByRole('heading', { level: 1, name: 'Problems' })).toBeVisible();
   }
 
   async openChallenge(title) {

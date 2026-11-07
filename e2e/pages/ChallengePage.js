@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 
-export const FIND_MAX_TITLE = 'Najveći element liste';
+export const FIND_MAX_TITLE = 'Largest number in a list';
 
 export const FIXED_FIND_MAX = `def find_max(numbers):
     if not numbers:
@@ -17,17 +17,17 @@ export const INFINITE_LOOP = `def find_max(numbers):
 
 // Matches all three keyword groups of the fallback evaluation (cause, condition, fix).
 export const GOOD_EXPLANATION =
-  'Početna inicijalizacija max_value = 0 je pogrešna: kad su svi brojevi negativni, funkcija vraća 0 koja nije u listi. Treba krenuti od prvi element numbers[0].';
+  'The initialization max_value = 0 is wrong: when every number is negative, the function returns 0, which is not in the list. It should start from the first element, numbers[0].';
 
 export class ChallengePage {
   constructor(page) {
     this.page = page;
-    this.runButton = page.getByRole('button', { name: 'Pokreni vidljive testove' });
-    this.submitButton = page.getByRole('button', { name: 'Predaj odgovor' });
-    this.editor = page.getByRole('textbox', { name: 'Editor koda' });
-    this.explanation = page.getByLabel('Objašnjenje greške');
-    this.edgeArgs = page.getByLabel(/Argumenti poziva/);
-    this.edgeExpected = page.getByLabel('Očekivani rezultat');
+    this.runButton = page.getByRole('button', { name: 'Run visible tests' });
+    this.submitButton = page.getByRole('button', { name: 'Submit answer' });
+    this.editor = page.getByRole('textbox', { name: 'Code editor' });
+    this.explanation = page.getByLabel('Explain the bug');
+    this.edgeArgs = page.getByLabel(/^Arguments for/);
+    this.edgeExpected = page.getByLabel('Expected result');
   }
 
   async open(id = 'find-max') {
@@ -38,11 +38,11 @@ export class ChallengePage {
   /** The run button stays disabled until Pyodide has loaded in the worker. */
   async waitForRunner() {
     await expect(this.runButton).toBeEnabled({ timeout: 45_000 });
-    await expect(this.page.getByText('Pokretač testova se učitava')).toHaveCount(0);
+    await expect(this.page.getByText('Loading the test runner')).toHaveCount(0);
   }
 
   line(n) {
-    return this.page.getByRole('button', { name: `Linija ${n}`, exact: true });
+    return this.page.getByRole('button', { name: `Line ${n}`, exact: true });
   }
 
   async selectLine(n) {
@@ -77,8 +77,8 @@ export class ChallengePage {
   }
 
   async requestHint(level) {
-    await this.page.getByRole('button', { name: new RegExp(`^Zatraži savjet ${level}`) }).click();
-    await expect(this.page.getByText(`Savjet ${level} (`)).toBeVisible();
+    await this.page.getByRole('button', { name: new RegExp(`^Request hint ${level} `) }).click();
+    await expect(this.page.getByText(new RegExp(`^Hint ${level} \\(`))).toBeVisible();
   }
 
   async submit() {

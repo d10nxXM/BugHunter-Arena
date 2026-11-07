@@ -62,7 +62,7 @@ export default defineConfig({
   use: {
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    locale: 'sr-Latn-ME',
+    locale: 'en-US',
     actionTimeout: 15_000,
   },
   projects: [

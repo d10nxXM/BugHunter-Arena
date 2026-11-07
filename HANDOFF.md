@@ -2,15 +2,24 @@
 
 Deadline: public deploy on Render by **Sat 2026-11-07 12:00 CET**.
 
-## Continue here: branch `feat/dark-challenge-result-dashboard`
+## Continue here: `feat/dark-challenge-result-dashboard` is merged into `main` (2026-11-07)
 
-Pushed to `origin`, **not merged into `main`** (so not deployed). Start with:
+Merged and pushed, so Render deploys it. The owner tests the live site by hand.
 
-```bash
-git fetch origin
-git checkout feat/dark-challenge-result-dashboard
-cd client && npm ci
-```
+Done on 2026-11-07, after the work below:
+- The e2e specs and page objects use the English UI strings, and `dashboard.spec.js` is rewritten for `/dashboard`. They are **not run yet**: running them needs `server/.env`, which this clone does not have.
+- `react-reviewer` and `code-reviewer` ran on the branch. Fixed:
+  - the mobile menu reopened when you came back to a page;
+  - a menu link to the current page did not close the menu;
+  - focus was lost after the last hint;
+  - the demo label in the recovered submission view was wrong.
+  - Each fix has a regression test.
+- Open items from the reviews:
+  - the header "Start hunting" button competes with each page's primary action;
+  - "Next challenge" appears late on the result page while the challenge list loads;
+  - the dashboard "Continue" card changes when history loads;
+  - the one-day cache on unversioned `/pyodide/*` can mix versions after a Pyodide upgrade;
+  - add a `.gitattributes` (`eol=lf`).
 
 ### Done on the branch
 - **Challenge page** (`/challenges/:id`): English and the dark design.

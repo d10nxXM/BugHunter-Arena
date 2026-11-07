@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { HINT_PENALTIES } from '../lib/submitConstants.js';
 import Badge from './ui/Badge.jsx';
 import Button from './ui/Button.jsx';
@@ -18,6 +19,15 @@ import Notice from './ui/Notice.jsx';
 export default function HintPanel({ hints, maxLevel, loading, error, disabled, onRequest }) {
   const nextLevel = hints.length + 1;
   const exhausted = nextLevel > maxLevel;
+  const exhaustedRef = useRef(null);
+  const wasExhausted = useRef(exhausted);
+
+  // The last request replaces the focused button with text; move focus there so it does not
+  // drop to the body. Only on the change, never on mount.
+  useEffect(() => {
+    if (exhausted && !wasExhausted.current) exhaustedRef.current?.focus();
+    wasExhausted.current = exhausted;
+  }, [exhausted]);
 
   let status = '';
   if (loading) status = 'Loading hint…';
@@ -79,7 +89,9 @@ export default function HintPanel({ hints, maxLevel, loading, error, disabled, o
       {maxLevel === 0 ? (
         <p className="text-sm text-subtle">This challenge has no hints.</p>
       ) : exhausted ? (
-        <p className="text-sm text-subtle">You have used every hint.</p>
+        <p ref={exhaustedRef} tabIndex={-1} className="text-sm text-subtle focus:outline-none">
+          You have used every hint.
+        </p>
       ) : (
         <Button
           variant="secondary"

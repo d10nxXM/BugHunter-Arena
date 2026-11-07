@@ -100,16 +100,25 @@ export default function Layout() {
   const { pathname } = useLocation();
   const { user, persisted } = useUser();
   useFocusHeadingOnNavigation(pathname);
-  // Below lg the nav and account actions sit behind a menu button. The menu belongs to the page
-  // it was opened on, so navigating closes it without an effect.
-  const [menu, setMenu] = useState({ open: false, path: pathname });
-  const menuOpen = menu.open && menu.path === pathname;
+  // Below lg the nav and account actions sit behind a menu button. Navigating closes it: the
+  // reset happens during render (no effect), so a later visit to the same page starts closed.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPath, setMenuPath] = useState(pathname);
+  if (menuPath !== pathname) {
+    setMenuPath(pathname);
+    setMenuOpen(false);
+  }
   const menuButtonRef = useRef(null);
 
   function closeMenuOnEscape(event) {
     if (event.key !== 'Escape' || !menuOpen) return;
-    setMenu({ open: false, path: pathname });
+    setMenuOpen(false);
     menuButtonRef.current?.focus();
+  }
+
+  // A link to the page you are already on does not change the path, so close on any link click.
+  function closeMenuOnLinkClick(event) {
+    if (event.target instanceof Element && event.target.closest('a')) setMenuOpen(false);
   }
 
   return (
@@ -136,7 +145,7 @@ export default function Layout() {
             type="button"
             aria-expanded={menuOpen}
             aria-controls="site-menu"
-            onClick={() => setMenu({ open: !menuOpen, path: pathname })}
+            onClick={() => setMenuOpen((open) => !open)}
             className={`ml-auto flex size-11 items-center justify-center rounded-lg border border-border-strong text-heading hover:bg-surface-3 lg:hidden ${FOCUS_RING}`}
           >
             <MenuIcon open={menuOpen} />
@@ -144,6 +153,7 @@ export default function Layout() {
           </button>
           <div
             id="site-menu"
+            onClick={closeMenuOnLinkClick}
             className={`${menuOpen ? 'flex' : 'hidden'} w-full flex-col gap-4 pt-4 pb-2 lg:flex lg:w-auto lg:flex-1 lg:flex-row lg:items-center lg:gap-7 lg:p-0`}
           >
             <nav aria-label="Main navigation">

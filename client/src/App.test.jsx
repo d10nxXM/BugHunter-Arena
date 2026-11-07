@@ -190,6 +190,33 @@ describe('App routes', () => {
     expect(button).toHaveAttribute('aria-expanded', 'false');
   });
 
+  it('regression: the menu stays closed when you come back to the page it was opened on', async () => {
+    const user = userEvent.setup();
+    renderAt('/dashboard');
+    await screen.findByRole('heading', { level: 1 });
+    const button = screen.getByRole('button', { name: 'Menu' });
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+
+    await user.click(button);
+    await user.click(within(nav).getByRole('link', { name: 'Problems' }));
+    await screen.findByRole('heading', { level: 1, name: 'Problems' });
+    await user.click(within(nav).getByRole('link', { name: 'Dashboard' }));
+    await screen.findByRole('heading', { level: 1, name: /dashboard|Welcome back/ });
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('a menu link to the current page closes the menu', async () => {
+    const user = userEvent.setup();
+    renderAt('/dashboard');
+    await screen.findByRole('heading', { level: 1 });
+    const button = screen.getByRole('button', { name: 'Menu' });
+
+    await user.click(button);
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+    await user.click(within(nav).getByRole('link', { name: 'Dashboard' }));
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+  });
+
   it('shows the stored display name in the header', async () => {
     localStorage.setItem(
       USER_STORAGE_KEY,

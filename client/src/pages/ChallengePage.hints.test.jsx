@@ -43,7 +43,8 @@ describe('ChallengePage hints', () => {
     expect(await screen.findByText(hintLevel3.hint)).toBeInTheDocument();
 
     expect(screen.getByText(hintLevel1.hint)).toBeInTheDocument();
-    expect(screen.getByText('You have used every hint.')).toBeInTheDocument();
+    // Regression: the focused button disappears, so focus moves to the text instead of the body.
+    expect(screen.getByText('You have used every hint.')).toHaveFocus();
     expect(screen.queryByRole('button', { name: /Request hint/ })).not.toBeInTheDocument();
     expect(requestHint.mock.calls.map(([id, body]) => [id, body.level])).toEqual([
       ['find-max', 1],

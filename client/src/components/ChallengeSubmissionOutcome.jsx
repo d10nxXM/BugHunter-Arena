@@ -9,7 +9,7 @@ const LINK =
 
 const FEEDBACK_SOURCE_LABEL = {
   ai: SOURCE_LABELS.ai,
-  demo: SOURCE_LABELS.ai,
+  demo: SOURCE_LABELS.demo,
   fallback: SOURCE_LABELS.fallback,
 };
 

@@ -3,11 +3,11 @@ import { expect } from '@playwright/test';
 export class ResultPage {
   constructor(page) {
     this.page = page;
-    this.breakdown = page.getByRole('table', { name: 'Bodovi po dijelovima' });
+    this.breakdown = page.getByRole('table', { name: 'Points per part' });
   }
 
   async expectScore(total) {
-    await expect(this.page.getByText(`Ukupno: ${total} / 100`)).toBeVisible();
+    await expect(this.page.getByText(`Total: ${total} / 100`)).toBeVisible();
   }
 
   /** One breakdown row as a number. `label` is the row header text. */
@@ -20,11 +20,11 @@ export class ResultPage {
 
   async breakdownValues() {
     return {
-      lineIdentification: await this.row('Pronalaženje linije s greškom'),
-      explanation: await this.row('Objašnjenje'),
-      edgeCase: await this.row('Granični slučaj'),
-      fix: await this.row('Ispravka koda'),
-      hintPenalty: await this.row('Kazna za nagovještaje'),
+      lineIdentification: await this.row('Finding the bug line'),
+      explanation: await this.row('Explanation'),
+      edgeCase: await this.row('Edge case'),
+      fix: await this.row('Code fix'),
+      hintPenalty: await this.row('Hint penalty'),
     };
   }
 }
