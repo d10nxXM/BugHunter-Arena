@@ -137,7 +137,6 @@ Two things to know:
 - In the Supabase dashboard, raise the per-IP limits for sign-in and token refresh (every login comes from Render's one IP).
 - Delete the smoke-test accounts `smoke_151932` and `smoke_152646`.
 - Switch the CSP to enforcing.
-- Add a `.gitattributes` with `eol=lf`, so Prettier on Windows stops showing line-ending-only changes.
 
 Later:
 - XP and progress read only the newest 1000 attempts per user.

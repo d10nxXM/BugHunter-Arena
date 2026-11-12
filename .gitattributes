@@ -1,0 +1,17 @@
+# Line endings: LF everywhere, in the repo and in the working tree, on every OS.
+# Prettier writes LF too, so formatting on Windows no longer shows files as modified.
+* text=auto eol=lf
+
+# Binary files: never convert or diff as text.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.wasm binary
+*.zip binary
