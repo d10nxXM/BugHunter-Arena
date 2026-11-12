@@ -1,13 +1,16 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, getChallenges } from '../api/client.js';
+import { ApiError, getChallenges, getLeaderboard } from '../api/client.js';
+import * as f from '../api/mocks/fixtures.js';
 import { RANKS } from '../lib/xp.js';
 import Landing from './Landing.jsx';
 
 vi.mock('../api/client.js', async (importOriginal) => ({
   ...(await importOriginal()),
   getChallenges: vi.fn(),
+  getLeaderboard: vi.fn(),
 }));
 
 const CHALLENGES = Array.from({ length: 8 }, (_, i) => ({
@@ -28,6 +31,9 @@ function renderLanding() {
 
 beforeEach(() => {
   vi.mocked(getChallenges).mockReset();
+  vi.mocked(getLeaderboard)
+    .mockReset()
+    .mockReturnValue(new Promise(() => {}));
 });
 
 describe('Landing', () => {
@@ -74,9 +80,49 @@ describe('Landing', () => {
       expect(screen.getByRole('heading', { level: 3, name: rank.name })).toBeInTheDocument();
       expect(screen.getByText(rank.description)).toBeInTheDocument();
     }
-    expect(
-      screen.getByText('Duels, weekly hunts and leaderboards are coming soon.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Duels and weekly hunts are coming soon.')).toBeInTheDocument();
+  });
+
+  it('lists the real top 5 hunters with links to their profiles', async () => {
+    getChallenges.mockReturnValue(new Promise(() => {}));
+    getLeaderboard.mockResolvedValue(f.leaderboard);
+    renderLanding();
+    const card = screen.getByRole('region', { name: 'Top hunters' });
+    expect(within(card).getByRole('status')).toHaveTextContent('Loading the leaderboard…');
+    const items = await within(card).findAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    expect(items[0]).toHaveTextContent('Position 1');
+    expect(items[0]).toHaveTextContent('274 XP');
+    expect(within(items[0]).getByRole('link', { name: 'segfault_sam' })).toHaveAttribute(
+      'href',
+      '/u/segfault_sam',
+    );
+    expect(getLeaderboard).toHaveBeenCalledWith({ limit: 5 }, expect.anything());
+    expect(within(card).getByRole('link', { name: 'Full leaderboard →' })).toHaveAttribute(
+      'href',
+      '/leaderboard',
+    );
+  });
+
+  it('top hunters: empty board and a failed load with retry', async () => {
+    const user = userEvent.setup();
+    getChallenges.mockReturnValue(new Promise(() => {}));
+    getLeaderboard.mockResolvedValueOnce({
+      entries: [],
+      total: 0,
+      updatedAt: f.leaderboard.updatedAt,
+    });
+    const { unmount } = renderLanding();
+    expect(await screen.findByText(/No hunter has solved a challenge yet/)).toBeInTheDocument();
+    unmount();
+
+    getLeaderboard.mockRejectedValueOnce(new ApiError('down', { code: 'NETWORK_ERROR' }));
+    getLeaderboard.mockResolvedValueOnce(f.leaderboard);
+    renderLanding();
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('The leaderboard could not be loaded.');
+    await user.click(within(alert).getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByRole('link', { name: 'null_pointer' })).toBeInTheDocument();
   });
 
   it('shows up to six live challenges linked to the challenge page', async () => {

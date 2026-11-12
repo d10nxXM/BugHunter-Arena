@@ -56,6 +56,7 @@ describe('App routes', () => {
     ['/dashboard', 'Your dashboard', 'Dashboard'],
     ['/login', 'Log in'],
     ['/signup', 'Create your hunter account', 'Create account'],
+    ['/leaderboard', 'Leaderboard'],
     ['/no-such-page', 'Page not found'],
   ])('%s shows its h1 and title', async (path, heading, title = heading) => {
     renderAt(path);
@@ -123,11 +124,14 @@ describe('App routes', () => {
       'aria-current',
       'page',
     );
-    // Planned sections are visible but not links yet.
-    expect(within(nav).queryByRole('link', { name: /Arena|Leaderboard/ })).not.toBeInTheDocument();
+    expect(within(nav).getByRole('link', { name: 'Leaderboard' })).toHaveAttribute(
+      'href',
+      '/leaderboard',
+    );
+    // The arena is planned: visible but not a link yet.
+    expect(within(nav).queryByRole('link', { name: /Arena/ })).not.toBeInTheDocument();
     expect(within(nav).getByText('Arena')).toBeInTheDocument();
-    expect(within(nav).getByText('Leaderboard')).toBeInTheDocument();
-    expect(within(nav).getAllByText('Soon')).toHaveLength(2);
+    expect(within(nav).getAllByText('Soon')).toHaveLength(1);
     expect(screen.getByRole('link', { name: 'BugHunter Arena' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'Log in' })).toHaveAttribute('href', '/login');
     expect(screen.getByRole('link', { name: 'Start hunting' })).toHaveAttribute(
@@ -162,7 +166,7 @@ describe('App routes', () => {
     expect(screen.getByRole('link', { name: 'BugHunter Arena' })).toHaveFocus();
     await user.tab();
     expect(screen.getByRole('button', { name: 'Menu' })).toHaveFocus();
-    for (const name of ['Dashboard', 'Problems', 'Log in', 'Start hunting']) {
+    for (const name of ['Dashboard', 'Problems', 'Leaderboard', 'Log in', 'Start hunting']) {
       await user.tab();
       expect(within(screen.getByRole('banner')).getByRole('link', { name })).toHaveFocus();
     }
@@ -231,7 +235,7 @@ describe('App routes', () => {
       throw new Error('blocked');
     });
     renderAt('/');
-    expect(await screen.findByRole('status')).toHaveTextContent(
+    expect(await within(screen.getByRole('banner')).findByRole('status')).toHaveTextContent(
       'Your data will not be saved after you close this page.',
     );
   });

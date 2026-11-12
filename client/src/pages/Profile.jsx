@@ -115,6 +115,7 @@ export default function Profile() {
       {status === 'ready' && (
         <>
           <ProfileStats
+            globalPosition={profile.globalPosition}
             totalXp={profile.totalXp}
             solved={profile.solved}
             attempted={profile.attempted}

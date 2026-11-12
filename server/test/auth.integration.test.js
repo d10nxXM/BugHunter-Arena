@@ -11,7 +11,10 @@ import { CHALLENGES_DIR, collectKeys } from './fixtures.js';
 
 const state = vi.hoisted(() => ({ db: null }));
 vi.mock('../src/db/client.js', () => ({
-  db: { from: (...args) => state.db.from(...args) },
+  db: {
+    from: (...args) => state.db.from(...args),
+    rpc: (...args) => state.db.rpc(...args),
+  },
 }));
 
 const gotrue = vi.hoisted(() => ({
@@ -500,6 +503,7 @@ describe('GET /api/profiles/:handle', () => {
         'attempted',
         'challengesAvailable',
         'displayName',
+        'globalPosition',
         'handle',
         'memberSince',
         'rank',

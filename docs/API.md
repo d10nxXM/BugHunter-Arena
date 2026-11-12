@@ -24,6 +24,7 @@ Grading happens in two calls: `POST /api/attempts` locks the answer and only the
 | POST | `/api/auth/logout` | Revoke the current session (Bearer) | Should |
 | GET | `/api/me` | The logged-in account (Bearer) | Should |
 | GET | `/api/profiles/:handle` | Public read-only hunter profile | Should |
+| GET | `/api/leaderboard?limit=` | Public ranking of accounts by XP | Could |
 
 ## Authentication
 
@@ -354,6 +355,7 @@ Response `200 OK`:
   "solved": 2,
   "attempted": 3,
   "challengesAvailable": 6,
+  "globalPosition": 2,
   "solvedByLanguage": [{ "language": "python", "solved": 2 }],
   "recentSolves": [
     { "challengeId": "find-max", "title": "Largest number in a list", "language": "python", "difficulty": "easy", "bestScore": 89, "solvedAt": "2026-11-06T18:20:00.000000+00:00" }
@@ -363,9 +365,34 @@ Response `200 OK`:
 
 - `totalXp` and `rank` follow `docs/SCORING.md`, "XP and ranks". At the top rank `nextName` is `null` and `xpToNext` is 0.
 - `solved` and `attempted` are the same numbers as in `GET /api/progress`. `challengesAvailable` is the number of challenges on the platform.
+- `globalPosition`: the account's position on `GET /api/leaderboard` (1 is the top), or `null` when it is not listed (0 XP) or the leaderboard cannot be read right now. It comes from the same 60 s cache as the leaderboard, so it can lag a new solve, and it counts all attempts while `totalXp` here reads the newest 1000.
 - `solvedByLanguage`: one entry per language with at least one solved challenge, most solved first, ties by language name.
 - `recentSolves`: at most 10 solved challenges, newest `solvedAt` first. `solvedAt` is the `createdAt` of the first attempt that solved it (score at least 70). `bestScore` is the best score on that challenge.
 - Never returned: explanations, feedback, weak categories, email or the Supabase user id. Definitions are in `docs/DATA_MODEL.md`, "Derived data for the profile".
+
+## GET /api/leaderboard
+
+Public, no auth. Optional query `limit`: an integer 1-100, default 50. Anything else returns `400 VALIDATION_ERROR`.
+
+Response `200 OK`:
+
+```json
+{
+  "entries": [
+    { "position": 1, "handle": "null_pointer", "totalXp": 274, "rankName": "Exterminator", "solved": 3 },
+    { "position": 2, "handle": "dion_m", "totalXp": 174, "rankName": "Hunter", "solved": 2 }
+  ],
+  "total": 2,
+  "updatedAt": "2026-11-12T10:00:00.000Z"
+}
+```
+
+- Lists accounts with more than 0 XP, at most `limit` entries, best first. Guests are never listed.
+- XP follows `docs/SCORING.md`, "XP and ranks", over **all** of the account's attempts. The order and positions follow `docs/SCORING.md`, "Leaderboard". Positions are unique: 1, 2, 3, ... with no shared places.
+- `rankName` is the rank name for `totalXp`. `solved` is the number of challenges the account has solved.
+- `total` is the number of listed accounts, which can be more than `entries.length`.
+- `updatedAt` is when the server computed the ranking. The server caches it for 60 s, so a new solve can take up to a minute to show. The database read times out after 5 s. If a refresh fails, the server keeps serving the last good ranking (its `updatedAt` shows how old it is) and tries again 5 s later. Only when there is no earlier ranking does a failure return `500 INTERNAL_ERROR`.
+- Never returned: email, `auth_user_id`, the `users.id` UUID or display names of guests.
 
 ## Trust model
 
@@ -447,7 +474,7 @@ An unavailable AI service is not an error: the evaluation returns `200` with `fe
 
 | HTTP | Code | When |
 | --- | --- | --- |
-| 400 | VALIDATION_ERROR | Invalid, empty or too long input; challenge id not matching `[a-z0-9-]{1,64}`; hint `level` not an integer 1-3; malformed JSON body (also an unsupported charset or encoding); attempt id or `userId` not a UUID; `userId` missing without a token; signup `handle`, `email` or `password` invalid; profile handle not matching `^[a-z0-9_]{3,20}$`; `limit`, `cursor` or `cursorId` invalid, or `cursorId` without `cursor`, on `GET /api/attempts` |
+| 400 | VALIDATION_ERROR | Invalid, empty or too long input; challenge id not matching `[a-z0-9-]{1,64}`; hint `level` not an integer 1-3; malformed JSON body (also an unsupported charset or encoding); attempt id or `userId` not a UUID; `userId` missing without a token; signup `handle`, `email` or `password` invalid; profile handle not matching `^[a-z0-9_]{3,20}$`; `limit`, `cursor` or `cursorId` invalid, or `cursorId` without `cursor`, on `GET /api/attempts`; `limit` not an integer 1-100 on `GET /api/leaderboard` |
 | 401 | UNAUTHORIZED | Missing, malformed, invalid or expired token on a route that needs one, or any bad token sent; invalid refresh token; a token whose user has no account row |
 | 401 | INVALID_CREDENTIALS | Login failed. The message is always `Invalid email or password.` |
 | 403 | FORBIDDEN | `userId` does not match the token |

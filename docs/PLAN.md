@@ -66,6 +66,37 @@ Accounts (signup, login, refresh, logout), bearer ownership of attempts and prog
 - [ ] Set `SUPABASE_ANON_KEY` on the Render API service.
 - [ ] Supabase dashboard: "Confirm email" off, "Allow new users to sign up" off (both done), minimum password length 10, raise the per-IP sign-in and token-refresh limits.
 
+## Leaderboard (2026-11-12)
+
+Branch `feat/leaderboard`. From the mockups in `client/docs/refs/Design-project/`: the "Leaderboard" nav item, "Top hunters" on the landing page, "Global position" on the dashboard and "Global rank" on the profile. Contract: `docs/API.md` (`GET /api/leaderboard`, `globalPosition` on profiles). Rules: `docs/SCORING.md`, "Leaderboard".
+
+Decisions:
+- Only accounts with more than 0 XP are listed. Guests have no handle and are never listed.
+- XP uses the same first-solve rule as profiles, over **all** attempts (not the newest 1000).
+- Order: total XP (highest first), then who reached that XP first (earlier last first solve), then handle.
+- Computed by the SQL function `leaderboard_xp()` (migration `20261112090000_leaderboard.sql`), callable only with the service key. The server ranks the rows and caches the result for 60 s.
+- Responses carry only handle, position, XP, rank name and solved count. Never email, `auth_user_id` or the internal user id.
+
+| Step | Area | Files |
+| --- | --- | --- |
+| 1 | Contract | `docs/API.md`, `docs/SCORING.md`, `docs/DATA_MODEL.md`, `docs/SPEC.md` |
+| 2 | Database | `supabase/migrations/20261112090000_leaderboard.sql` |
+| 3 | Server (test-first) | `server/src/db/leaderboard.js`, `server/src/services/leaderboardService.js`, `server/src/schemas/leaderboard.js`, `server/src/routes/leaderboard.js`, `server/src/app.js`, `server/src/services/profileService.js`, `server/test/fakeSupabase.js` (`rpc`) |
+| 4 | Client | `client/src/api/client.js` and mocks, `paths.js`, `App.jsx`, `pages/Leaderboard.jsx`, `Layout.jsx` (nav link), landing "Top hunters", profile "Global rank", dashboard "Global position" (from the profile's `globalPosition`) |
+| 5 | Review | `database-reviewer`, `security-reviewer`, `code-reviewer`, `react-reviewer` |
+| 6 | Release | Push the migration with `npx supabase db push --remote` **before** the server deploys, then merge to `main` |
+
+- [x] Plan
+- [x] Contract docs
+- [x] Migration (written, not pushed)
+- [x] Server: `npm test` 903 passing, lint clean
+- [x] Client: `npm test` 567 passing, lint clean, build passes
+- [x] Reviews (database, security, React, code). Fixed: read timeout and stale fallback, best-first SQL order with a cap warning, focusable scroll region, table semantics, live regions, exact dashboard position from the profile, consistent doc and fixture examples
+- [ ] Manual check of `leaderboard_xp()` against production data (unit tests use a JS fake of the SQL)
+- [ ] Migration pushed to production, then merge
+
+Known limits: the profile's `totalXp` reads the newest 1000 attempts and the leaderboard reads all of them, so they can differ for a user with more than 1000 attempts. A position can be up to 60 s old.
+
 ## M1: what must exist before parallel work
 
 Server foundation (first Claude Code task):

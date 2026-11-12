@@ -172,7 +172,9 @@ export default function Layout() {
                   <SoonItem>Arena</SoonItem>
                 </li>
                 <li>
-                  <SoonItem>Leaderboard</SoonItem>
+                  <NavLink to={paths.leaderboard} className={navLinkClass}>
+                    Leaderboard
+                  </NavLink>
                 </li>
               </ul>
             </nav>

@@ -63,6 +63,7 @@ describe('Profile', () => {
     expect(screen.getByText('NP')).toBeInTheDocument();
 
     const stats = screen.getByRole('region', { name: 'Stats' });
+    expect(within(stats).getByText('Global rank').nextSibling).toHaveTextContent('#2');
     expect(within(stats).getByText('Total XP').nextSibling).toHaveTextContent('174');
     expect(within(stats).getByText('Solved').nextSibling).toHaveTextContent('2/ 6');
     expect(within(stats).getByText('Attempted').nextSibling).toHaveTextContent('3');
@@ -85,9 +86,7 @@ describe('Profile', () => {
     expect(within(next).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '74');
 
     // Cut items from the mockup are not there.
-    expect(screen.queryByText(/Global rank|First bloods|Duels|Streak|Badges|Edit profile/i)).toBe(
-      null,
-    );
+    expect(screen.queryByText(/First bloods|Duels|Streak|Badges|Edit profile/i)).toBe(null);
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 
@@ -97,6 +96,8 @@ describe('Profile', () => {
     expect(await screen.findByText('No solved challenges yet.')).toBeInTheDocument();
     expect(screen.getByText('Nothing solved yet.')).toBeInTheDocument();
     expect(screen.getByText('100 XP to go')).toBeInTheDocument();
+    const stats = screen.getByRole('region', { name: 'Stats' });
+    expect(within(stats).getByText('Global rank').nextSibling).toHaveTextContent('—Not ranked yet');
   });
 
   it('the top rank says so', async () => {

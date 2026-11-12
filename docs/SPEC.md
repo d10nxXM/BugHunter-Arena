@@ -72,6 +72,7 @@ Priority: **Must** = the core flow does not work without it; **Should** = MVP go
 | FR-25 | Log in and log out | Should |
 | FR-26 | Public read-only hunter profile at `/u/:handle` | Should |
 | FR-27 | Claim guest progress at signup | Could |
+| FR-28 | Public leaderboard of accounts by XP, with the position on the profile and the dashboard | Could |
 
 ## Non-functional requirements
 
@@ -136,14 +137,15 @@ How the bug shows in the three Must challenges:
 | Progress | Total score, solved, average time, score per challenge, top 3 bug categories | Back to challenges |
 | Login | Email, password | Log in, go to signup |
 | Signup | Handle, email, password | Create account, go to login |
-| Profile | Handle, rank, total XP, solved and attempted, recent solves, solved by language, member since | Open a challenge |
+| Profile | Handle, rank, global position, total XP, solved and attempted, recent solves, solved by language, member since | Open a challenge |
+| Leaderboard | Position, handle, rank, XP and solved per account; your own row highlighted | Open a profile |
 
 ## Out of scope for the MVP
 
 - Role management, OAuth, password reset, email verification.
-- Global rank, badges, duels, streaks.
+- Badges, duels, streaks. (The leaderboard and global position were added on 2026-11-12, FR-28.)
 - Many languages or generated challenges.
-- Leaderboards, multiplayer, advanced analytics.
+- Multiplayer, advanced analytics.
 - Running user code on a server.
 
 ## Known limitations

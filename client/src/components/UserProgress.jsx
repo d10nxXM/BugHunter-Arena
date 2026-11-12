@@ -1,11 +1,14 @@
 import { useNavigate } from 'react-router';
+import { useGlobalPosition } from '../hooks/useGlobalPosition.js';
 import { useUserProgress } from '../hooks/useUserProgress.js';
+import { standingOf } from '../lib/leaderboard.js';
 import {
   continueTarget,
   recommendations,
   skillsByCategory,
   unsolvedChallenges,
 } from '../lib/dashboard.js';
+import { totalXp } from '../lib/xp.js';
 import { paths } from '../paths.js';
 import ContinueCard from './dashboard/ContinueCard.jsx';
 import DashboardHeader from './dashboard/DashboardHeader.jsx';
@@ -62,8 +65,9 @@ const HISTORY_STATUS = { loading: 'Loading attempts…', ready: 'Attempts loaded
  * The dashboard for one user: header, stats, what to do next, skills and history.
  * Mount it with key={userId}, so state resets per user. Server state lives in useUserProgress
  * and is passed down. `hunterCard` (the name settings) is rendered in the side column.
+ * `rankedHandle` is the account's handle (null for guests): it adds the global position tile.
  */
-export default function UserProgress({ userId, name, hunterCard = null }) {
+export default function UserProgress({ userId, name, hunterCard = null, rankedHandle = null }) {
   const navigate = useNavigate();
   const {
     progress,
@@ -78,8 +82,13 @@ export default function UserProgress({ userId, name, hunterCard = null }) {
     retryHistory,
     loadMore,
   } = useUserProgress(userId);
+  const positionState = useGlobalPosition(rankedHandle);
 
   const summary = progress.data;
+  const standing =
+    rankedHandle === null
+      ? null
+      : standingOf(positionState, totalXp(summary?.perChallenge ?? [], summary?.totalXp));
   const ready = progress.status === 'ready';
   const hasAttempts = summary && (summary.attempted > 0 || (summary.perChallenge?.length ?? 0) > 0);
   const perChallenge = summary?.perChallenge ?? [];
@@ -124,7 +133,9 @@ export default function UserProgress({ userId, name, hunterCard = null }) {
         {progress.status === 'error' && (
           <ErrorWithRetry message={progress.error} onRetry={retryProgress} />
         )}
-        {ready && <ProgressSummary progress={summary} challenges={challenges} />}
+        {ready && (
+          <ProgressSummary progress={summary} challenges={challenges} standing={standing} />
+        )}
         {ready && !hasAttempts && (
           <p className="text-muted">
             You have no attempts yet. Pick a challenge below or press “Random challenge”.

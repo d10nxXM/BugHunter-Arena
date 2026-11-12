@@ -33,6 +33,7 @@ const BLOCK_FIXTURES = [
   ['signup response', f.signupResponse],
   // The doc example lists one recent solve; the fixture has two.
   ['GET /api/profiles/:handle', { ...f.profile, recentSolves: f.profile.recentSolves.slice(0, 1) }],
+  ['GET /api/leaderboard', f.leaderboard],
 ];
 
 /**
@@ -444,5 +445,18 @@ describe('account mocks', () => {
       data: f.errorProfileNotFound,
     });
     expect((await mockRequest({ path: '/api/profiles/Bad%20Handle' })).status).toBe(400);
+  });
+
+  it('leaderboard: fixture, limit slices the entries, 400 for an invalid limit', async () => {
+    expect(await mockRequest({ path: '/api/leaderboard' })).toEqual({
+      status: 200,
+      data: f.leaderboard,
+    });
+    const one = await mockRequest({ path: '/api/leaderboard?limit=1' });
+    expect(one.data.entries).toHaveLength(1);
+    expect(one.data.total).toBe(2);
+    for (const bad of ['0', '101', '1.5', 'x']) {
+      expect((await mockRequest({ path: `/api/leaderboard?limit=${bad}` })).status).toBe(400);
+    }
   });
 });

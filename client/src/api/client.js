@@ -392,9 +392,19 @@ export function getMe({ signal } = {}) {
 /**
  * GET /api/profiles/:handle (public, no token) -> { handle, displayName, memberSince,
  * rank: { name, xp, nextName, xpToNext }, totalXp, solved, attempted, challengesAvailable,
+ * globalPosition: number | null,
  * solvedByLanguage: [{ language, solved }], recentSolves: [{ challengeId, title, language,
  * difficulty, bestScore, solvedAt }] }
  */
 export function getProfile(handle, { signal } = {}) {
   return request(`/api/profiles/${enc(handle)}`, { signal, auth: false });
+}
+
+/**
+ * GET /api/leaderboard?limit= (public, no token) -> { entries: [{ position, handle, totalXp,
+ * rankName, solved }], total, updatedAt }. `limit` is 1-100; the server default is 50.
+ */
+export function getLeaderboard({ limit } = {}, { signal } = {}) {
+  const query = limit === undefined ? '' : `?limit=${enc(String(limit))}`;
+  return request(`/api/leaderboard${query}`, { signal, auth: false });
 }

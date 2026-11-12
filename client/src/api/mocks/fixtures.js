@@ -274,6 +274,7 @@ export const profile = {
   solved: 2,
   attempted: 3,
   challengesAvailable: 6,
+  globalPosition: 2,
   solvedByLanguage: [{ language: 'python', solved: 2 }],
   recentSolves: [
     {
@@ -305,8 +306,20 @@ export const profileEmpty = {
   solved: 0,
   attempted: 0,
   challengesAvailable: 6,
+  globalPosition: null,
   solvedByLanguage: [],
   recentSolves: [],
+};
+
+/** GET /api/leaderboard response. Same numbers as the docs/API.md example; null_pointer (the
+ * profile fixture) is #2, matching its globalPosition. */
+export const leaderboard = {
+  entries: [
+    { position: 1, handle: 'segfault_sam', totalXp: 274, rankName: 'Exterminator', solved: 3 },
+    { position: 2, handle: 'null_pointer', totalXp: 174, rankName: 'Hunter', solved: 2 },
+  ],
+  total: 2,
+  updatedAt: '2026-11-12T10:00:00.000Z',
 };
 
 export const errorUnauthorized = {

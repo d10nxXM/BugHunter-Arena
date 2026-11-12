@@ -40,6 +40,15 @@ XP is display data for progress and profiles. It is not the attempt score and ne
 
 The rank object is `{ name, xp, nextName, xpToNext }`: `xpToNext` is the XP still needed for the next rank. At Arena Legend, `nextName` is null and `xpToNext` is 0.
 
+## Leaderboard
+
+`GET /api/leaderboard` ranks accounts (never guests) by total XP. XP is computed with the rule in "XP and ranks", over all of an account's attempts, by the SQL function `leaderboard_xp()` (`docs/DATA_MODEL.md`).
+
+- Accounts with 0 XP are not listed.
+- Order: highest total XP first. On equal XP, the account whose last first solve is older wins (it reached that XP first). Then handle, in plain character order (`0-9`, then `_`, then `a-z`).
+- Positions are 1, 2, 3, ... in that order, with no shared places. The server compares times to the millisecond, so two last first solves in the same millisecond fall through to the handle.
+- The ranking is computed by `rankLeaderboard` in `server/src/services/leaderboardService.js` and cached on the server for 60 s.
+
 ## Explanation quality (AI rubric)
 
 | Quality | Criterion |

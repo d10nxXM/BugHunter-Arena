@@ -14,6 +14,7 @@ import usersRouter from './routes/users.js';
 import authRouter from './routes/auth.js';
 import meRouter from './routes/me.js';
 import profilesRouter from './routes/profiles.js';
+import leaderboardRouter from './routes/leaderboard.js';
 
 export const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/me', meRouter);
 app.use('/api/profiles', profilesRouter);
+app.use('/api/leaderboard', leaderboardRouter);
 
 app.use(notFound);
 app.use(errorHandler);
