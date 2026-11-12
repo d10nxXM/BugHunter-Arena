@@ -88,12 +88,12 @@ Decisions:
 
 - [x] Plan
 - [x] Contract docs
-- [x] Migration (written, not pushed)
+- [x] Migration (pushed to production 2026-11-12 with `npx supabase db push --remote`)
 - [x] Server: `npm test` 903 passing, lint clean
 - [x] Client: `npm test` 567 passing, lint clean, build passes
 - [x] Reviews (database, security, React, code). Fixed: read timeout and stale fallback, best-first SQL order with a cap warning, focusable scroll region, table semantics, live regions, exact dashboard position from the profile, consistent doc and fixture examples
-- [ ] Manual check of `leaderboard_xp()` against production data (unit tests use a JS fake of the SQL)
-- [ ] Migration pushed to production, then merge
+- [x] Manual check on production (2026-11-12): `leaderboard_xp()` matches `computeXp` over each ranked account's attempts (1 ranked account, 84 XP, ALL MATCH). The anon key and no key both get HTTP 401 on `/rest/v1/rpc/leaderboard_xp`
+- [ ] Merge `feat/leaderboard` into `main` (Render deploys it), then check `/leaderboard` on the live site
 
 Known limits: the profile's `totalXp` reads the newest 1000 attempts and the leaderboard reads all of them, so they can differ for a user with more than 1000 attempts. A position can be up to 60 s old.
 

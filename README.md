@@ -130,7 +130,7 @@ Two things to know:
 
 **On `feat/leaderboard`, not merged yet:**
 - The leaderboard and global position.
-- Before merging, push migration `20261112090000_leaderboard.sql` and check `leaderboard_xp()` on production data. The full checklist is in `docs/PLAN.md`.
+- Migration `20261112090000_leaderboard.sql` is pushed to production and checked against real data. What is left is to merge into `main` and check the live site (checklist in `docs/PLAN.md`).
 
 **Open:**
 - Run the e2e suite and do a browser check of the live site.
