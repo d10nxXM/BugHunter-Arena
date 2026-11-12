@@ -3,6 +3,8 @@ import { findAccountByHandle } from '../db/users.js';
 import { getChallengeMeta, listAttemptSummaries } from '../db/attempts.js';
 import { computeProgress } from './attemptService.js';
 import { computeXp, rankForXp } from './scoringService.js';
+import { getGlobalPosition } from './leaderboardService.js';
+import { logger } from '../lib/logger.js';
 
 // Same window as GET /api/progress.
 const PROFILE_MAX_ROWS = 1000;
@@ -67,9 +69,30 @@ export function computeProfile(account, rows, meta) {
 export async function getProfile(handle) {
   const account = await findAccountByHandle(handle);
   if (!account) throw new AppError(404, 'NOT_FOUND', 'Hunter not found.');
-  const [rows, meta] = await Promise.all([
+  const [rows, meta, globalPosition] = await Promise.all([
     listAttemptSummaries(account.id, { limit: PROFILE_MAX_ROWS }),
     getChallengeMeta(),
+    positionOrNull(account.handle),
   ]);
-  return computeProfile(account, rows, meta);
+  return { ...computeProfile(account, rows, meta), globalPosition };
+}
+
+/**
+ * The leaderboard position, or null when it cannot be read: the profile must
+ * still load if the leaderboard query fails. The failure is logged.
+ */
+async function positionOrNull(handle) {
+  try {
+    return await getGlobalPosition(handle);
+  } catch (err) {
+    logger.warn(
+      {
+        route: 'profiles',
+        reason: 'leaderboard_failed',
+        code: err?.cause?.code,
+      },
+      'leaderboard unavailable; globalPosition is null',
+    );
+    return null;
+  }
 }

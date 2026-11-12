@@ -203,6 +203,7 @@ export default function Dashboard() {
       userId={user.userId}
       name={isAccount ? account.handle : user.displayName}
       hunterCard={hunterCard}
+      rankedHandle={isAccount ? account.handle : null}
     />
   );
 }

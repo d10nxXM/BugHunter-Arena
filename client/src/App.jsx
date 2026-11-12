@@ -15,6 +15,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
 const Signup = lazy(() => import('./pages/Signup.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard.jsx'));
 const NotFound = lazy(() => import('./pages/NotFound.jsx'));
 
 // Route table. Suspense and the error boundary live in Layout, so the header stays while a page
@@ -35,6 +36,7 @@ export default function App() {
                 <Route path={paths.login} element={<Login />} />
                 <Route path={paths.signup} element={<Signup />} />
                 <Route path="/u/:handle" element={<Profile />} />
+                <Route path={paths.leaderboard} element={<Leaderboard />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
               <Route path={paths.ownProfile} element={<ProfileRedirect />} />

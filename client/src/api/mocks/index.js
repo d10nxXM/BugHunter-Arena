@@ -219,6 +219,15 @@ function route(method, url, body, headers) {
     return user ? reply(200, user) : reply(401, f.errorUnauthorized);
   }
 
+  if (method === 'GET' && path === '/api/leaderboard') {
+    const raw = query.get('limit');
+    const limit = raw === null ? 50 : Number(raw);
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      return reply(400, f.errorValidationGeneric);
+    }
+    return reply(200, { ...f.leaderboard, entries: f.leaderboard.entries.slice(0, limit) });
+  }
+
   if ((match = path.match(/^\/api\/profiles\/([^/]+)$/)) && method === 'GET') {
     const handle = decodeURIComponent(match[1]);
     if (!HANDLE.test(handle)) return reply(400, f.errorValidationGeneric);

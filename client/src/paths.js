@@ -5,6 +5,7 @@ export const paths = {
   challenge: (id) => `/challenges/${encodeURIComponent(id)}`,
   result: (id) => `/challenges/${encodeURIComponent(id)}/result`,
   dashboard: '/dashboard',
+  leaderboard: '/leaderboard',
   login: '/login',
   signup: '/signup',
   /** Public hunter profile. */

@@ -2,8 +2,20 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, createUser, getAttempts, getChallenges, getProgress } from '../api/client.js';
 import {
+  ApiError,
+  createUser,
+  getAttempts,
+  getChallenges,
+  getProfile,
+  getMe,
+  getProgress,
+} from '../api/client.js';
+import {
+  accountUser,
+  authSession,
+  profile,
+  me,
   attemptsPage,
   challengeList,
   progress,
@@ -13,6 +25,7 @@ import {
 import { USER_STORAGE_KEY } from '../context/UserContext.js';
 import AuthProvider from '../context/AuthProvider.jsx';
 import UserProvider from '../context/UserProvider.jsx';
+import { writeSession } from '../lib/session.js';
 import Dashboard from './Dashboard.jsx';
 
 vi.mock('../api/client.js', async (importOriginal) => {
@@ -23,6 +36,8 @@ vi.mock('../api/client.js', async (importOriginal) => {
     getProgress: vi.fn(),
     getAttempts: vi.fn(),
     getChallenges: vi.fn(),
+    getProfile: vi.fn(),
+    getMe: vi.fn(),
   };
 });
 
@@ -64,6 +79,8 @@ beforeEach(() => {
   getChallenges.mockResolvedValue(challengeList);
   getProgress.mockResolvedValue(progress);
   getAttempts.mockResolvedValue(attemptsPage);
+  getProfile.mockResolvedValue(profile);
+  getMe.mockResolvedValue(me);
 });
 
 afterEach(() => {
@@ -510,5 +527,68 @@ describe('Dashboard with a user', () => {
     expect(rows[0]).toHaveTextContent('AI-assisted assessment');
     expect(rows[1]).toHaveTextContent('Assessed without AI');
     expect(rows[2]).toHaveTextContent('AI-assisted assessment (demo)');
+  });
+});
+
+describe('Dashboard global position', () => {
+  function storeAccount() {
+    writeSession({
+      ...authSession,
+      expiresAt: Math.floor(Date.now() / 1000) + 3600,
+      user: accountUser,
+    });
+    storeUser({ userId: accountUser.id, displayName: accountUser.handle });
+  }
+
+  function positionTile() {
+    return screen.getByText('Global position').parentElement;
+  }
+
+  it('an account sees its exact position from its profile, with a link to the leaderboard', async () => {
+    storeAccount();
+    renderDashboard();
+    await screen.findByText('Global position');
+    await waitFor(() => expect(positionTile()).toHaveTextContent('#2'));
+    expect(within(positionTile()).getByRole('link', { name: 'Leaderboard' })).toHaveAttribute(
+      'href',
+      '/leaderboard',
+    );
+    expect(getProfile).toHaveBeenCalledWith(accountUser.handle, expect.anything());
+  });
+
+  it('not ranked: no XP says how to get ranked; XP not yet ranked says it updates soon', async () => {
+    storeAccount();
+    getProfile.mockResolvedValue({ ...profile, globalPosition: null });
+    getProgress.mockResolvedValue(progressEmpty);
+    const { unmount } = renderDashboard();
+    await screen.findByText('Global position');
+    await waitFor(() =>
+      expect(positionTile()).toHaveTextContent('Solve a challenge to get ranked'),
+    );
+    expect(positionTile()).toHaveTextContent('Not ranked yet');
+    unmount();
+
+    getProgress.mockResolvedValue(progress);
+    renderDashboard();
+    await screen.findByText('Global position');
+    await waitFor(() =>
+      expect(positionTile()).toHaveTextContent('Your new XP shows within a minute'),
+    );
+  });
+
+  it('a failed position load says so', async () => {
+    storeAccount();
+    getProfile.mockRejectedValue(new ApiError('down', { code: 'NETWORK_ERROR' }));
+    renderDashboard();
+    await screen.findByText('Global position');
+    await waitFor(() => expect(positionTile()).toHaveTextContent('Could not be loaded'));
+  });
+
+  it('a guest has no position tile and no profile request', async () => {
+    storeUser();
+    renderDashboard();
+    await screen.findByText('Total XP');
+    expect(screen.queryByText('Global position')).not.toBeInTheDocument();
+    expect(getProfile).not.toHaveBeenCalled();
   });
 });

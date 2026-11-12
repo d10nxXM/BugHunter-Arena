@@ -83,6 +83,7 @@ Migrations:
 | `20261104090000_attempts_user_created_at_id_idx.sql` | Drops and recreates `attempts_user_id_created_at_idx` on `attempts (user_id, created_at desc, id desc)`, so the index follows the composite `(created_at, id)` cursor of `GET /api/attempts` |
 | `20261106200000_user_accounts.sql` | Accounts: adds `users.auth_user_id` (unique, references `auth.users`), `users.handle` (unique, `^[a-z0-9_]{3,20}$`), `users.bio` (at most 280 characters, unused until profile editing ships) and the check `users_account_pair` (both `auth_user_id` and `handle` set, or both null). Additive only, safe to push before the code deploys |
 | `20261106120000_challenges_difficulty_english.sql` | Drops the old difficulty check (`challenges_difficulty_check`, plus any check on `challenges` that still lists `lako`), maps existing rows `lako`/`srednje`/`teško` to `easy`/`medium`/`hard`, and adds `challenges_difficulty_check` for `easy`, `medium`, `hard`. Run `npm run seed` afterwards to load the English challenge text |
+| `20261112090000_leaderboard.sql` | Adds the SQL function `leaderboard_xp()` (see "Derived data for the leaderboard"). `execute` is revoked from `public`, `anon` and `authenticated` and granted only to `service_role`. No tables or columns change |
 
 ## User columns
 
@@ -176,6 +177,16 @@ Computed by `computeProgress` in `server/src/services/attemptService.js` from th
 - **XP**: `perChallenge[].xp` and `totalXp`, see `docs/SCORING.md`, "XP and ranks". XP is read from the same newest 1000 attempts, so a first solve older than that is not seen.
 - A user with no attempts gets zeros and empty lists.
 
+## Derived data for the leaderboard
+
+`leaderboard_xp()` (migration `20261112090000_leaderboard.sql`) returns one row per account with at least one solve: `handle`, `total_xp`, `solved` and `reached_at`.
+
+- A **first solve** is, per user and challenge, the evaluated attempt with a score of at least 70 that has the oldest `created_at`, then the smallest id. Same rule as `computeXp` in `server/src/services/scoringService.js`.
+- `total_xp` is the sum of the first-solve scores, `solved` their count and `reached_at` the newest first-solve `created_at`.
+- It reads all attempts, not the newest 1000. Guests (`handle` null) are left out.
+- Rows come back best first (`total_xp` desc, `reached_at`, `handle`). PostgREST cuts an rpc result at its `max-rows` (1000 on Supabase), so past 1000 ranked accounts the bottom of the board has no position; the server logs a warning when that can happen.
+- The server orders and numbers the rows (`docs/SCORING.md`, "Leaderboard") and caches the result for 60 s. The profile's `globalPosition` comes from the same cache.
+
 ## Derived data for the profile
 
 Computed by `computeProfile` in `server/src/services/profileService.js` for `GET /api/profiles/:handle`, from the same newest 1000 attempts and the challenge list. It reuses `computeProgress`.
@@ -186,4 +197,5 @@ Computed by `computeProfile` in `server/src/services/profileService.js` for `GET
 - **solvedByLanguage**: solved challenges grouped by the challenge's `language`, most solved first, ties by language name. Languages with no solved challenge are not listed.
 - **recentSolves**: at most 10 solved challenges, newest solved-at first (ties by challenge id), each `{ challengeId, title, language, difficulty, bestScore, solvedAt }`.
 - A solved challenge that no longer exists in `challenges` counts in `solved` and `totalXp` but is left out of `solvedByLanguage` and `recentSolves`.
+- **globalPosition**: the account's position in the cached leaderboard, or null when it has 0 XP or the leaderboard cannot be read.
 - Never part of the profile: explanations, feedback, weak categories, email, `auth_user_id`.

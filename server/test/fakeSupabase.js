@@ -27,6 +27,10 @@
  *   from(t).update(patch).eq(col, v)...select(cols).maybeSingle() | await
  *     (every .eq is a condition, so update().eq('status', 'submitted') is a
  *     conditional update; it changes only matching rows and returns them)
+ *   rpc('leaderboard_xp') | await
+ *     emulates supabase/migrations/20261112090000_leaderboard.sql over
+ *     tables.users and tables.attempts; recorded in calls.rpcs. Any other
+ *     function name throws.
  * Inserts and updates mutate the `tables` object passed in. Inserted rows get
  * an id (uuid), created_at and the attempts defaults when missing.
  * `calls` records everything the code under test asked for.
@@ -99,6 +103,7 @@ export function createFakeSupabase({
     upserts: [],
     inserts: [],
     updates: [],
+    rpcs: [],
   };
 
   function builder(table) {
@@ -236,10 +241,54 @@ export function createFakeSupabase({
     return chain;
   }
 
+  /** Same rule as leaderboard_xp(): first solves per user and challenge. */
+  function leaderboardXp() {
+    const first = new Map();
+    for (const a of tables.attempts ?? []) {
+      if (a.status !== 'evaluated' || !(a.score >= 70) || !a.user_id) continue;
+      const key = `${a.user_id}|${a.challenge_id}`;
+      const cur = first.get(key);
+      const earlier =
+        !cur ||
+        lessThan(a.created_at, cur.created_at) ||
+        (sameInstant(a.created_at, cur.created_at) &&
+          String(a.id) < String(cur.id));
+      if (earlier) first.set(key, a);
+    }
+    const byUser = new Map();
+    for (const a of first.values()) {
+      const u = byUser.get(a.user_id) ?? {
+        total_xp: 0,
+        solved: 0,
+        reached_at: null,
+      };
+      u.total_xp += a.score;
+      u.solved += 1;
+      if (u.reached_at === null || lessThan(u.reached_at, a.created_at)) {
+        u.reached_at = a.created_at;
+      }
+      byUser.set(a.user_id, u);
+    }
+    const out = [];
+    for (const [userId, u] of byUser) {
+      const user = (tables.users ?? []).find((x) => x.id === userId);
+      if (user?.handle) out.push({ handle: user.handle, ...u });
+    }
+    return out;
+  }
+
   const db = {
     from(table) {
       calls.from.push(table);
       return builder(table);
+    },
+    rpc(name) {
+      calls.rpcs.push(name);
+      if (name !== 'leaderboard_xp') {
+        throw new Error(`fakeSupabase: unsupported rpc: ${name}`);
+      }
+      if (error) return Promise.resolve({ data: null, error });
+      return Promise.resolve({ data: leaderboardXp(), error: null });
     },
   };
 
