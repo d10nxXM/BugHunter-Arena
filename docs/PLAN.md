@@ -158,10 +158,10 @@ Not an orchestrator batch. The owner does these by hand or in one main session.
 | Step | What | Files |
 | --- | --- | --- |
 | 1 | Close the four ops items from "Open items" (migration list, Render env, Supabase dashboard, live `/leaderboard` check) | none (dashboards). `npx supabase migration list --remote` |
-| 2 | Delete stale branches: 25 `worktree-agent-*` branches and their worktrees, plus merged feature branches | none (`git worktree prune`, `git branch -d`) |
+| 2 | **Mostly done 2026-11-13:** merged branches and clean worktrees removed; 4 worktrees with uncommitted agent work wait for the owner. Delete stale branches: 25 `worktree-agent-*` branches and their worktrees, plus merged feature branches | none (`git worktree prune`, `git branch -d`) |
 | 3 | **Done 2026-11-13.** Fix agent and skill text that still says Montenegrin, `lako/srednje/teško` or "two-person team" | `.claude/skills/add-challenge/SKILL.md`, `.claude/skills/api-contract/SKILL.md`, `.claude/skills/error-handling/SKILL.md`, `.claude/skills/git-workflow/SKILL.md`, `.claude/agents/{ai-integration,code-reviewer,frontend-dev,react-reviewer,test-runner}.md` |
-| 4 | Roadmap table in `docs/SPEC.md` follows this plan (phases A-D); "Challenge author (team)" becomes the owner | `docs/SPEC.md` (`docs-sync`) |
-| 5 | Minimal CI: lint and tests for `server/` and `client/`, `validate:challenges`, client build, tools unit tests. No e2e yet (A5) | `.github/workflows/ci.yml` (new) |
+| 4 | **Done 2026-11-13.** Roadmap table in `docs/SPEC.md` follows this plan (phases A-D); "Challenge author (team)" becomes the owner | `docs/SPEC.md` (`docs-sync`) |
+| 5 | **Workflow added 2026-11-13; green on `main` still to confirm after the push.** Minimal CI: lint and tests for `server/` and `client/`, `validate:challenges`, client build, tools unit tests. No e2e yet (A5) | `.github/workflows/ci.yml` (new) |
 
 Step 5 is here, not in A5, because every later milestone merges agent-written code and CI is the cheapest second reviewer. `server/vitest.config.js` already sets a fake `SUPABASE_URL`, so the server job should need no secrets; confirm on the first run.
 

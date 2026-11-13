@@ -7,7 +7,7 @@ Students get short programs with a deliberate bug. They mark the buggy line, exp
 | Role | In the system | MVP |
 | --- | --- | --- |
 | Student | Solves challenges, asks for hints, tracks progress | Yes |
-| Challenge author (team) | Writes code, tests, hints and bug description as JSON | Yes, internal |
+| Challenge author (the maintainer) | Writes code, tests, hints and bug description as JSON | Yes, internal |
 | AI service (external) | Generates hints, evaluates explanations | Yes |
 | Teacher | Creates challenges, sees group progress in a teacher panel | No, phase 2 |
 
@@ -156,8 +156,11 @@ How the bug shows in the three Must challenges:
 
 ## Roadmap
 
+The MVP (one complete flow, accounts, profiles, leaderboard) shipped in November 2026. The detailed plan, with milestones and open decisions, is `docs/PLAN.md`.
+
 | Phase | Focus | Features |
 | --- | --- | --- |
-| 1. MVP | One complete, stable flow | 5-8 Python challenges, browser tests, AI mentor, scoring, dashboard |
-| 2. Classroom pilot | Teachers and groups | Teacher panel, login, JavaScript, more difficulty levels, server-side isolated test execution |
-| 3. Platform | Personalization | Challenge sets based on a student's typical mistakes, classroom competitions, GitHub Classroom and LMS integration |
+| A. Portfolio-ready | Stable, tested and explained | Pre-generated hints, security review and fixes, leaderboard integrity, 40-50 Python challenges from openly licensed datasets, CI, e2e, README and demo |
+| B. More languages | Browser runners | JavaScript end to end, then optionally TypeScript |
+| C. Ready for real users | Running it for others | Error tracking, backup, account deletion, privacy policy, feedback, onboarding |
+| D. Server-side runner (optional) | A fair leaderboard | Isolated runner service called by the API; Express itself never runs code. Local learning first |
