@@ -1,6 +1,4 @@
-// Fixtures shaped like the JSON examples in docs/API.md, with English content (the site is English;
-// docs/API.md and the server's challenge data still show Montenegrin examples until they are
-// translated). mocks.test.js checks each fixture has the same shape as its doc example, so change a
+// Fixtures shaped like the JSON examples in docs/API.md. mocks.test.js checks each fixture has the same shape as its doc example, so change a
 // shape in the doc first (api-contract skill) and then mirror it here.
 //
 // Integrity: only attemptCreated (the POST /api/attempts response) and the evaluation fixtures may

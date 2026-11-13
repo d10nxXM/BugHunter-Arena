@@ -140,7 +140,7 @@ export function errorHandler(err, req, res, _next) {
     return res.status(err.status).json({ error: { code: err.code, message: err.message } });
   }
   req.log?.error({ err, route: req.originalUrl }, 'unhandled error');
-  res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Došlo je do greške. Pokušaj ponovo.' } });
+  res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Something went wrong. Please try again.' } });
 }
 ```
 

@@ -36,8 +36,8 @@ You review the React client of BugHunter Arena (React + Vite, plain JavaScript, 
 - Inputs (explanation, edge case) without a label.
 - Test status shown by color only, without an icon or text.
 - No loading state for tests or AI evaluation; no error state for a failed request.
-- AI feedback not labelled "Pomoćna AI procjena" / "Procjena bez AI-ja".
-- UI text not in Montenegrin.
+- AI feedback not labelled "AI-assisted assessment" / "Assessed without AI".
+- UI text not in English.
 
 ## MEDIUM
 

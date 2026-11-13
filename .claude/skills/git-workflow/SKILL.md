@@ -1,6 +1,6 @@
 ---
 name: git-workflow
-description: Git conventions for BugHunter Arena's two-person team - GitHub Flow branches, Conventional Commits, pull requests with the verification report, rebasing a feature branch, and resolving conflicts in docs/API.md. Use when committing, branching, opening a PR, or resolving a merge conflict.
+description: Git conventions for BugHunter Arena (one maintainer plus agents) - GitHub Flow branches, Conventional Commits, merging with the verification report, rebasing a feature branch, and resolving conflicts in docs/API.md. Use when committing, branching, opening a PR, or resolving a merge conflict.
 ---
 
 # Git workflow
@@ -9,7 +9,8 @@ description: Git conventions for BugHunter Arena's two-person team - GitHub Flow
 
 - `main` always works: lint and tests pass, the solve flow runs.
 - One short-lived branch per change: `feat/hint-panel`, `fix/scoring-related-lines`, `docs/api-hints`, `chore/eslint-a11y`.
-- Merge through a pull request, even in a team of two. The other person reviews.
+- One maintainer: the owner reads the diff and the verification report, then merges into `main` with `git merge --no-ff <branch>` (or through a pull request when CI should run first). Agent work is reviewed by the reviewer agents before the owner sees it.
+- Only the owner pushes `main`; Render deploys from it.
 
 ```bash
 git switch main && git pull
@@ -90,9 +91,9 @@ git add <file>
 git rebase --continue      # or git merge --continue
 ```
 
-`docs/API.md` conflicts are the important ones: both people changed the contract. Don't just pick one side; agree on the final shape, then update the code on both sides to match it.
+`docs/API.md` conflicts are the important ones: two branches (often two parallel agent areas) changed the contract. Don't just pick one side; settle the final shape, then update the code on both sides to match it.
 
-Avoid conflicts by pulling `main` daily, keeping PRs small, and announcing contract changes before making them.
+Avoid conflicts by keeping branches short, merging one at a time, and making contract changes in a contract step before parallel areas start (see `docs/PLAN.md`).
 
 ## Undo safely
 

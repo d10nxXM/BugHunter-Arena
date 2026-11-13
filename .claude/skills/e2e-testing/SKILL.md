@@ -64,21 +64,21 @@ export class ChallengePage {
 
   async open(id) {
     await this.page.goto(`/challenges/${id}`);
-    await expect(this.page.getByRole('button', { name: /pokreni testove/i })).toBeEnabled({ timeout: 30_000 }); // Pyodide ready
+    await expect(this.page.getByRole('button', { name: 'Run visible tests' })).toBeEnabled({ timeout: 30_000 }); // Pyodide ready
   }
-  async selectLine(n) { await this.page.getByRole('button', { name: `Linija ${n}` }).click(); }
-  async explain(text) { await this.page.getByLabel(/objašnjenje/i).fill(text); }
+  async selectLine(n) { await this.page.getByRole('button', { name: `Line ${n}` }).click(); }
+  async explain(text) { await this.page.getByLabel(/explain the bug/i).fill(text); }
   async edgeCase(input, expected) {
-    await this.page.getByLabel(/ulaz/i).fill(input);
-    await this.page.getByLabel(/očekivani rezultat/i).fill(expected);
+    await this.page.getByLabel(/arguments for/i).fill(input);
+    await this.page.getByLabel(/expected result/i).fill(expected);
   }
   async fixCode(code) {
-    const editor = this.page.getByRole('textbox', { name: /editor koda/i });
+    const editor = this.page.getByRole('textbox', { name: /code editor/i });
     await editor.click();
     await this.page.keyboard.press('ControlOrMeta+A');
     await this.page.keyboard.insertText(code);
   }
-  async submit() { await this.page.getByRole('button', { name: /predaj odgovor/i }).click(); }
+  async submit() { await this.page.getByRole('button', { name: 'Submit answer' }).click(); }
 }
 ```
 
@@ -92,7 +92,7 @@ test('student solves find_max without hints', async ({ page }) => {
   const challenge = new ChallengePage(page);
   await challenge.open('find-max');
   await challenge.selectLine(2);
-  await challenge.explain('max_value počinje od 0, pa za samo negativne brojeve funkcija vraća 0 koja nije u listi.');
+  await challenge.explain('max_value starts at 0, so for a list of only negative numbers the function returns 0, which is not in the list.');
   await challenge.edgeCase('[-8, -3, -10]', '-3');
   await challenge.fixCode(FIXED_FIND_MAX);
   await challenge.submit();

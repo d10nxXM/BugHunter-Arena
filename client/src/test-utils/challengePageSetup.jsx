@@ -39,7 +39,7 @@ import ResultProbe from './ResultProbe.jsx';
 export const USER_ID = '6f1d2c3b-4a5e-4f60-8a7b-9c0d1e2f3a4b';
 export const ATTEMPT_ID = attemptCreated.attemptId;
 export const EXPLANATION =
-  'max_value počinje od 0, pa za listu samo negativnih brojeva funkcija vraća 0 koja nije u listi.';
+  'max_value starts at 0, so for a list of only negative numbers the function returns 0, which is not in the list.';
 export const FIXED_CODE = 'def find_max(numbers):\n    return max(numbers) if numbers else None';
 
 export const timeoutError = () =>

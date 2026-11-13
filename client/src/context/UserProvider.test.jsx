@@ -19,12 +19,12 @@ function Probe() {
   return (
     <>
       <p>{user ? `${user.displayName}:${user.userId}` : 'nema korisnika'}</p>
-      <p>{persisted ? 'sačuvano' : 'nije sačuvano'}</p>
+      <p>{persisted ? 'saved' : 'not saved'}</p>
       <button type="button" onClick={() => setUser(other)}>
         postavi
       </button>
       <button type="button" onClick={clearUser}>
-        obriši
+        clear
       </button>
     </>
   );
@@ -58,7 +58,7 @@ describe('UserProvider', () => {
   it('starts empty without a stored user', () => {
     renderProbe();
     expect(screen.getByText('nema korisnika')).toBeInTheDocument();
-    expect(screen.getByText('sačuvano')).toBeInTheDocument();
+    expect(screen.getByText('saved')).toBeInTheDocument();
   });
 
   it('reads the stored user', () => {
@@ -73,7 +73,7 @@ describe('UserProvider', () => {
     await user.click(screen.getByRole('button', { name: 'postavi' }));
     expect(screen.getByText(`ana:${other.userId}`)).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem(USER_STORAGE_KEY))).toEqual(other);
-    await user.click(screen.getByRole('button', { name: 'obriši' }));
+    await user.click(screen.getByRole('button', { name: 'clear' }));
     expect(screen.getByText('nema korisnika')).toBeInTheDocument();
     expect(localStorage.getItem(USER_STORAGE_KEY)).toBeNull();
   });
@@ -95,10 +95,10 @@ describe('UserProvider', () => {
     const user = userEvent.setup();
     renderProbe();
     expect(screen.getByText('nema korisnika')).toBeInTheDocument();
-    expect(screen.getByText('nije sačuvano')).toBeInTheDocument();
+    expect(screen.getByText('not saved')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'postavi' }));
     expect(screen.getByText(`ana:${other.userId}`)).toBeInTheDocument();
-    expect(screen.getByText('nije sačuvano')).toBeInTheDocument();
+    expect(screen.getByText('not saved')).toBeInTheDocument();
   });
 
   it('setUser returns whether the user was saved', () => {

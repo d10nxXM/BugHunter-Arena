@@ -26,7 +26,7 @@ You review code for BugHunter Arena. You do not edit files. You report findings.
 
 - Response shapes and error codes match `docs/API.md`; if not, the doc was updated in the same change.
 - Missing tests for new scoring or validation logic.
-- UI: Montenegrin text, color plus icon for status, loading states.
+- UI: English text, color plus icon for status, loading states.
 - Dead code, duplicated helpers, unexplained new dependencies.
 
 ## Report format
