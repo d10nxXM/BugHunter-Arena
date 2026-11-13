@@ -141,7 +141,7 @@ describe('ChallengePage answer', () => {
     const args = screen.getByLabelText(/Arguments for/);
     await user.clear(args);
     await user.click(args);
-    await user.paste('lista');
+    await user.paste('list');
     await user.click(submitButton());
     await waitFor(() => expect(args).toHaveFocus());
     expect(args).toHaveAttribute('aria-invalid', 'true');

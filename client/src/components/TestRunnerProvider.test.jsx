@@ -140,7 +140,7 @@ describe('TestRunnerProvider', () => {
     expect(result.current).toMatchObject({ ready: true, loadError: null });
   });
 
-  it('run() while not ready rejects with a Montenegrin message and posts nothing', async () => {
+  it('run() while not ready rejects with an English message and posts nothing', async () => {
     const { result } = setup();
     await expect(result.current.run(PAYLOAD)).rejects.toThrow(RUNNER_NOT_READY);
     expect(latest().port.posted).toHaveLength(0);
@@ -447,7 +447,7 @@ describe('TestRunnerProvider', () => {
   it('StrictMode: the first worker is terminated and the second mount starts a fresh one', () => {
     function Probe() {
       const runner = useTestRunner();
-      return <p>{runner.ready ? 'spremno' : 'učitava'}</p>;
+      return <p>{runner.ready ? 'ready' : 'loading'}</p>;
     }
     const { getByText } = render(
       <StrictMode>
@@ -462,9 +462,9 @@ describe('TestRunnerProvider', () => {
 
     // The terminated worker's port is detached; the live one drives the state.
     act(() => FakeWorker.instances[0].port.onmessage?.({ data: { type: 'ready' } }));
-    expect(getByText('učitava')).toBeInTheDocument();
+    expect(getByText('loading')).toBeInTheDocument();
     FakeWorker.instances[1].ready();
-    expect(getByText('spremno')).toBeInTheDocument();
+    expect(getByText('ready')).toBeInTheDocument();
   });
 
   it('keeps the context value stable across provider re-renders', () => {

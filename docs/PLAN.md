@@ -159,7 +159,7 @@ Not an orchestrator batch. The owner does these by hand or in one main session.
 | --- | --- | --- |
 | 1 | Close the four ops items from "Open items" (migration list, Render env, Supabase dashboard, live `/leaderboard` check) | none (dashboards). `npx supabase migration list --remote` |
 | 2 | Delete stale branches: 25 `worktree-agent-*` branches and their worktrees, plus merged feature branches | none (`git worktree prune`, `git branch -d`) |
-| 3 | Fix agent and skill text that still says Montenegrin, `lako/srednje/teško` or "two-person team" | `.claude/skills/add-challenge/SKILL.md`, `.claude/skills/api-contract/SKILL.md`, `.claude/skills/error-handling/SKILL.md`, `.claude/skills/git-workflow/SKILL.md`, `.claude/agents/{ai-integration,code-reviewer,frontend-dev,react-reviewer,test-runner}.md` |
+| 3 | **Done 2026-11-13.** Fix agent and skill text that still says Montenegrin, `lako/srednje/teško` or "two-person team" | `.claude/skills/add-challenge/SKILL.md`, `.claude/skills/api-contract/SKILL.md`, `.claude/skills/error-handling/SKILL.md`, `.claude/skills/git-workflow/SKILL.md`, `.claude/agents/{ai-integration,code-reviewer,frontend-dev,react-reviewer,test-runner}.md` |
 | 4 | Roadmap table in `docs/SPEC.md` follows this plan (phases A-D); "Challenge author (team)" becomes the owner | `docs/SPEC.md` (`docs-sync`) |
 | 5 | Minimal CI: lint and tests for `server/` and `client/`, `validate:challenges`, client build, tools unit tests. No e2e yet (A5) | `.github/workflows/ci.yml` (new) |
 

@@ -54,7 +54,7 @@ function renderResult({ path = '/challenges/find-max/result', state } = {}) {
     <MemoryRouter initialEntries={[{ pathname: path, state }]}>
       <Routes>
         <Route path="/challenges/:id/result" element={<ResultView />} />
-        <Route path="/challenges/:id" element={<h1>Izazov</h1>} />
+        <Route path="/challenges/:id" element={<h1>Challenge</h1>} />
       </Routes>
     </MemoryRouter>,
   );

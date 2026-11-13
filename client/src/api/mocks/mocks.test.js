@@ -37,8 +37,8 @@ const BLOCK_FIXTURES = [
 ];
 
 /**
- * Shape of a JSON value: strings become 'string' (the doc examples are Montenegrin, the fixtures
- * English), everything else is kept, so keys, numbers, booleans, nulls and array lengths must match.
+ * Shape of a JSON value: strings become 'string' (the text may differ between the doc examples and
+ * the fixtures), everything else is kept, so keys, numbers, booleans, nulls and array lengths must match.
  */
 function shape(value) {
   if (typeof value === 'string') return 'string';

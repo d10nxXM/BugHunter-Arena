@@ -41,8 +41,8 @@ Test what the student sees and does, not component internals. If a refactor keep
 
 ## Query priority
 
-1. `getByRole('button', { name: /predaj odgovor/i })`
-2. `getByLabelText(/objašnjenje/i)`
+1. `getByRole('button', { name: 'Submit answer' })`
+2. `getByLabelText(/explain the bug/i)`
 3. `getByText(...)` for non-interactive text
 4. `getByTestId` only when nothing above works
 
@@ -59,10 +59,10 @@ test('submit is disabled until the explanation is long enough', async () => {
   const user = userEvent.setup();
   render(<AnswerForm onSubmit={vi.fn()} />);
 
-  const submit = screen.getByRole('button', { name: /predaj odgovor/i });
+  const submit = screen.getByRole('button', { name: 'Submit answer' });
   expect(submit).toBeDisabled();
 
-  await user.type(screen.getByLabelText(/objašnjenje/i), 'max_value počinje od nule pa negativni brojevi ne rade');
+  await user.type(screen.getByLabelText(/explain the bug/i), 'max_value starts at zero so negative numbers do not work');
   expect(submit).toBeEnabled();
 });
 ```
@@ -85,9 +85,9 @@ vi.mock('../api/client.js', async (importOriginal) => ({
 }));
 
 test('shows an error when the challenge fails to load', async () => {
-  getChallenge.mockRejectedValueOnce(new ApiError('Izazov ne postoji.', { status: 404, code: 'NOT_FOUND' }));
+  getChallenge.mockRejectedValueOnce(new ApiError('Challenge not found.', { status: 404, code: 'NOT_FOUND' }));
   render(<ChallengePage id="missing" />);
-  expect(await screen.findByText(/izazov ne postoji/i)).toBeInTheDocument();
+  expect(await screen.findByText(/challenge not found/i)).toBeInTheDocument();
 });
 ```
 

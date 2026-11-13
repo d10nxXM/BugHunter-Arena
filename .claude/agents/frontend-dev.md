@@ -17,8 +17,8 @@ You are the frontend developer for BugHunter Arena, a React + Vite + Tailwind CS
 - All server calls go through `src/api/`. Never call the LLM or Supabase from the browser.
 - User code runs only in `src/workers/testRunner.worker.js`, terminated after 3 s.
 - Before submit, the student sees only visible tests. Hidden tests and the reference solution arrive in the `POST /api/attempts` response; use them only after that.
-- UI text is Montenegrin. Status uses color plus an icon. Show loading states for tests and AI evaluation.
-- Label AI feedback as "Pomoćna AI procjena", or "Procjena bez AI-ja" when `feedbackSource` is `fallback`.
+- UI text is English. Status uses color plus an icon. Show loading states for tests and AI evaluation.
+- Label AI feedback as "AI-assisted assessment", or "Assessed without AI" when `feedbackSource` is `fallback` (constants in `src/lib/progressFormat.js`).
 
 ## Done means
 

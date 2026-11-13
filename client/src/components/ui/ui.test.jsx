@@ -49,7 +49,6 @@ describe('DifficultyBadge', () => {
     ['easy', 'Easy', 'text-easy'],
     ['medium', 'Medium', 'text-medium'],
     ['hard', 'Hard', 'text-hard'],
-    ['lako', 'Easy', 'text-easy'],
   ])('%s shows text and color', (difficulty, text, cls) => {
     render(<DifficultyBadge difficulty={difficulty} />);
     expect(screen.getByText(text)).toHaveClass(cls);

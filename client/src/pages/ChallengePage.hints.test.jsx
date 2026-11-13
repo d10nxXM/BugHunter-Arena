@@ -89,7 +89,7 @@ describe('ChallengePage hints', () => {
     await user.click(screen.getByRole('button', { name: /Request hint 1/ }));
     expect(screen.getByRole('button', { name: 'Loading hint…' })).toBeDisabled();
     rejectHint(
-      new ApiError('Previše zahtjeva. Sačekaj malo pa pokušaj ponovo.', {
+      new ApiError('Too many requests. Wait a moment and try again.', {
         status: 429,
         code: 'RATE_LIMITED',
       }),

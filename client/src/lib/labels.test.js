@@ -7,9 +7,6 @@ describe('difficulty labels', () => {
     ['medium', 'medium', 'Medium', 'text-medium'],
     ['hard', 'hard', 'Hard', 'text-hard'],
     ['HARD', 'hard', 'Hard', 'text-hard'],
-    ['lako', 'easy', 'Easy', 'text-easy'],
-    ['srednje', 'medium', 'Medium', 'text-medium'],
-    ['teško', 'hard', 'Hard', 'text-hard'],
   ])('%s', (value, key, label, cls) => {
     expect(normalizeDifficulty(value)).toBe(key);
     expect(difficultyLabel(value)).toBe(label);

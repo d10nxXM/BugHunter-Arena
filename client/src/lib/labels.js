@@ -1,15 +1,4 @@
-// Display labels for challenge metadata. The API sends difficulty as easy | medium | hard; the
-// Montenegrin values (lako | srednje | teško) are still accepted while the server data is
-// being translated.
-
-const DIFFICULTY_ALIASES = {
-  easy: 'easy',
-  medium: 'medium',
-  hard: 'hard',
-  lako: 'easy',
-  srednje: 'medium',
-  teško: 'hard',
-};
+// Display labels for challenge metadata. The API sends difficulty as easy | medium | hard.
 
 const DIFFICULTY_LABELS = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
 
@@ -21,7 +10,8 @@ const LANGUAGE_LABELS = { python: 'Python', javascript: 'JavaScript' };
 /** Canonical difficulty (easy | medium | hard), or null for an unknown value. */
 export function normalizeDifficulty(value) {
   if (typeof value !== 'string') return null;
-  return DIFFICULTY_ALIASES[value.trim().toLowerCase()] ?? null;
+  const key = value.trim().toLowerCase();
+  return Object.hasOwn(DIFFICULTY_LABELS, key) ? key : null;
 }
 
 /** "Easy" | "Medium" | "Hard"; an unknown value is shown as given (or "Unknown" when empty). */

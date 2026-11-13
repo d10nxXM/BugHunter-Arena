@@ -331,7 +331,7 @@ describe('ChallengePage timeouts and recovery', () => {
 
   it('evaluation 429 is shown, not recovered', async () => {
     submitEvaluation.mockRejectedValueOnce(
-      new ApiError('Previše zahtjeva. Sačekaj malo pa pokušaj ponovo.', {
+      new ApiError('Too many requests. Wait a moment and try again.', {
         status: 429,
         code: 'RATE_LIMITED',
       }),

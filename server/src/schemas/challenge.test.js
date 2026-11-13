@@ -49,7 +49,7 @@ describe('ChallengeSummarySchema', () => {
       ChallengeSummarySchema.parse({ ...summary, language: 'ruby' }),
     ).toThrow();
     expect(() =>
-      ChallengeSummarySchema.parse({ ...summary, difficulty: 'lako' }),
+      ChallengeSummarySchema.parse({ ...summary, difficulty: 'expert' }),
     ).toThrow();
   });
 });
@@ -202,16 +202,10 @@ describe('ChallengeFileSchema', () => {
     expect(() =>
       ChallengeFileSchema.parse({ ...file(), difficulty: 'expert' }),
     ).toThrow();
+    expect(DifficultySchema.safeParse('expert').success).toBe(false);
+    expect(DifficultySchema.safeParse('easy').success).toBe(true);
   });
 
-  it('rejects the old Montenegrin difficulty values', () => {
-    for (const difficulty of ['lako', 'srednje', 'teško']) {
-      expect(DifficultySchema.safeParse(difficulty).success).toBe(false);
-      expect(() =>
-        ChallengeFileSchema.parse({ ...file(), difficulty }),
-      ).toThrow();
-    }
-  });
 
   it('accepts javascript and every English difficulty', () => {
     for (const difficulty of ['easy', 'medium', 'hard']) {

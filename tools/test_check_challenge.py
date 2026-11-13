@@ -40,7 +40,7 @@ REFERENCE = (
 
 GOOD = {
     "id": "find-max",
-    "title": "Najveći element liste",
+    "title": "Largest number in a list (naïve)",
     "language": "python",
     "function_name": "find_max",
     "code": BUGGY,
@@ -140,7 +140,7 @@ class CheckFileTest(Fixture):
             ["id", "args", "expected", "visible", "failsOnOriginal"],
         )
         self.assertTrue(self.read(path).endswith("}\n"))
-        self.assertIn("Najveći", self.read(path))
+        self.assertIn("naïve", self.read(path))
 
     def test_correct_flags_leave_file_byte_identical(self):
         data = copy.deepcopy(GOOD)
@@ -420,7 +420,7 @@ class WriteTest(Fixture):
 
     def test_file_changed_during_check_is_not_written(self):
         path = self.write(GOOD)
-        edited = self.read(path).replace("Najveći", "Najveci")
+        edited = self.read(path).replace("naïve", "naive")
         real_evaluate = cc.evaluate
 
         def evaluate_then_edit(data):

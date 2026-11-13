@@ -35,7 +35,7 @@ const { ready, run, loadError } = useTestRunner();
 
 Keep these stable. If one must change, say so in your summary, because ChallengePage depends on it.
 
-Consumers never run tests while `ready` is false, and show `loadError` (Montenegrin) when it is set. A rejected `run()` means "tests did not run", never "tests failed".
+Consumers never run tests while `ready` is false, and show `loadError` (English) when it is set. A rejected `run()` means "tests did not run", never "tests failed".
 
 ## Runner contract
 
@@ -54,7 +54,7 @@ From the doc comment in `src/hooks/useTestRunner.js`:
   - `RUNNER_NOT_READY` while `!ready`: during loading, and while the worker is replaced after a timeout or crash.
   - `BAD_REQUEST`: an invalid payload (missing `code` or `functionName`, a test `id` that is not 1-64 characters, `args` that is not an array), or a run that could not be posted to the worker.
 - `fail()` is terminal until the page is reloaded: it stops the worker, sets `loadError`, rejects pending runs and never restarts. `ready` never becomes true again.
-- Worker error text is never rendered as HTML. `loadError` values are fixed Montenegrin constants. Crash text in `error` is shown as plain text (`src/` has no `innerHTML`).
+- Worker error text is never rendered as HTML. `loadError` values are fixed English constants. Crash text in `error` is shown as plain text (`src/` has no `innerHTML`).
 - StrictMode: the effect that starts the worker terminates it in its cleanup.
 - The context value is memoised (`useMemo` over `ready`, `loadError` and a stable `run` from `useCallback`), so consumers do not re-render on every provider render.
 - Monaco workers are loaded with Vite `?worker` imports in your own files. The editor worker is imported in `workers/monacoSetup.js`: `import EditorWorker from 'monaco-editor/editor/editor.worker?worker'`.

@@ -1,6 +1,6 @@
 ---
 name: error-handling
-description: Error handling for BugHunter Arena - AppError and the error middleware, wrapping causes, timeouts and the AI fallback chain, retries, client-side error states and Montenegrin user messages. Use when writing try/catch, fallbacks, retries, error responses or error UI.
+description: Error handling for BugHunter Arena - AppError and the error middleware, wrapping causes, timeouts and the AI fallback chain, retries, client-side error states and English user messages. Use when writing try/catch, fallbacks, retries, error responses or error UI.
 ---
 
 # Error handling
@@ -25,8 +25,8 @@ export class AppError extends Error {
 }
 
 // usage
-if (!attempt) throw new AppError(404, 'NOT_FOUND', 'Pokušaj ne postoji.');
-if (attempt.status === 'evaluated') throw new AppError(409, 'ALREADY_EVALUATED', 'Ovaj pokušaj je već ocijenjen.');
+if (!attempt) throw new AppError(404, 'NOT_FOUND', 'Attempt not found.');
+if (attempt.status === 'evaluated') throw new AppError(409, 'ALREADY_EVALUATED', 'Attempt already evaluated.');
 ```
 
 Routes call `next(err)`; the error middleware (in `express-patterns`) turns `AppError` into the documented shape and anything else into `500 INTERNAL_ERROR`.
@@ -61,15 +61,15 @@ Supabase calls are not retried automatically: a failure is reported as `500` and
 ## Client: every async view has three states
 
 ```jsx
-if (state.status === 'loading') return <Spinner label="Učitavanje izazova…" />;
+if (state.status === 'loading') return <Spinner label="Loading the challenge…" />;
 if (state.status === 'error') return <ErrorMessage message={state.error.message} onRetry={reload} />;
 return <ChallengeView challenge={state.data} />;
 ```
 
 - Clear stale data when entering the error state.
-- Network failure (no response) gets its own message: "Server nije dostupan. Provjeri internet i pokušaj ponovo."
+- Network failure (no response) gets its own message: "The server is not reachable. Check your connection and try again."
 - Validation errors (`VALIDATION_ERROR`) are shown next to the field, not as a page error.
-- An error boundary at the route level catches render crashes and shows a "Nešto nije u redu" screen with a reload button.
+- An error boundary at the route level catches render crashes and shows a "Something went wrong." screen with a reload button.
 
 ## Test-runner errors
 
@@ -79,13 +79,13 @@ return <ChallengeView challenge={state.data} />;
 
 ## User-facing messages
 
-| Situation | Message (Montenegrin) |
+| Situation | Message (English) |
 | --- | --- |
-| Too short explanation | Objašnjenje mora imati najmanje 20 karaktera. |
-| Rate limited | Previše zahtjeva. Sačekaj malo pa pokušaj ponovo. |
-| Server error | Došlo je do greške. Pokušaj ponovo. |
-| AI fallback | Procjena bez AI-ja: objašnjenje je ocijenjeno prema ključnim pojmovima. |
-| Test timeout | Test je prekinut nakon 3 sekunde. Provjeri da li kod ima beskonačnu petlju. |
+| Too short explanation | Explanation must be at least 20 characters. |
+| Rate limited | Too many requests. Wait a moment and try again. |
+| Server error | Something went wrong. Please try again. |
+| AI fallback | Assessed without AI: the explanation was scored by key terms. |
+| Test timeout | The test stopped after 3 seconds. Check whether the code has an infinite loop. |
 
 Messages say what happened and what to do, never expose stack traces, codes or internal names.
 
@@ -96,4 +96,4 @@ Messages say what happened and what to do, never expose stack traces, codes or i
 - [ ] Fallbacks set `feedbackSource` / `source` and are logged at `warn`
 - [ ] Errors keep their `cause`
 - [ ] Every async UI has loading, error and success states
-- [ ] Messages are Montenegrin and actionable
+- [ ] Messages are English and actionable

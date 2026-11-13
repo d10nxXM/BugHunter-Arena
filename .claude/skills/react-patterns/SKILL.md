@@ -48,7 +48,7 @@ export async function api(path, { method = 'GET', body, signal } = {}) {
   });
   const data = await res.json().catch(() => null);
   if (!res.ok) {
-    const error = new Error(data?.error?.message ?? 'Greška u komunikaciji sa serverom.');
+    const error = new Error(data?.error?.message ?? 'Something went wrong talking to the server.');
     error.code = data?.error?.code ?? 'NETWORK_ERROR';
     throw error;
   }
@@ -126,7 +126,7 @@ export function useTestRunner() {
 }
 ```
 
-Disable "Pokreni testove" and "Predaj odgovor" until `ready` is true, with a short "Učitavanje Python okruženja…" message. The worker posts `{ type: 'ready' }` after Pyodide loads and `{ type: 'result', results }` after each run, catching Python exceptions per test so one crash doesn't hide the other results.
+Disable "Run visible tests" and "Submit answer" until `ready` is true, with a short "Loading Python…" message. The worker posts `{ type: 'ready' }` after Pyodide loads and `{ type: 'result', results }` after each run, catching Python exceptions per test so one crash doesn't hide the other results.
 
 ## Forms
 

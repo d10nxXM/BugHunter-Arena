@@ -23,7 +23,7 @@ Target students: beginner and intermediate programming courses, Python first.
 6. Student gives an edge case: an input and the result correct code would return.
 7. Student fixes the code in the editor. "Vrati original" restores it.
 8. Optionally asks for hints, up to three levels. Each one costs points.
-9. "Predaj odgovor" locks the answer. All tests (visible and hidden) run on the fix in the browser.
+9. "Submit answer" locks the answer. All tests (visible and hidden) run on the fix in the browser.
 10. Server computes the score; AI evaluates the explanation. Student sees score breakdown, test results, AI feedback, the misconception found and a practice tip.
 11. Student retries or moves on. The attempt is stored and counts toward progress.
 
